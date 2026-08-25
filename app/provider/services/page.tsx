@@ -1,0 +1,164 @@
+"use client";
+
+import Link from "next/link";
+import { useEffect, useState } from "react";
+import { PlusIcon, SearchIcon } from "lucide-react";
+
+import { ProfileBackLink } from "@/components/provider/profile-back-link";
+import { ServiceCard } from "@/components/provider/service-card";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
+import { fetchProviderServices } from "@/services/services/servicesApi";
+import type { ProviderService } from "@/services/services/types";
+import { useAuth } from "@/store/useAuth";
+
+export default function ProviderServicesPage() {
+	const { user } = useAuth();
+	const providerId = user?.provider?.id ?? "";
+	const [services, setServices] = useState<ProviderService[]>([]);
+	const [loading, setLoading] = useState(true);
+	const [error, setError] = useState<string | null>(null);
+	const [showInactive, setShowInactive] = useState(false);
+	const [query, setQuery] = useState("");
+
+	useEffect(() => {
+		if (!providerId) return;
+		let cancelled = false;
+		(async () => {
+			setLoading(true);
+			const res = await fetchProviderServices(providerId);
+			if (cancelled) return;
+			setServices(res.services);
+			setError(res.error);
+			setLoading(false);
+		})();
+		return () => {
+			cancelled = true;
+		};
+	}, [providerId]);
+
+	const visible = (showInactive ? services : services.filter((s) => s.status)).filter(
+		(s) => {
+			const q = query.trim().toLowerCase();
+			if (!q) return true;
+			return (
+				s.serviceName?.toLowerCase().includes(q) ||
+				s.categoryName?.toLowerCase().includes(q) ||
+				s.subCategoryName?.toLowerCase().includes(q)
+			);
+		},
+	);
+
+	return (
+		<div className="mx-auto w-full max-w-5xl pb-20 lg:pb-0">
+			{/* Mobile: nested screen with back (Flutter opens Services from Profile) */}
+			<div className="lg:hidden">
+				<ProfileBackLink href="/provider/profile" label="Profile" />
+				<h1 className="text-lg font-normal text-[#464646]">All Service</h1>
+			</div>
+
+			<div className="hidden flex-wrap items-end justify-between gap-3 lg:flex">
+				<div className="min-w-0">
+					<p className="admin-eyebrow">Provider</p>
+					<h1 className="admin-page-title mt-1">Services</h1>
+					<p className="mt-1.5 text-sm text-muted-foreground">
+						{loading
+							? "Loading…"
+							: `${services.length} listing${services.length === 1 ? "" : "s"}`}
+					</p>
+				</div>
+				<div className="flex gap-2">
+					<Button
+						variant="outline"
+						size="sm"
+						onClick={() => setShowInactive((v) => !v)}
+					>
+						{showInactive ? "Hide inactive" : "Show inactive"}
+					</Button>
+					<Link
+						href="/provider/services/new"
+						className={cn(
+							buttonVariants({ size: "sm" }),
+							"inline-flex items-center gap-1.5",
+						)}
+					>
+						<PlusIcon className="size-3.5" />
+						Add service
+					</Link>
+				</div>
+			</div>
+
+			<div className="relative mt-3 lg:mt-5">
+				<SearchIcon className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+				<Input
+					value={query}
+					onChange={(e) => setQuery(e.target.value)}
+					placeholder="Search Services"
+					className="h-10 rounded-lg border-0 bg-white pl-9 lg:h-11 lg:rounded-xl"
+				/>
+			</div>
+
+			<div className="mt-3 flex gap-2 lg:hidden">
+				<Button
+					variant="outline"
+					size="sm"
+					className="flex-1"
+					onClick={() => setShowInactive((v) => !v)}
+				>
+					{showInactive ? "Hide inactive" : "Show inactive"}
+				</Button>
+			</div>
+
+			{error ? (
+				<p className="mt-4 text-sm text-destructive">{error}</p>
+			) : null}
+
+			{loading ? (
+				<div className="mt-4 grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-3">
+					{Array.from({ length: 4 }).map((_, i) => (
+						<div
+							key={i}
+							className="aspect-[0.68] animate-pulse rounded-xl bg-muted"
+						/>
+					))}
+				</div>
+			) : visible.length === 0 ? (
+				<div className="mt-5 rounded-xl bg-white px-4 py-12 text-center">
+					<p className="text-sm text-muted-foreground">
+						No services yet. Create your first listing.
+					</p>
+				</div>
+			) : (
+				<div className="mt-4 grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-3">
+					{visible.map((service) => (
+						<ServiceCard
+							key={service.id}
+							service={service}
+							compact
+							providerName={user?.name}
+							providerImage={user?.provider?.profileImage}
+						/>
+					))}
+				</div>
+			)}
+
+			{/* Flutter sticky Add Service CTA */}
+			<div
+				className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-white px-4 py-3 lg:hidden"
+				style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}
+			>
+				<Link
+					href="/provider/services/new"
+					className={cn(
+						buttonVariants(),
+						"flex h-12 w-full items-center justify-center gap-2 rounded-xl text-base",
+					)}
+				>
+					<PlusIcon className="size-4" />
+					Add Service
+				</Link>
+			</div>
+		</div>
+	);
+}
