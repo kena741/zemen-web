@@ -1,27 +1,30 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 
 import { ProfileBackLink } from "@/components/provider/profile-back-link";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AppLoading } from "@/components/ui/app-loading";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
 	deleteBankMethod,
-	fetchBankMethods,
 	saveBankMethod,
 	setDefaultBankMethod,
 } from "@/services/bank/bankApi";
-import type { BankMethod } from "@/services/bank/types";
+import { useAppDispatch } from "@/store/hooks";
+import { invalidateProviderBank } from "@/store/providerCacheSlice";
 import { useAuth } from "@/store/useAuth";
+import { useCachedProviderBank } from "@/store/useProviderCache";
 
 export default function BankDetailsPage() {
 	const { user } = useAuth();
+	const dispatch = useAppDispatch();
 	const authUserId = user?.id ?? "";
-	const providerId = user?.provider?.id ?? null;
-	const [banks, setBanks] = useState<BankMethod[]>([]);
-	const [loading, setLoading] = useState(true);
+	const providerId = user?.provider?.id ?? "";
+	const { data: banks, loading, error: loadError, refresh, refreshing } =
+		useCachedProviderBank({ authUserId, providerId });
 	const [error, setError] = useState<string | null>(null);
 	const [busy, setBusy] = useState(false);
 	const [showForm, setShowForm] = useState(false);
@@ -31,18 +34,10 @@ export default function BankDetailsPage() {
 	const [swiftCode, setSwiftCode] = useState("");
 	const [branchCity, setBranchCity] = useState("");
 
-	const load = useCallback(async () => {
-		if (!authUserId) return;
-		setLoading(true);
-		const res = await fetchBankMethods({ authUserId, providerId });
-		setBanks(res.banks);
-		setError(res.error);
-		setLoading(false);
-	}, [authUserId, providerId]);
-
-	useEffect(() => {
-		void load();
-	}, [load]);
+	async function afterMutate() {
+		dispatch(invalidateProviderBank());
+		refresh();
+	}
 
 	async function handleSave(e: React.FormEvent) {
 		e.preventDefault();
@@ -67,7 +62,7 @@ export default function BankDetailsPage() {
 		setBankName("");
 		setSwiftCode("");
 		setBranchCity("");
-		await load();
+		await afterMutate();
 	}
 
 	async function makeDefault(id: string) {
@@ -75,7 +70,7 @@ export default function BankDetailsPage() {
 		const res = await setDefaultBankMethod({ authUserId, bankId: id });
 		setBusy(false);
 		if (!res.ok) setError(res.error);
-		else await load();
+		else await afterMutate();
 	}
 
 	async function remove(id: string) {
@@ -84,12 +79,21 @@ export default function BankDetailsPage() {
 		const res = await deleteBankMethod(id);
 		setBusy(false);
 		if (!res.ok) setError(res.error);
-		else await load();
+		else await afterMutate();
 	}
 
 	return (
 		<div className="mx-auto max-w-3xl">
-			<ProfileBackLink />
+			<div className="flex items-center justify-between gap-2">
+				<ProfileBackLink href="/provider/profile" label="Profile" />
+				<button
+					type="button"
+					onClick={refresh}
+					className="mb-3 text-xs font-medium text-primary"
+				>
+					{refreshing ? "Refreshing…" : "Refresh"}
+				</button>
+			</div>
 			<div className="flex flex-wrap items-end justify-between gap-3">
 				<div>
 					<p className="admin-eyebrow">Payouts</p>
@@ -107,9 +111,9 @@ export default function BankDetailsPage() {
 				</Button>
 			</div>
 
-			{error ? (
+			{error || loadError ? (
 				<Alert variant="destructive" className="mt-4">
-					<AlertDescription>{error}</AlertDescription>
+					<AlertDescription>{error || loadError}</AlertDescription>
 				</Alert>
 			) : null}
 
@@ -171,9 +175,7 @@ export default function BankDetailsPage() {
 
 			<div className="mt-5 space-y-2">
 				{loading ? (
-					<p className="rounded-xl border border-border bg-white px-4 py-10 text-center text-sm text-muted-foreground shadow-xs">
-						Loading…
-					</p>
+					<AppLoading compact />
 				) : banks.length === 0 ? (
 					<p className="rounded-xl border border-border bg-white px-4 py-10 text-center text-sm text-muted-foreground shadow-xs">
 						No bank accounts saved yet.

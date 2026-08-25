@@ -1,19 +1,22 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { ImageIcon } from "lucide-react";
 
 import { ProviderMobileTabBar } from "@/components/provider/mobile-chrome";
+import { AppLoading } from "@/components/ui/app-loading";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
-	fetchProviderOffers,
 	formatOfferPrice,
 	respondToOffer,
 	type ServiceOffer,
 } from "@/services/offers/offersApi";
 import { formatDateTime } from "@/services/bookings/types";
+import { useAppDispatch } from "@/store/hooks";
+import { invalidateProviderOffers } from "@/store/providerCacheSlice";
 import { useAuth } from "@/store/useAuth";
+import { useCachedProviderOffers } from "@/store/useProviderCache";
 
 function statusClass(status: string) {
 	switch (status) {
@@ -21,10 +24,6 @@ function statusClass(status: string) {
 			return "bg-amber-100 text-amber-900";
 		case "accepted":
 			return "bg-[#e8f5e3] text-primary";
-		case "rejected":
-		case "cancelled":
-		case "expired":
-			return "bg-muted text-muted-foreground";
 		default:
 			return "bg-muted text-muted-foreground";
 	}
@@ -32,37 +31,26 @@ function statusClass(status: string) {
 
 export default function ProviderOffersPage() {
 	const { user } = useAuth();
+	const dispatch = useAppDispatch();
 	const providerId = user?.provider?.id ?? "";
 	const authUserId = user?.id ?? "";
-	const [offers, setOffers] = useState<ServiceOffer[]>([]);
-	const [loading, setLoading] = useState(true);
-	const [error, setError] = useState<string | null>(null);
+	const { data: offers, loading, error, refresh, refreshing } =
+		useCachedProviderOffers(providerId, authUserId);
 	const [actingId, setActingId] = useState<string | null>(null);
-
-	async function load() {
-		if (!providerId && !authUserId) return;
-		setLoading(true);
-		const res = await fetchProviderOffers(providerId, authUserId);
-		setOffers(res.offers);
-		setError(res.error);
-		setLoading(false);
-	}
-
-	useEffect(() => {
-		void load();
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [providerId, authUserId]);
+	const [actionError, setActionError] = useState<string | null>(null);
 
 	async function onRespond(offer: ServiceOffer, accept: boolean) {
 		if (actingId) return;
 		setActingId(offer.id);
+		setActionError(null);
 		const res = await respondToOffer({ offerId: offer.id, accept });
 		setActingId(null);
 		if (!res.ok) {
-			setError(res.error);
+			setActionError(res.error);
 			return;
 		}
-		await load();
+		dispatch(invalidateProviderOffers());
+		refresh();
 	}
 
 	return (
@@ -70,32 +58,46 @@ export default function ProviderOffersPage() {
 			<ProviderMobileTabBar title="Offers" />
 
 			<div className="hidden lg:block">
-				<p className="admin-eyebrow">Provider</p>
-				<h1 className="admin-page-title mt-1">Offers</h1>
-				<p className="mt-2 text-sm text-muted-foreground">
-					Customer price offers on your services
-				</p>
+				<div className="flex items-start justify-between gap-3">
+					<div>
+						<p className="admin-eyebrow">Provider</p>
+						<h1 className="admin-page-title mt-1">Offers</h1>
+						<p className="mt-2 text-sm text-muted-foreground">
+							Customer price offers on your services
+						</p>
+					</div>
+					<button
+						type="button"
+						onClick={refresh}
+						className="text-xs font-medium text-primary"
+					>
+						{refreshing ? "Refreshing…" : "Refresh"}
+					</button>
+				</div>
 			</div>
 
 			<div className="px-3 pt-3 lg:px-0 lg:pt-5">
-				{error ? (
-					<p className="mb-3 text-sm text-destructive">{error}</p>
+				<div className="mb-2 flex justify-end lg:hidden">
+					<button
+						type="button"
+						onClick={refresh}
+						className="text-xs font-medium text-primary"
+					>
+						{refreshing ? "Refreshing…" : "Refresh"}
+					</button>
+				</div>
+
+				{actionError || error ? (
+					<p className="mb-3 text-sm text-destructive">
+						{actionError || error}
+					</p>
 				) : null}
 
 				{loading ? (
-					<div className="space-y-2.5">
-						{Array.from({ length: 3 }).map((_, i) => (
-							<div
-								key={i}
-								className="h-28 animate-pulse rounded-xl bg-muted"
-							/>
-						))}
-					</div>
+					<AppLoading compact />
 				) : offers.length === 0 ? (
 					<div className="rounded-xl bg-white px-4 py-14 text-center">
-						<p className="text-sm text-muted-foreground">
-							No offers yet.
-						</p>
+						<p className="text-sm text-muted-foreground">No offers yet.</p>
 					</div>
 				) : (
 					<ul className="space-y-2.5">

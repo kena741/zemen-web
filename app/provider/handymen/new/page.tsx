@@ -7,10 +7,13 @@ import { HandymanForm } from "@/components/provider/handyman-form";
 import { ProfileBackLink } from "@/components/provider/profile-back-link";
 import { createHandyman } from "@/services/handymen/handymenApi";
 import type { HandymanFormValues } from "@/services/handymen/types";
+import { useAppDispatch } from "@/store/hooks";
+import { invalidateProviderHandymen } from "@/store/providerCacheSlice";
 import { useAuth } from "@/store/useAuth";
 
 export default function NewHandymanPage() {
 	const router = useRouter();
+	const dispatch = useAppDispatch();
 	const { user } = useAuth();
 	const [busy, setBusy] = useState(false);
 	const [error, setError] = useState<string | null>(null);
@@ -24,6 +27,7 @@ export default function NewHandymanPage() {
 			setError(res.error);
 			return;
 		}
+		dispatch(invalidateProviderHandymen());
 		router.replace(`/provider/handymen/${res.handyman.id}`);
 	}
 

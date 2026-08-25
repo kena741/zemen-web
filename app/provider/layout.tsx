@@ -20,6 +20,7 @@ import {
 
 import appIcon from "@/assets/images/app_icon.png";
 import { Button } from "@/components/ui/button";
+import { AppLoading } from "@/components/ui/app-loading";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { BRAND_NAME } from "@/lib/brand";
 import { cn } from "@/lib/utils";
@@ -91,12 +92,7 @@ export default function ProviderLayout({
 	if (sessionPending || !user || user.mode !== "provider") {
 		return (
 			<div className="flex min-h-svh items-center justify-center bg-[#f6f6f6]">
-				<div className="flex flex-col items-center gap-3">
-					<div className="admin-loading-mark size-10 overflow-hidden rounded-lg">
-						<Image src={appIcon} alt="" width={40} height={40} />
-					</div>
-					<p className="text-sm text-muted-foreground">Loading…</p>
-				</div>
+				<AppLoading className="min-h-0" />
 			</div>
 		);
 	}

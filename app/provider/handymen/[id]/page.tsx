@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import {
 	ArrowLeftIcon,
 	EyeIcon,
@@ -12,17 +12,19 @@ import {
 } from "lucide-react";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AppLoading } from "@/components/ui/app-loading";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { cn } from "@/lib/utils";
 import {
 	deleteHandyman,
-	fetchHandymanById,
 	handymanDisplayName,
 	setHandymanActive,
 } from "@/services/handymen/handymenApi";
-import type { Handyman } from "@/services/handymen/types";
+import { useAppDispatch } from "@/store/hooks";
+import { invalidateProviderHandymen } from "@/store/providerCacheSlice";
 import { useAuth } from "@/store/useAuth";
+import { useCachedProviderHandymanDetail } from "@/store/useProviderCache";
 
 function Row({ label, value }: { label: string; value: React.ReactNode }) {
 	return (
@@ -37,25 +39,13 @@ export default function HandymanDetailPage() {
 	const params = useParams<{ id: string }>();
 	const id = params?.id ?? "";
 	const router = useRouter();
+	const dispatch = useAppDispatch();
 	const { user } = useAuth();
-	const [handyman, setHandyman] = useState<Handyman | null>(null);
-	const [loading, setLoading] = useState(true);
+	const { handyman, loading, error: loadError, refresh } =
+		useCachedProviderHandymanDetail(id);
 	const [busy, setBusy] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const [showPassword, setShowPassword] = useState(false);
-
-	const load = useCallback(async () => {
-		if (!id) return;
-		setLoading(true);
-		const res = await fetchHandymanById(id);
-		setHandyman(res.handyman);
-		setError(res.error);
-		setLoading(false);
-	}, [id]);
-
-	useEffect(() => {
-		void load();
-	}, [load]);
 
 	useEffect(() => {
 		if (!handyman || !user?.provider?.id) return;
@@ -77,7 +67,8 @@ export default function HandymanDetailPage() {
 			setError(res.error);
 			return;
 		}
-		await load();
+		dispatch(invalidateProviderHandymen());
+		refresh();
 	}
 
 	async function handleDelete() {
@@ -97,6 +88,7 @@ export default function HandymanDetailPage() {
 			setError(res.error);
 			return;
 		}
+		dispatch(invalidateProviderHandymen());
 		router.replace("/provider/handymen");
 	}
 
@@ -113,9 +105,11 @@ export default function HandymanDetailPage() {
 			</Button>
 
 			{loading ? (
-				<p className="text-sm text-muted-foreground">Loading…</p>
+				<AppLoading compact />
 			) : !handyman ? (
-				<p className="text-sm text-destructive">{error ?? "Not found"}</p>
+				<p className="text-sm text-destructive">
+					{error || loadError || "Not found"}
+				</p>
 			) : (
 				<>
 					<div className="flex flex-wrap items-start justify-between gap-3">

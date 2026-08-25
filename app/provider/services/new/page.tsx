@@ -4,16 +4,20 @@ import { useRouter } from "next/navigation";
 
 import { ProfileBackLink } from "@/components/provider/profile-back-link";
 import { ServiceForm } from "@/components/provider/service-form";
+import { AppLoading } from "@/components/ui/app-loading";
+import { useAppDispatch } from "@/store/hooks";
+import { invalidateProviderServices } from "@/store/providerCacheSlice";
 import { useAuth } from "@/store/useAuth";
 
 export default function NewServicePage() {
 	const router = useRouter();
+	const dispatch = useAppDispatch();
 	const { user } = useAuth();
 	const providerId = user?.provider?.id ?? "";
 	const authUserId = user?.id ?? "";
 
 	if (!providerId || !authUserId) {
-		return <p className="text-sm text-muted-foreground">Loading…</p>;
+		return <AppLoading />;
 	}
 
 	return (
@@ -29,7 +33,10 @@ export default function NewServicePage() {
 					mode="create"
 					providerId={providerId}
 					authUserId={authUserId}
-					onSuccess={(id) => router.replace(`/provider/services/${id}`)}
+					onSuccess={(id) => {
+						dispatch(invalidateProviderServices());
+						router.replace(`/provider/services/${id}`);
+					}}
 				/>
 			</div>
 		</div>

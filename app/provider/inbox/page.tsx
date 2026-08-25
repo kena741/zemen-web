@@ -1,42 +1,33 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
 import { ChevronRightIcon } from "lucide-react";
 
 import { ProfileBackLink } from "@/components/provider/profile-back-link";
+import { AppLoading } from "@/components/ui/app-loading";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { formatDateTime } from "@/services/bookings/types";
-import { fetchInbox } from "@/services/chat/chatApi";
-import type { InboxThread } from "@/services/chat/types";
 import { useAuth } from "@/store/useAuth";
+import { useCachedProviderInbox } from "@/store/useProviderCache";
 
 export default function InboxPage() {
 	const { user } = useAuth();
 	const userId = user?.id ?? "";
-	const [threads, setThreads] = useState<InboxThread[]>([]);
-	const [loading, setLoading] = useState(true);
-	const [error, setError] = useState<string | null>(null);
-
-	useEffect(() => {
-		if (!userId) return;
-		let cancelled = false;
-		(async () => {
-			setLoading(true);
-			const res = await fetchInbox(userId);
-			if (cancelled) return;
-			setThreads(res.threads);
-			setError(res.error);
-			setLoading(false);
-		})();
-		return () => {
-			cancelled = true;
-		};
-	}, [userId]);
+	const { data: threads, loading, error, refresh, refreshing } =
+		useCachedProviderInbox(userId);
 
 	return (
 		<div className="mx-auto max-w-3xl">
-			<ProfileBackLink />
+			<div className="flex items-center justify-between gap-2">
+				<ProfileBackLink href="/provider" label="Dashboard" />
+				<button
+					type="button"
+					onClick={refresh}
+					className="mb-3 text-xs font-medium text-primary"
+				>
+					{refreshing ? "Refreshing…" : "Refresh"}
+				</button>
+			</div>
 			<p className="admin-eyebrow">Messages</p>
 			<h1 className="admin-page-title mt-1">Inbox</h1>
 			<p className="mt-2 text-sm text-muted-foreground">
@@ -51,9 +42,7 @@ export default function InboxPage() {
 
 			<div className="mt-5 rounded-xl border border-border bg-white px-2 shadow-xs">
 				{loading ? (
-					<p className="py-10 text-center text-sm text-muted-foreground">
-						Loading inbox…
-					</p>
+					<AppLoading compact />
 				) : threads.length === 0 ? (
 					<p className="py-10 text-center text-sm text-muted-foreground">
 						No conversations yet.
@@ -78,7 +67,7 @@ export default function InboxPage() {
 								<p className="mt-0.5 truncate text-xs text-muted-foreground">
 									{t.lastMessage || (t.mediaUrl ? "Media" : "—")}
 								</p>
-								<p className="mt-0.5 text-[11px] text-muted-foreground">
+								<p className="mt-0.5 text-[10px] text-muted-foreground">
 									{formatDateTime(t.timestamp)}
 								</p>
 							</div>

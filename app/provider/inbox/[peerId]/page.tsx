@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { ArrowLeftIcon, SendIcon } from "lucide-react";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AppLoading } from "@/components/ui/app-loading";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -16,12 +17,15 @@ import {
 	sendChatMessage,
 } from "@/services/chat/chatApi";
 import type { ChatMessage } from "@/services/chat/types";
+import { useAppDispatch } from "@/store/hooks";
+import { invalidateProviderInbox } from "@/store/providerCacheSlice";
 import { useAuth } from "@/store/useAuth";
 
 export default function ChatThreadPage() {
 	const params = useParams<{ peerId: string }>();
 	const peerId = params?.peerId ?? "";
 	const router = useRouter();
+	const dispatch = useAppDispatch();
 	const { user } = useAuth();
 	const userId = user?.id ?? "";
 	const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -78,6 +82,7 @@ export default function ChatThreadPage() {
 			return;
 		}
 		setText("");
+		dispatch(invalidateProviderInbox());
 		await load();
 	}
 
@@ -105,9 +110,7 @@ export default function ChatThreadPage() {
 
 			<div className="mt-4 flex-1 space-y-2 overflow-y-auto rounded-xl border border-border bg-white p-3 shadow-xs">
 				{loading ? (
-					<p className="py-8 text-center text-sm text-muted-foreground">
-						Loading messages…
-					</p>
+					<AppLoading compact />
 				) : messages.length === 0 ? (
 					<p className="py-8 text-center text-sm text-muted-foreground">
 						No messages yet. Say hello.

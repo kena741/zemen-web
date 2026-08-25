@@ -1,65 +1,44 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 
 import { ProfileBackLink } from "@/components/provider/profile-back-link";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AppLoading } from "@/components/ui/app-loading";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
-import { fetchBankMethods } from "@/services/bank/bankApi";
-import type { BankMethod } from "@/services/bank/types";
 import { formatAmount, formatDateTime } from "@/services/bookings/types";
-import {
-	fetchWalletBalance,
-	fetchWalletTransactions,
-	fetchWithdrawals,
-	requestWithdrawal,
-} from "@/services/wallet/walletApi";
-import type {
-	WalletTransaction,
-	WithdrawRequest,
-} from "@/services/wallet/types";
+import { requestWithdrawal } from "@/services/wallet/walletApi";
+import { useAppDispatch } from "@/store/hooks";
+import { invalidateProviderWallet } from "@/store/providerCacheSlice";
 import { useAuth } from "@/store/useAuth";
+import {
+	useCachedProviderBank,
+	useCachedProviderWallet,
+} from "@/store/useProviderCache";
 
 export default function WalletPage() {
 	const { user } = useAuth();
+	const dispatch = useAppDispatch();
 	const authUserId = user?.id ?? "";
 	const providerId = user?.provider?.id ?? "";
-	const [balance, setBalance] = useState(0);
-	const [transactions, setTransactions] = useState<WalletTransaction[]>([]);
-	const [withdrawals, setWithdrawals] = useState<WithdrawRequest[]>([]);
-	const [banks, setBanks] = useState<BankMethod[]>([]);
-	const [loading, setLoading] = useState(true);
-	const [error, setError] = useState<string | null>(null);
+	const {
+		data: wallet,
+		loading,
+		error: loadError,
+		refresh,
+		refreshing,
+	} = useCachedProviderWallet({ authUserId, providerId });
+	const { data: banks } = useCachedProviderBank({ authUserId, providerId });
 	const [busy, setBusy] = useState(false);
+	const [error, setError] = useState<string | null>(null);
 	const [showWithdraw, setShowWithdraw] = useState(false);
 	const [amount, setAmount] = useState("");
 	const [note, setNote] = useState("");
 	const [tab, setTab] = useState<"tx" | "withdraw">("tx");
-
-	const load = useCallback(async () => {
-		if (!authUserId || !providerId) return;
-		setLoading(true);
-		const [bal, txs, wds, bks] = await Promise.all([
-			fetchWalletBalance(providerId),
-			fetchWalletTransactions({ authUserId, providerId }),
-			fetchWithdrawals({ authUserId, providerId }),
-			fetchBankMethods({ authUserId, providerId }),
-		]);
-		setBalance(bal.balance);
-		setTransactions(txs.transactions);
-		setWithdrawals(wds.withdrawals);
-		setBanks(bks.banks);
-		setError(bal.error || txs.error || wds.error || bks.error);
-		setLoading(false);
-	}, [authUserId, providerId]);
-
-	useEffect(() => {
-		void load();
-	}, [load]);
 
 	const defaultBank = banks.find((b) => b.isDefault) ?? banks[0] ?? null;
 
@@ -94,19 +73,29 @@ export default function WalletPage() {
 		setShowWithdraw(false);
 		setAmount("");
 		setNote("");
-		await load();
+		dispatch(invalidateProviderWallet());
+		refresh();
 	}
 
 	return (
 		<div className="mx-auto max-w-3xl">
-			<ProfileBackLink />
+			<div className="flex items-center justify-between gap-2">
+				<ProfileBackLink href="/provider/profile" label="Profile" />
+				<button
+					type="button"
+					onClick={refresh}
+					className="mb-3 text-xs font-medium text-primary"
+				>
+					{refreshing ? "Refreshing…" : "Refresh"}
+				</button>
+			</div>
 			<p className="admin-eyebrow">Payments</p>
 			<h1 className="admin-page-title mt-1">Wallet</h1>
 
 			<div className="admin-brand-band mt-6 px-5 py-6">
 				<p className="admin-brand-band-label">Available balance</p>
 				<p className="mt-2 text-3xl font-semibold tracking-tight tabular-nums">
-					{loading ? "…" : formatAmount(String(balance))}
+					{loading ? "…" : formatAmount(String(wallet.balance))}
 				</p>
 				<div className="mt-4 flex flex-wrap gap-2">
 					<Button
@@ -129,9 +118,9 @@ export default function WalletPage() {
 				</div>
 			</div>
 
-			{error ? (
+			{error || loadError ? (
 				<Alert variant="destructive" className="mt-4">
-					<AlertDescription>{error}</AlertDescription>
+					<AlertDescription>{error || loadError}</AlertDescription>
 				</Alert>
 			) : null}
 
@@ -197,16 +186,14 @@ export default function WalletPage() {
 
 			<div className="mt-3 rounded-xl border border-border bg-white px-4 shadow-xs">
 				{loading ? (
-					<p className="py-10 text-center text-sm text-muted-foreground">
-						Loading…
-					</p>
+					<AppLoading compact />
 				) : tab === "tx" ? (
-					transactions.length === 0 ? (
+					wallet.transactions.length === 0 ? (
 						<p className="py-10 text-center text-sm text-muted-foreground">
 							No wallet transactions yet.
 						</p>
 					) : (
-						transactions.map((tx) => (
+						wallet.transactions.map((tx) => (
 							<div
 								key={tx.id}
 								className="flex items-start justify-between gap-3 border-b border-border py-3 last:border-b-0"
@@ -231,12 +218,12 @@ export default function WalletPage() {
 							</div>
 						))
 					)
-				) : withdrawals.length === 0 ? (
+				) : wallet.withdrawals.length === 0 ? (
 					<p className="py-10 text-center text-sm text-muted-foreground">
 						No withdrawal requests yet.
 					</p>
 				) : (
-					withdrawals.map((w) => (
+					wallet.withdrawals.map((w) => (
 						<div
 							key={w.id}
 							className="flex items-start justify-between gap-3 border-b border-border py-3 last:border-b-0"

@@ -2,26 +2,28 @@
 
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { ArrowLeftIcon } from "lucide-react";
 
 import { StatusBadge } from "@/components/provider/status-badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AppLoading } from "@/components/ui/app-loading";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { BOOKING_STATUS } from "@/lib/booking-status";
-import {
-	fetchBookingById,
-	updateBookingStatus,
-} from "@/services/bookings/bookingsApi";
+import { updateBookingStatus } from "@/services/bookings/bookingsApi";
 import {
 	customerDisplayName,
 	formatAmount,
 	formatDateTime,
-	type Booking,
 } from "@/services/bookings/types";
+import { useAppDispatch } from "@/store/hooks";
+import {
+	invalidateProviderBookings,
+} from "@/store/providerCacheSlice";
 import { useAuth } from "@/store/useAuth";
+import { useCachedProviderBookingDetail } from "@/store/useProviderCache";
 
 function DetailRow({ label, value }: { label: string; value: React.ReactNode }) {
 	return (
@@ -38,28 +40,16 @@ export default function BookingDetailPage() {
 	const params = useParams<{ id: string }>();
 	const id = params?.id ?? "";
 	const router = useRouter();
+	const dispatch = useAppDispatch();
 	const { user } = useAuth();
-	const [booking, setBooking] = useState<Booking | null>(null);
-	const [loading, setLoading] = useState(true);
+	const { booking, loading, error: loadError, refresh } =
+		useCachedProviderBookingDetail(id);
 	const [busy, setBusy] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const [rejectReason, setRejectReason] = useState("");
 	const [showReject, setShowReject] = useState(false);
 	const [otpInput, setOtpInput] = useState("");
 	const [showOtp, setShowOtp] = useState(false);
-
-	const load = useCallback(async () => {
-		if (!id) return;
-		setLoading(true);
-		const res = await fetchBookingById(id);
-		setBooking(res.booking);
-		setError(res.error);
-		setLoading(false);
-	}, [id]);
-
-	useEffect(() => {
-		void load();
-	}, [load]);
 
 	useEffect(() => {
 		if (!booking || !user?.provider?.id) return;
@@ -87,7 +77,8 @@ export default function BookingDetailPage() {
 		}
 		setShowReject(false);
 		setShowOtp(false);
-		await load();
+		dispatch(invalidateProviderBookings());
+		refresh();
 	}
 
 	function handleStartService() {
@@ -129,9 +120,11 @@ export default function BookingDetailPage() {
 			</Button>
 
 			{loading ? (
-				<p className="text-sm text-muted-foreground">Loading booking…</p>
+				<AppLoading compact />
 			) : !booking ? (
-				<p className="text-sm text-destructive">{error ?? "Booking not found"}</p>
+				<p className="text-sm text-destructive">
+					{error || loadError || "Booking not found"}
+				</p>
 			) : (
 				<>
 					<div className="flex flex-wrap items-start justify-between gap-3">

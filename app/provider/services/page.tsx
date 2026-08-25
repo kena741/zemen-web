@@ -1,42 +1,25 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { PlusIcon, SearchIcon } from "lucide-react";
 
 import { ProfileBackLink } from "@/components/provider/profile-back-link";
 import { ServiceCard } from "@/components/provider/service-card";
+import { AppLoading } from "@/components/ui/app-loading";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { fetchProviderServices } from "@/services/services/servicesApi";
-import type { ProviderService } from "@/services/services/types";
 import { useAuth } from "@/store/useAuth";
+import { useCachedProviderServices } from "@/store/useProviderCache";
 
 export default function ProviderServicesPage() {
 	const { user } = useAuth();
 	const providerId = user?.provider?.id ?? "";
-	const [services, setServices] = useState<ProviderService[]>([]);
-	const [loading, setLoading] = useState(true);
-	const [error, setError] = useState<string | null>(null);
+	const { data: services, loading, error, refresh, refreshing } =
+		useCachedProviderServices(providerId);
 	const [showInactive, setShowInactive] = useState(false);
 	const [query, setQuery] = useState("");
-
-	useEffect(() => {
-		if (!providerId) return;
-		let cancelled = false;
-		(async () => {
-			setLoading(true);
-			const res = await fetchProviderServices(providerId);
-			if (cancelled) return;
-			setServices(res.services);
-			setError(res.error);
-			setLoading(false);
-		})();
-		return () => {
-			cancelled = true;
-		};
-	}, [providerId]);
 
 	const visible = (showInactive ? services : services.filter((s) => s.status)).filter(
 		(s) => {
@@ -52,9 +35,17 @@ export default function ProviderServicesPage() {
 
 	return (
 		<div className="mx-auto w-full max-w-5xl pb-20 lg:pb-0">
-			{/* Mobile: nested screen with back (Flutter opens Services from Profile) */}
 			<div className="lg:hidden">
-				<ProfileBackLink href="/provider/profile" label="Profile" />
+				<div className="flex items-center justify-between gap-2">
+					<ProfileBackLink href="/provider/profile" label="Profile" />
+					<button
+						type="button"
+						onClick={refresh}
+						className="mb-3 text-xs font-medium text-primary"
+					>
+						{refreshing ? "Refreshing…" : "Refresh"}
+					</button>
+				</div>
 				<h1 className="text-lg font-normal text-[#464646]">All Service</h1>
 			</div>
 
@@ -69,6 +60,13 @@ export default function ProviderServicesPage() {
 					</p>
 				</div>
 				<div className="flex gap-2">
+					<button
+						type="button"
+						onClick={refresh}
+						className="text-xs font-medium text-primary"
+					>
+						{refreshing ? "Refreshing…" : "Refresh"}
+					</button>
 					<Button
 						variant="outline"
 						size="sm"
@@ -115,14 +113,7 @@ export default function ProviderServicesPage() {
 			) : null}
 
 			{loading ? (
-				<div className="mt-4 grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-3">
-					{Array.from({ length: 4 }).map((_, i) => (
-						<div
-							key={i}
-							className="aspect-[0.68] animate-pulse rounded-xl bg-muted"
-						/>
-					))}
-				</div>
+				<AppLoading compact />
 			) : visible.length === 0 ? (
 				<div className="mt-5 rounded-xl bg-white px-4 py-12 text-center">
 					<p className="text-sm text-muted-foreground">
@@ -143,7 +134,6 @@ export default function ProviderServicesPage() {
 				</div>
 			)}
 
-			{/* Flutter sticky Add Service CTA */}
 			<div
 				className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-white px-4 py-3 lg:hidden"
 				style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}

@@ -1,40 +1,29 @@
 "use client";
 
-import Link from "next/link";
-import { useEffect, useState } from "react";
-
 import { ProfileBackLink } from "@/components/provider/profile-back-link";
+import { AppLoading } from "@/components/ui/app-loading";
 import { formatDateTime } from "@/services/bookings/types";
-import { fetchNotifications } from "@/services/chat/chatApi";
-import type { AppNotification } from "@/services/chat/types";
 import { useAuth } from "@/store/useAuth";
+import { useCachedProviderNotifications } from "@/store/useProviderCache";
 
 export default function NotificationsPage() {
 	const { user } = useAuth();
 	const providerId = user?.provider?.id ?? "";
-	const [items, setItems] = useState<AppNotification[]>([]);
-	const [loading, setLoading] = useState(true);
-	const [error, setError] = useState<string | null>(null);
-
-	useEffect(() => {
-		if (!providerId) return;
-		let cancelled = false;
-		(async () => {
-			setLoading(true);
-			const res = await fetchNotifications(providerId);
-			if (cancelled) return;
-			setItems(res.notifications);
-			setError(res.error);
-			setLoading(false);
-		})();
-		return () => {
-			cancelled = true;
-		};
-	}, [providerId]);
+	const { data: items, loading, error, refresh, refreshing } =
+		useCachedProviderNotifications(providerId);
 
 	return (
 		<div className="mx-auto max-w-3xl">
-			<ProfileBackLink />
+			<div className="flex items-center justify-between gap-2">
+				<ProfileBackLink href="/provider" label="Dashboard" />
+				<button
+					type="button"
+					onClick={refresh}
+					className="mb-3 text-xs font-medium text-primary"
+				>
+					{refreshing ? "Refreshing…" : "Refresh"}
+				</button>
+			</div>
 			<p className="admin-eyebrow">Alerts</p>
 			<h1 className="admin-page-title mt-1">Notifications</h1>
 			<p className="mt-2 text-sm text-muted-foreground">
@@ -49,9 +38,7 @@ export default function NotificationsPage() {
 
 			<div className="mt-5 rounded-xl border border-border bg-white px-4 shadow-xs">
 				{loading ? (
-					<p className="py-10 text-center text-sm text-muted-foreground">
-						Loading…
-					</p>
+					<AppLoading compact />
 				) : items.length === 0 ? (
 					<p className="py-10 text-center text-sm text-muted-foreground">
 						No notifications yet.
@@ -78,16 +65,6 @@ export default function NotificationsPage() {
 							<p className="mt-1 text-xs text-muted-foreground">
 								{formatDateTime(n.createdAt)}
 							</p>
-							{n.bookingId ? (
-								<p className="mt-1.5 text-xs">
-									<Link
-										href={`/provider/bookings/${n.bookingId}`}
-										className="text-brand-ink underline-offset-4 hover:underline"
-									>
-										Open booking
-									</Link>
-								</p>
-							) : null}
 						</div>
 					))
 				)}

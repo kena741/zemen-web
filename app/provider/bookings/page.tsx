@@ -1,18 +1,18 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { SearchIcon } from "lucide-react";
 
 import { BookingGridCard } from "@/components/provider/booking-grid-card";
 import { BookingRow } from "@/components/provider/booking-row";
 import { ProviderMobileTabBar } from "@/components/provider/mobile-chrome";
+import { AppLoading } from "@/components/ui/app-loading";
 import { Input } from "@/components/ui/input";
 import { BOOKING_STATUS, formatBookingStatus } from "@/lib/booking-status";
 import { cn } from "@/lib/utils";
-import { fetchProviderBookings } from "@/services/bookings/bookingsApi";
-import type { Booking } from "@/services/bookings/types";
 import { customerDisplayName } from "@/services/bookings/types";
 import { useAuth } from "@/store/useAuth";
+import { useCachedProviderBookings } from "@/store/useProviderCache";
 
 const FILTERS = [
 	{ id: "all", label: "All" },
@@ -26,27 +26,10 @@ const FILTERS = [
 export default function ProviderBookingsPage() {
 	const { user } = useAuth();
 	const providerId = user?.provider?.id ?? "";
-	const [bookings, setBookings] = useState<Booking[]>([]);
+	const { data: bookings, loading, error, refresh, refreshing } =
+		useCachedProviderBookings(providerId);
 	const [filter, setFilter] = useState<(typeof FILTERS)[number]["id"]>("all");
 	const [query, setQuery] = useState("");
-	const [loading, setLoading] = useState(true);
-	const [error, setError] = useState<string | null>(null);
-
-	useEffect(() => {
-		if (!providerId) return;
-		let cancelled = false;
-		(async () => {
-			setLoading(true);
-			const res = await fetchProviderBookings(providerId);
-			if (cancelled) return;
-			setBookings(res.bookings);
-			setError(res.error);
-			setLoading(false);
-		})();
-		return () => {
-			cancelled = true;
-		};
-	}, [providerId]);
 
 	const filtered = useMemo(() => {
 		let list = bookings;
@@ -81,16 +64,37 @@ export default function ProviderBookingsPage() {
 			<ProviderMobileTabBar title="Booking" />
 
 			<div className="hidden lg:block">
-				<p className="admin-eyebrow">Provider</p>
-				<h1 className="admin-page-title mt-1">Bookings</h1>
-				<p className="mt-2 text-sm text-muted-foreground">
-					{loading
-						? "Loading…"
-						: `${bookings.length} booking${bookings.length === 1 ? "" : "s"}`}
-				</p>
+				<div className="flex items-start justify-between gap-3">
+					<div>
+						<p className="admin-eyebrow">Provider</p>
+						<h1 className="admin-page-title mt-1">Bookings</h1>
+						<p className="mt-2 text-sm text-muted-foreground">
+							{loading
+								? "Loading…"
+								: `${bookings.length} booking${bookings.length === 1 ? "" : "s"}`}
+						</p>
+					</div>
+					<button
+						type="button"
+						onClick={refresh}
+						className="text-xs font-medium text-primary"
+					>
+						{refreshing ? "Refreshing…" : "Refresh"}
+					</button>
+				</div>
 			</div>
 
 			<div className="px-4 pt-2 lg:px-0 lg:pt-5">
+				<div className="mb-2 flex justify-end lg:hidden">
+					<button
+						type="button"
+						onClick={refresh}
+						className="text-xs font-medium text-primary"
+					>
+						{refreshing ? "Refreshing…" : "Refresh"}
+					</button>
+				</div>
+
 				<div className="relative">
 					<SearchIcon className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
 					<Input
@@ -126,17 +130,9 @@ export default function ProviderBookingsPage() {
 					<p className="mt-4 text-sm text-destructive">{error}</p>
 				) : null}
 
-				{/* Mobile: 2-col grid like Flutter */}
 				<div className="mt-4 lg:hidden">
 					{loading ? (
-						<div className="grid grid-cols-2 gap-3">
-							{Array.from({ length: 4 }).map((_, i) => (
-								<div
-									key={i}
-									className="aspect-[0.72] animate-pulse rounded-[14px] bg-muted"
-								/>
-							))}
-						</div>
+						<AppLoading compact />
 					) : filtered.length === 0 ? (
 						<p className="py-12 text-center text-sm text-muted-foreground">
 							No{" "}
@@ -154,12 +150,9 @@ export default function ProviderBookingsPage() {
 					)}
 				</div>
 
-				{/* Desktop: list rows */}
 				<div className="mt-4 hidden rounded-xl bg-white px-2 lg:block">
 					{loading ? (
-						<p className="py-10 text-center text-sm text-muted-foreground">
-							Loading bookings…
-						</p>
+						<AppLoading compact />
 					) : filtered.length === 0 ? (
 						<p className="py-10 text-center text-sm text-muted-foreground">
 							No bookings.

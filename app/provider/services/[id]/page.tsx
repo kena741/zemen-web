@@ -3,21 +3,26 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { ArrowLeftIcon, PencilIcon, StarIcon, Trash2Icon } from "lucide-react";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AppLoading } from "@/components/ui/app-loading";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { formatAmount } from "@/services/bookings/types";
 import {
 	deleteService,
-	fetchServiceById,
 	requestServiceFeatured,
 	setServiceActive,
 } from "@/services/services/servicesApi";
-import type { ProviderService } from "@/services/services/types";
+import { useAppDispatch } from "@/store/hooks";
+import {
+	invalidateProviderServices,
+	patchProviderService,
+} from "@/store/providerCacheSlice";
 import { useAuth } from "@/store/useAuth";
+import { useCachedProviderServiceDetail } from "@/store/useProviderCache";
 
 function DetailRow({ label, value }: { label: string; value: React.ReactNode }) {
 	return (
@@ -34,25 +39,13 @@ export default function ServiceDetailPage() {
 	const params = useParams<{ id: string }>();
 	const id = params?.id ?? "";
 	const router = useRouter();
+	const dispatch = useAppDispatch();
 	const { user } = useAuth();
-	const [service, setService] = useState<ProviderService | null>(null);
-	const [loading, setLoading] = useState(true);
+	const { service, loading, error: loadError, refresh } =
+		useCachedProviderServiceDetail(id);
 	const [busy, setBusy] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const [info, setInfo] = useState<string | null>(null);
-
-	const load = useCallback(async () => {
-		if (!id) return;
-		setLoading(true);
-		const res = await fetchServiceById(id);
-		setService(res.service);
-		setError(res.error);
-		setLoading(false);
-	}, [id]);
-
-	useEffect(() => {
-		void load();
-	}, [load]);
 
 	useEffect(() => {
 		if (!service || !user?.provider?.id) return;
@@ -75,7 +68,14 @@ export default function ServiceDetailPage() {
 			setError(res.error);
 			return;
 		}
-		await load();
+		dispatch(
+			patchProviderService({
+				id: service.id,
+				patch: { status: !service.status },
+			}),
+		);
+		dispatch(invalidateProviderServices());
+		refresh();
 	}
 
 	async function handleFeatured() {
@@ -90,7 +90,8 @@ export default function ServiceDetailPage() {
 			return;
 		}
 		setInfo("Featured request submitted. An admin will review it.");
-		await load();
+		dispatch(invalidateProviderServices());
+		refresh();
 	}
 
 	async function handleDelete() {
@@ -110,6 +111,7 @@ export default function ServiceDetailPage() {
 			setError(res.error);
 			return;
 		}
+		dispatch(invalidateProviderServices());
 		router.replace("/provider/services");
 	}
 
@@ -132,9 +134,11 @@ export default function ServiceDetailPage() {
 			</Button>
 
 			{loading ? (
-				<p className="text-sm text-muted-foreground">Loading service…</p>
+				<AppLoading compact />
 			) : !service ? (
-				<p className="text-sm text-destructive">{error ?? "Service not found"}</p>
+				<p className="text-sm text-destructive">
+					{error || loadError || "Service not found"}
+				</p>
 			) : (
 				<>
 					{service.serviceImage.length > 0 ? (

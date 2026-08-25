@@ -1,43 +1,24 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { ChevronRightIcon, PlusIcon } from "lucide-react";
 
 import { ProfileBackLink } from "@/components/provider/profile-back-link";
+import { AppLoading } from "@/components/ui/app-loading";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { cn } from "@/lib/utils";
-import {
-	fetchProviderHandymen,
-	handymanDisplayName,
-} from "@/services/handymen/handymenApi";
-import type { Handyman } from "@/services/handymen/types";
+import { handymanDisplayName } from "@/services/handymen/handymenApi";
 import { useAuth } from "@/store/useAuth";
+import { useCachedProviderHandymen } from "@/store/useProviderCache";
 
 export default function HandymenPage() {
 	const { user } = useAuth();
 	const providerId = user?.provider?.id ?? "";
-	const [handymen, setHandymen] = useState<Handyman[]>([]);
-	const [loading, setLoading] = useState(true);
-	const [error, setError] = useState<string | null>(null);
+	const { data: handymen, loading, error, refresh, refreshing } =
+		useCachedProviderHandymen(providerId);
 	const [showInactive, setShowInactive] = useState(true);
-
-	useEffect(() => {
-		if (!providerId) return;
-		let cancelled = false;
-		(async () => {
-			setLoading(true);
-			const res = await fetchProviderHandymen(providerId);
-			if (cancelled) return;
-			setHandymen(res.handymen);
-			setError(res.error);
-			setLoading(false);
-		})();
-		return () => {
-			cancelled = true;
-		};
-	}, [providerId]);
 
 	const visible = showInactive
 		? handymen
@@ -45,7 +26,16 @@ export default function HandymenPage() {
 
 	return (
 		<div className="mx-auto max-w-3xl">
-			<ProfileBackLink href="/provider" label="Dashboard" />
+			<div className="flex items-center justify-between gap-2">
+				<ProfileBackLink href="/provider/profile" label="Profile" />
+				<button
+					type="button"
+					onClick={refresh}
+					className="mb-3 text-xs font-medium text-primary"
+				>
+					{refreshing ? "Refreshing…" : "Refresh"}
+				</button>
+			</div>
 			<div className="flex flex-wrap items-end justify-between gap-3">
 				<div>
 					<p className="admin-eyebrow">Team</p>
@@ -81,65 +71,42 @@ export default function HandymenPage() {
 				<p className="mt-4 text-sm text-destructive">{error}</p>
 			) : null}
 
-			<div className="mt-5 space-y-2">
+			<div className="mt-5 rounded-xl bg-white shadow-sm ring-1 ring-black/5">
 				{loading ? (
-					<p className="rounded-xl border border-border bg-white px-4 py-10 text-center text-sm text-muted-foreground shadow-xs">
-						Loading handymen…
-					</p>
+					<AppLoading compact />
 				) : visible.length === 0 ? (
-					<div className="rounded-xl border border-border bg-white px-4 py-10 text-center shadow-xs">
-						<p className="text-sm text-muted-foreground">
-							No handymen yet. Create one with an email and password.
-						</p>
-						<Link
-							href="/provider/handymen/new"
-							className={cn(
-								buttonVariants({ size: "sm" }),
-								"mt-4 inline-flex items-center gap-1.5",
-							)}
-						>
-							<PlusIcon className="size-3.5" />
-							Add handyman
-						</Link>
-					</div>
+					<p className="py-10 text-center text-sm text-muted-foreground">
+						No handymen yet.
+					</p>
 				) : (
 					visible.map((h) => {
-						const available = h.active && h.isActive;
 						const name = handymanDisplayName(h);
+						const inactive = !h.active || !h.isActive;
 						return (
 							<Link
 								key={h.id}
 								href={`/provider/handymen/${h.id}`}
-								className={cn(
-									"flex items-center gap-3 rounded-xl border border-border bg-white px-3 py-3 shadow-xs transition-colors hover:bg-muted/40",
-									!available && "opacity-70",
-								)}
+								className="flex items-center gap-3 border-b border-border px-4 py-3 last:border-b-0 hover:bg-muted/40"
 							>
 								<UserAvatar
 									src={h.profileImage}
 									name={name}
 									size="md"
-									className="size-12"
 								/>
 								<div className="min-w-0 flex-1">
-									<p className="truncate text-sm font-semibold">{name}</p>
+									<p className="truncate text-sm font-semibold">
+										{name}
+										{inactive ? (
+											<span className="ml-2 text-[10px] font-medium text-muted-foreground">
+												Inactive
+											</span>
+										) : null}
+									</p>
 									<p className="mt-0.5 truncate text-xs text-muted-foreground">
-										{[h.category, h.subCategory, h.phoneNumber]
-											.filter(Boolean)
-											.join(" · ") || h.email}
+										{h.email || h.phoneNumber || h.category || "—"}
 									</p>
 								</div>
-								<span
-									className={cn(
-										"rounded-md px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide",
-										available
-											? "bg-secondary text-secondary-foreground"
-											: "bg-muted text-muted-foreground",
-									)}
-								>
-									{available ? "Active" : "Off"}
-								</span>
-								<ChevronRightIcon className="size-4 text-muted-foreground" />
+								<ChevronRightIcon className="size-4 shrink-0 text-muted-foreground" />
 							</Link>
 						);
 					})
