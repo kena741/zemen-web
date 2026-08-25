@@ -4,12 +4,14 @@ import Link from "next/link";
 import {
 	BanknoteIcon,
 	BellIcon,
+	BriefcaseIcon,
 	ChevronRightIcon,
 	FileCheckIcon,
 	HistoryIcon,
 	KeyRoundIcon,
 	LogOutIcon,
 	MessagesSquareIcon,
+	PencilIcon,
 	PercentIcon,
 	TagIcon,
 	UsersIcon,
@@ -104,6 +106,13 @@ export default function ProviderProfilePage() {
 							{provider.providerType}
 						</span>
 					) : null}
+					<Link
+						href="/provider/profile/edit"
+						className="mt-4 inline-flex items-center gap-1.5 text-sm font-medium text-primary"
+					>
+						<PencilIcon className="size-3.5" />
+						Edit profile
+					</Link>
 				</div>
 
 				<MenuGroup title="Service">
@@ -120,6 +129,12 @@ export default function ProviderProfilePage() {
 					/>
 					<Divider />
 					<MenuItem href="/provider/offers" icon={TagIcon} label="Offers" />
+					<Divider />
+					<MenuItem
+						href="/provider/jobs"
+						icon={BriefcaseIcon}
+						label="Job requests"
+					/>
 				</MenuGroup>
 
 				<MenuGroup title="Payment">

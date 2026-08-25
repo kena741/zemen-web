@@ -8,7 +8,10 @@ import { Button } from "@/components/ui/button";
 import { ServiceLoading } from "@/components/service/service-loading";
 import { getSupabase } from "@/lib/supabase/client";
 import { formatAmount, formatDateTime } from "@/services/bookings/types";
-import { deleteJobRequest } from "@/services/customer/bookingsApi";
+import {
+	acceptJobBid,
+	deleteJobRequest,
+} from "@/services/customer/bookingsApi";
 import { useAppDispatch } from "@/store/hooks";
 import { invalidateRequests } from "@/store/customerCacheSlice";
 
@@ -21,23 +24,21 @@ export default function RequestDetailPage() {
 	const [error, setError] = useState<string | null>(null);
 	const [busy, setBusy] = useState(false);
 
+	async function reload() {
+		setLoading(true);
+		const { data, error: err } = await getSupabase()
+			.from("job_request")
+			.select("*")
+			.eq("id", params.id)
+			.maybeSingle();
+		if (err) setError(err.message);
+		setJob((data as Record<string, unknown> | null) ?? null);
+		setLoading(false);
+	}
+
 	useEffect(() => {
-		let cancelled = false;
-		(async () => {
-			setLoading(true);
-			const { data, error: err } = await getSupabase()
-				.from("job_request")
-				.select("*")
-				.eq("id", params.id)
-				.maybeSingle();
-			if (cancelled) return;
-			if (err) setError(err.message);
-			setJob((data as Record<string, unknown> | null) ?? null);
-			setLoading(false);
-		})();
-		return () => {
-			cancelled = true;
-		};
+		void reload();
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [params.id]);
 
 	async function onDelete() {
@@ -52,6 +53,47 @@ export default function RequestDetailPage() {
 		}
 		dispatch(invalidateRequests());
 		router.replace("/service/requests");
+	}
+
+	async function onAcceptBid(bid: Record<string, unknown>) {
+		if (!job || busy) return;
+		const providerId = String(bid.providerId ?? bid.provider_id ?? "");
+		const bidPrice = String(bid.price ?? bid.bidPrice ?? "");
+		if (!providerId || !bidPrice) {
+			setError("Invalid bid data");
+			return;
+		}
+		if (
+			!window.confirm(
+				`Accept this bid for ${formatAmount(bidPrice)}? You'll book next.`,
+			)
+		) {
+			return;
+		}
+		setBusy(true);
+		setError(null);
+		const res = await acceptJobBid({
+			jobId: String(job.id),
+			providerId,
+			bidPrice,
+		});
+		setBusy(false);
+		if (!res.ok) {
+			setError(res.error);
+			return;
+		}
+		dispatch(invalidateRequests());
+		const serviceId =
+			(Array.isArray(job.serviceModelList) &&
+				(job.serviceModelList[0] as { id?: string } | undefined)?.id) ||
+			(job.serviceId != null ? String(job.serviceId) : null);
+		if (serviceId) {
+			router.push(
+				`/service/book/${serviceId}?bidPrice=${encodeURIComponent(bidPrice)}&providerId=${encodeURIComponent(providerId)}&postJob=1`,
+			);
+			return;
+		}
+		await reload();
 	}
 
 	if (loading) {
@@ -142,6 +184,16 @@ export default function RequestDetailPage() {
 									<p className="mt-1 text-xs text-muted-foreground">
 										{String(bid.note ?? bid.description)}
 									</p>
+								) : null}
+								{job.accepted !== true ? (
+									<Button
+										size="sm"
+										className="mt-2"
+										disabled={busy}
+										onClick={() => void onAcceptBid(bid)}
+									>
+										Accept bid
+									</Button>
 								) : null}
 							</div>
 						))

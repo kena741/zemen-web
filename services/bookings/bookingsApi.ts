@@ -133,6 +133,137 @@ export async function updateBookingStatus(params: {
 	return { ok: true, error: null };
 }
 
+export async function assignBookingWorker(params: {
+	bookingId: string;
+	providerMySelf: boolean;
+	handymanId?: string | null;
+}): Promise<{ ok: boolean; error: string | null }> {
+	const payload: Record<string, unknown> = {
+		status: "accepted",
+		providerMySelf: params.providerMySelf,
+		handymanId: params.providerMySelf ? null : (params.handymanId ?? null),
+	};
+
+	const { data, error } = await getSupabase()
+		.from("booked_service")
+		.update(payload)
+		.eq("id", params.bookingId)
+		.select("id")
+		.maybeSingle();
+
+	if (error) {
+		console.error("assignBookingWorker", error);
+		return { ok: false, error: error.message };
+	}
+	if (!data) {
+		return { ok: false, error: "Assign failed. Check permissions." };
+	}
+	return { ok: true, error: null };
+}
+
+export async function updateBookingFields(params: {
+	bookingId: string;
+	fields: Record<string, unknown>;
+}): Promise<{ ok: boolean; error: string | null }> {
+	const { data, error } = await getSupabase()
+		.from("booked_service")
+		.update(params.fields)
+		.eq("id", params.bookingId)
+		.select("id")
+		.maybeSingle();
+
+	if (error) {
+		console.error("updateBookingFields", error);
+		return { ok: false, error: error.message };
+	}
+	if (!data) {
+		return { ok: false, error: "Update failed. Check permissions." };
+	}
+	return { ok: true, error: null };
+}
+
+export async function saveBookingExtraCharge(params: {
+	bookingId: string;
+	detail: string;
+	amount: string;
+	existingId?: string | null;
+}): Promise<{ ok: boolean; error: string | null }> {
+	const amountNum = Number(params.amount);
+	if (!params.detail.trim()) {
+		return { ok: false, error: "Enter a charge detail." };
+	}
+	if (Number.isNaN(amountNum) || amountNum < 1) {
+		return { ok: false, error: "Amount must be at least 1 ETB." };
+	}
+	const model = {
+		id: params.existingId || crypto.randomUUID(),
+		chargeDetail: params.detail.trim(),
+		extraCharge: String(amountNum),
+	};
+	return updateBookingFields({
+		bookingId: params.bookingId,
+		fields: {
+			extraChargeModel: model,
+			extraChargeAmount: String(amountNum),
+		},
+	});
+}
+
+export async function saveBookingServiceProof(params: {
+	bookingId: string;
+	title: string;
+	description: string;
+	imageUrls: string[];
+	existingId?: string | null;
+}): Promise<{ ok: boolean; error: string | null }> {
+	const title = params.title.trim();
+	const description = params.description.trim();
+	if (title.length < 3) {
+		return { ok: false, error: "Proof title must be at least 3 characters." };
+	}
+	if (description.length < 10) {
+		return {
+			ok: false,
+			error: "Proof description must be at least 10 characters.",
+		};
+	}
+	const proof = {
+		id: params.existingId || crypto.randomUUID(),
+		bookingId: params.bookingId,
+		title,
+		description,
+		image: params.imageUrls.slice(0, 5),
+	};
+	return updateBookingFields({
+		bookingId: params.bookingId,
+		fields: { service_proof: proof },
+	});
+}
+
+export async function uploadProofImages(params: {
+	authUserId: string;
+	files: File[];
+}): Promise<{ urls: string[]; error: string | null }> {
+	const urls: string[] = [];
+	const supabase = getSupabase();
+	const bucket = "betegnabucket";
+
+	for (const file of params.files) {
+		const safeName = file.name.replace(/[^\w.\-]+/g, "_");
+		const path = `serviceProof/${params.authUserId}/${Date.now()}_${safeName}`;
+		const { error } = await supabase.storage
+			.from(bucket)
+			.upload(path, file, { upsert: true, contentType: file.type });
+		if (error) {
+			console.error("uploadProofImages", error);
+			return { urls, error: error.message };
+		}
+		const { data } = supabase.storage.from(bucket).getPublicUrl(path);
+		urls.push(data.publicUrl);
+	}
+	return { urls, error: null };
+}
+
 export async function fetchDashboardSnapshot(providerId: string): Promise<{
 	pending: number;
 	upcoming: Booking[];

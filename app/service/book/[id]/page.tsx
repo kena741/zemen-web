@@ -1,7 +1,7 @@
 "use client";
 
-import { useParams, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useMemo, useState } from "react";
 
 import { ProfileBackLink } from "@/components/provider/profile-back-link";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -12,6 +12,16 @@ import { Textarea } from "@/components/ui/textarea";
 import { ServiceLoading } from "@/components/service/service-loading";
 import { formatAmount } from "@/services/bookings/types";
 import { createCustomerBooking } from "@/services/customer/bookingsApi";
+import {
+	couponDiscount,
+	fetchCouponByCode,
+	fetchPublicCoupons,
+	type Coupon,
+} from "@/services/customer/couponsApi";
+import {
+	attachOfferToBooking,
+	createCustomerServiceOffer,
+} from "@/services/customer/offersApi";
 import { useAppDispatch } from "@/store/hooks";
 import { invalidateBookings } from "@/store/customerCacheSlice";
 import { useAuth } from "@/store/useAuth";
@@ -25,8 +35,9 @@ function todayIsoDate() {
 	return `${y}-${m}-${day}`;
 }
 
-export default function BookServicePage() {
+function BookServiceForm() {
 	const params = useParams<{ id: string }>();
+	const search = useSearchParams();
 	const router = useRouter();
 	const dispatch = useAppDispatch();
 	const { user } = useAuth();
@@ -35,14 +46,76 @@ export default function BookServicePage() {
 	const [busy, setBusy] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 
+	const bidPrice = search.get("bidPrice");
+	const bidProvider = search.get("providerId");
+	const postJob = search.get("postJob") === "1";
+
 	const [bookingDate, setBookingDate] = useState(todayIsoDate());
 	const [startTime, setStartTime] = useState("09:00");
 	const [address, setAddress] = useState("");
 	const [description, setDescription] = useState("");
 	const [quantity, setQuantity] = useState(1);
+	const catalogPrice = Number(service?.price ?? 0) || 0;
+	const [customPrice, setCustomPrice] = useState("");
+	const [useCustomPrice, setUseCustomPrice] = useState(false);
+	const [coupons, setCoupons] = useState<Coupon[]>([]);
+	const [couponCode, setCouponCode] = useState("");
+	const [appliedCoupon, setAppliedCoupon] = useState<Coupon | null>(null);
+	const [couponError, setCouponError] = useState<string | null>(null);
 
-	const unitPrice = Number(service?.price ?? 0) || 0;
-	const total = unitPrice * quantity;
+	useEffect(() => {
+		if (bidPrice) {
+			setCustomPrice(bidPrice);
+			setUseCustomPrice(true);
+		}
+	}, [bidPrice]);
+
+	useEffect(() => {
+		void fetchPublicCoupons().then((res) => setCoupons(res.coupons));
+	}, []);
+
+	const allowsCustom = Boolean(service?.allowsCustomOffer) || Boolean(bidPrice);
+	const unitPrice = useMemo(() => {
+		if (useCustomPrice && customPrice.trim()) {
+			const n = Number(customPrice);
+			return Number.isNaN(n) ? 0 : n;
+		}
+		return catalogPrice;
+	}, [useCustomPrice, customPrice, catalogPrice]);
+
+	const isCustomOffer =
+		allowsCustom &&
+		useCustomPrice &&
+		customPrice.trim() !== "" &&
+		Math.abs(unitPrice - catalogPrice) > 0.001;
+
+	const subtotal = unitPrice * quantity;
+	const discount = appliedCoupon
+		? couponDiscount(appliedCoupon, subtotal)
+		: 0;
+	const total = Math.max(0, subtotal - discount);
+
+	async function applyCoupon() {
+		setCouponError(null);
+		if (isCustomOffer) {
+			setCouponError("Coupons cannot be used with a custom price.");
+			return;
+		}
+		const res = await fetchCouponByCode(couponCode);
+		if (!res.coupon) {
+			setCouponError(res.error);
+			setAppliedCoupon(null);
+			return;
+		}
+		if (subtotal < res.coupon.minAmount) {
+			setCouponError(
+				`Minimum amount for this coupon is ${formatAmount(res.coupon.minAmount)}.`,
+			);
+			setAppliedCoupon(null);
+			return;
+		}
+		setAppliedCoupon(res.coupon);
+	}
 
 	async function onSubmit(e: React.FormEvent) {
 		e.preventDefault();
@@ -50,12 +123,21 @@ export default function BookServicePage() {
 			setError("Missing customer or service");
 			return;
 		}
-		if (!service.providerId) {
+		const providerId = bidProvider || service.providerId;
+		if (!providerId) {
 			setError("This service has no provider assigned");
 			return;
 		}
 		if (!address.trim()) {
 			setError("Please enter an address");
+			return;
+		}
+		if (isCustomOffer && !description.trim()) {
+			setError("Description is required when sending a custom price.");
+			return;
+		}
+		if (unitPrice <= 0) {
+			setError("Price must be greater than zero.");
 			return;
 		}
 
@@ -65,9 +147,67 @@ export default function BookServicePage() {
 
 		setBusy(true);
 		setError(null);
+
+		if (isCustomOffer) {
+			const offerRes = await createCustomerServiceOffer({
+				customerId: user.id,
+				serviceId: service.id,
+				providerId,
+				offeredPrice: total,
+				bookingDate: `${bookingDate}T${startTime}:00`,
+				address: address.trim(),
+				description: description.trim(),
+			});
+			if (!offerRes.offer) {
+				setBusy(false);
+				setError(offerRes.error || "Could not create custom price");
+				return;
+			}
+			const bookRes = await createCustomerBooking({
+				customerId: user.id,
+				providerId,
+				serviceId: service.id,
+				firstName,
+				lastName,
+				phoneNumber: customer.phone || "",
+				bookingDate,
+				startTime: `${bookingDate}T${startTime}:00`,
+				address: address.trim(),
+				description,
+				quantity,
+				price: unitPrice,
+				paymentType: "",
+				paymentCompleted: false,
+				totalAmount: total,
+			});
+			if (!bookRes.bookingId) {
+				setBusy(false);
+				setError(bookRes.error || "Could not create booking");
+				return;
+			}
+			await attachOfferToBooking({
+				offerId: offerRes.offer.id,
+				bookingId: bookRes.bookingId,
+			});
+			dispatch(invalidateBookings());
+			setBusy(false);
+			router.replace(`/service/bookings/${bookRes.bookingId}`);
+			return;
+		}
+
+		const couponSnapshot = appliedCoupon
+			? {
+					id: appliedCoupon.id,
+					code: appliedCoupon.code,
+					amount: appliedCoupon.amount,
+					isFix: appliedCoupon.isFix,
+					title: appliedCoupon.title,
+				}
+			: null;
+
 		const res = await createCustomerBooking({
 			customerId: user.id,
-			providerId: service.providerId,
+			providerId,
 			serviceId: service.id,
 			firstName,
 			lastName,
@@ -79,6 +219,10 @@ export default function BookServicePage() {
 			quantity,
 			price: unitPrice,
 			paymentType: "cash",
+			coupon: couponSnapshot,
+			discount,
+			totalAmount: total,
+			postJob,
 		});
 		setBusy(false);
 
@@ -90,9 +234,7 @@ export default function BookServicePage() {
 		router.replace(`/service/bookings/${res.bookingId}`);
 	}
 
-	if (loading) {
-		return <ServiceLoading />;
-	}
+	if (loading) return <ServiceLoading />;
 
 	if (!service) {
 		return (
@@ -113,7 +255,7 @@ export default function BookServicePage() {
 			/>
 			<h1 className="admin-page-title">Book service</h1>
 			<p className="mt-1 text-sm text-muted-foreground">
-				{service.serviceName} · {formatAmount(service.price)}
+				{service.serviceName} · Catalog {formatAmount(service.price)}
 			</p>
 
 			<form onSubmit={onSubmit} className="mx-auto mt-6 max-w-lg space-y-4">
@@ -149,20 +291,54 @@ export default function BookServicePage() {
 					</Field>
 				</div>
 
-				<Field>
-					<FieldLabel htmlFor="qty">Quantity</FieldLabel>
-					<Input
-						id="qty"
-						type="number"
-						min={1}
-						max={20}
-						value={quantity}
-						onChange={(e) =>
-							setQuantity(Math.max(1, Number(e.target.value) || 1))
-						}
-						className="bg-white"
-					/>
-				</Field>
+				{!isCustomOffer ? (
+					<Field>
+						<FieldLabel htmlFor="qty">Quantity</FieldLabel>
+						<Input
+							id="qty"
+							type="number"
+							min={1}
+							max={20}
+							value={quantity}
+							onChange={(e) =>
+								setQuantity(Math.max(1, Number(e.target.value) || 1))
+							}
+							className="bg-white"
+						/>
+					</Field>
+				) : null}
+
+				{allowsCustom ? (
+					<div className="space-y-2 rounded-xl bg-white p-4 shadow-sm ring-1 ring-black/5">
+						<label className="flex items-center gap-2 text-sm">
+							<input
+								type="checkbox"
+								checked={useCustomPrice}
+								onChange={(e) => {
+									setUseCustomPrice(e.target.checked);
+									if (e.target.checked) setAppliedCoupon(null);
+								}}
+							/>
+							Propose a custom price
+						</label>
+						{useCustomPrice ? (
+							<Field>
+								<FieldLabel htmlFor="custom-price">Your price (ETB)</FieldLabel>
+								<Input
+									id="custom-price"
+									inputMode="decimal"
+									required
+									value={customPrice}
+									onChange={(e) => setCustomPrice(e.target.value)}
+									className="bg-white"
+								/>
+								<p className="mt-1 text-xs text-muted-foreground">
+									Provider must accept before payment.
+								</p>
+							</Field>
+						) : null}
+					</div>
+				) : null}
 
 				<Field>
 					<FieldLabel htmlFor="address">Service address</FieldLabel>
@@ -178,10 +354,13 @@ export default function BookServicePage() {
 				</Field>
 
 				<Field>
-					<FieldLabel htmlFor="notes">Notes (optional)</FieldLabel>
+					<FieldLabel htmlFor="notes">
+						{isCustomOffer ? "Description (required)" : "Notes (optional)"}
+					</FieldLabel>
 					<Textarea
 						id="notes"
 						rows={3}
+						required={isCustomOffer}
 						placeholder="Anything the provider should know…"
 						value={description}
 						onChange={(e) => setDescription(e.target.value)}
@@ -189,22 +368,92 @@ export default function BookServicePage() {
 					/>
 				</Field>
 
+				{!isCustomOffer ? (
+					<div className="space-y-2 rounded-xl bg-white p-4 shadow-sm ring-1 ring-black/5">
+						<p className="text-sm font-medium">Coupon</p>
+						<div className="flex gap-2">
+							<Input
+								value={couponCode}
+								onChange={(e) => setCouponCode(e.target.value)}
+								placeholder="Enter code"
+								className="bg-white"
+							/>
+							<Button type="button" variant="outline" onClick={() => void applyCoupon()}>
+								Apply
+							</Button>
+						</div>
+						{couponError ? (
+							<p className="text-xs text-destructive">{couponError}</p>
+						) : null}
+						{appliedCoupon ? (
+							<p className="text-xs text-primary">
+								Applied {appliedCoupon.code} (−
+								{formatAmount(discount)})
+							</p>
+						) : null}
+						{coupons.length > 0 ? (
+							<div className="flex flex-wrap gap-1.5 pt-1">
+								{coupons.slice(0, 4).map((c) => (
+									<button
+										key={c.id}
+										type="button"
+										className="rounded-md bg-muted px-2 py-1 text-[11px] font-medium"
+										onClick={() => {
+											setCouponCode(c.code ?? "");
+											setAppliedCoupon(c);
+											setCouponError(null);
+										}}
+									>
+										{c.code}
+									</button>
+								))}
+							</div>
+						) : null}
+					</div>
+				) : null}
+
 				<div className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-black/5">
 					<div className="flex items-center justify-between text-sm">
 						<span className="text-muted-foreground">Subtotal</span>
-						<span className="font-semibold tabular-nums text-primary">
+						<span className="tabular-nums">{formatAmount(subtotal)}</span>
+					</div>
+					{discount > 0 ? (
+						<div className="mt-1 flex items-center justify-between text-sm">
+							<span className="text-muted-foreground">Coupon</span>
+							<span className="tabular-nums text-primary">
+								−{formatAmount(discount)}
+							</span>
+						</div>
+					) : null}
+					<div className="mt-2 flex items-center justify-between text-sm font-semibold">
+						<span>Total</span>
+						<span className="tabular-nums text-primary">
 							{formatAmount(total)}
 						</span>
 					</div>
 					<p className="mt-1 text-xs text-muted-foreground">
-						Payment on service · cash
+						{isCustomOffer
+							? "Sent as custom price offer · pay after provider accepts"
+							: "Payment on service · cash, or wallet later if required"}
 					</p>
 				</div>
 
 				<Button type="submit" className="w-full" disabled={busy}>
-					{busy ? "Booking…" : "Confirm booking"}
+					{busy
+						? "Submitting…"
+						: isCustomOffer
+							? "Send custom price"
+							: "Confirm booking"}
 				</Button>
 			</form>
 		</div>
+	);
+}
+
+export default function BookServicePage() {
+	return (
+		<Suspense fallback={<ServiceLoading />}>
+			<BookServiceForm />
+		</Suspense>
 	);
 }

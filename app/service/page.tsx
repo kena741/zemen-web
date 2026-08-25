@@ -28,6 +28,7 @@ export default function ServiceHomePage() {
 	const { user } = useAuth();
 	const [pending, startTransition] = useTransition();
 	const [query, setQuery] = useState("");
+	const [sortMode, setSortMode] = useState<"popular" | "nearby">("popular");
 	const {
 		data,
 		loading,
@@ -43,14 +44,32 @@ export default function ServiceHomePage() {
 
 	const filtered = useMemo(() => {
 		const q = query.trim().toLowerCase();
-		if (!q) return services;
-		return services.filter(
-			(s) =>
-				s.serviceName?.toLowerCase().includes(q) ||
-				s.categoryName?.toLowerCase().includes(q) ||
-				s.subCategoryName?.toLowerCase().includes(q),
-		);
-	}, [services, query]);
+		let list = services;
+		if (q) {
+			list = services.filter(
+				(s) =>
+					s.serviceName?.toLowerCase().includes(q) ||
+					s.categoryName?.toLowerCase().includes(q) ||
+					s.subCategoryName?.toLowerCase().includes(q),
+			);
+		}
+		if (sortMode === "nearby") {
+			const withCoords = [...list].sort((a, b) => {
+				const da =
+					a.latitude != null && a.longitude != null ? 0 : 1;
+				const db =
+					b.latitude != null && b.longitude != null ? 0 : 1;
+				if (da !== db) return da - db;
+				return (a.serviceName ?? "").localeCompare(b.serviceName ?? "");
+			});
+			return withCoords;
+		}
+		return [...list].sort((a, b) => {
+			const ra = Number(a.reviewCount ?? 0) || 0;
+			const rb = Number(b.reviewCount ?? 0) || 0;
+			return rb - ra;
+		});
+	}, [services, query, sortMode]);
 
 	const greeting =
 		user?.customer?.fullName?.split(" ")[0] || user?.name || "there";
@@ -294,24 +313,67 @@ export default function ServiceHomePage() {
 						) : null}
 
 						<section>
-							<div className="mb-3 flex items-center justify-between">
+							<div className="mb-3 flex items-center justify-between gap-2">
 								<h2 className="text-base font-semibold tracking-tight">
 									{query.trim() ? "Results" : "Services"}
 								</h2>
-								{!query.trim() ? (
-									<button
-										type="button"
-										onClick={() => router.push("/service/services")}
-										className="text-xs font-medium text-primary"
-									>
-										See all
-									</button>
-								) : null}
+								<div className="flex items-center gap-2">
+									{!query.trim() ? (
+										<>
+											<button
+												type="button"
+												onClick={() => setSortMode("popular")}
+												className={cn(
+													"text-xs font-medium",
+													sortMode === "popular"
+														? "text-primary"
+														: "text-muted-foreground",
+												)}
+											>
+												Popular
+											</button>
+											<button
+												type="button"
+												onClick={() => setSortMode("nearby")}
+												className={cn(
+													"text-xs font-medium",
+													sortMode === "nearby"
+														? "text-primary"
+														: "text-muted-foreground",
+												)}
+											>
+												Nearby
+											</button>
+											<button
+												type="button"
+												onClick={() => router.push("/service/services")}
+												className="text-xs font-medium text-primary"
+											>
+												See all
+											</button>
+										</>
+									) : null}
+								</div>
 							</div>
 							{filtered.length === 0 ? (
-								<p className="py-10 text-center text-sm text-muted-foreground">
-									No services found.
-								</p>
+								<div className="rounded-xl bg-white px-4 py-8 text-center shadow-sm ring-1 ring-black/5">
+									<p className="text-sm text-muted-foreground">
+										{query.trim()
+											? `No services match “${query.trim()}”.`
+											: "No services found."}
+									</p>
+									{query.trim() ? (
+										<button
+											type="button"
+											onClick={() =>
+												router.push("/service/requests/new")
+											}
+											className="mt-4 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground"
+										>
+											Request a custom service
+										</button>
+									) : null}
+								</div>
 							) : (
 								<div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
 									{filtered.map((s) => (

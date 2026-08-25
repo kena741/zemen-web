@@ -99,6 +99,12 @@ export type CreateBookingInput = {
 	quantity: number;
 	price: number;
 	paymentType?: string;
+	paymentCompleted?: boolean;
+	/** Persist coupon snapshot when applied */
+	coupon?: Record<string, unknown> | null;
+	discount?: number | null;
+	totalAmount?: number | null;
+	postJob?: boolean;
 };
 
 export async function createCustomerBooking(
@@ -107,9 +113,14 @@ export async function createCustomerBooking(
 	const id = crypto.randomUUID();
 	const otp = String(Math.floor(1000 + Math.random() * 9000));
 	const subTotal = input.price * input.quantity;
+	const discount = Number(input.discount ?? 0) || 0;
+	const total =
+		input.totalAmount != null
+			? Number(input.totalAmount)
+			: Math.max(0, subTotal - discount);
 	const now = new Date().toISOString();
 
-	const payload = {
+	const payload: Record<string, unknown> = {
 		id,
 		customer_id: input.customerId,
 		provider_id: input.providerId,
@@ -122,16 +133,18 @@ export async function createCustomerBooking(
 		status: "pending",
 		quantity: input.quantity,
 		subTotal,
-		totalAmount: subTotal,
+		totalAmount: total,
 		paymentType: input.paymentType || "cash",
-		paymentCompleted: false,
+		paymentCompleted: Boolean(input.paymentCompleted),
 		description: input.description?.trim() || "",
 		otp,
 		bookingAddress: { address: input.address },
 		createdAt: now,
 		providerMySelf: false,
-		postJob: false,
+		postJob: Boolean(input.postJob),
 	};
+	if (input.coupon) payload.coupon = input.coupon;
+	if (discount > 0) payload.discount = String(discount);
 
 	const { error } = await getSupabase().from("booked_service").insert(payload);
 	if (error) {
@@ -139,6 +152,114 @@ export async function createCustomerBooking(
 		return { bookingId: null, error: error.message };
 	}
 	return { bookingId: id, error: null };
+}
+
+export async function payBookingWithWallet(params: {
+	bookingId: string;
+	customerId: string;
+	amount: number;
+}): Promise<{ ok: boolean; newBalance: number | null; error: string | null }> {
+	const amount = Number(params.amount);
+	if (Number.isNaN(amount) || amount < 0) {
+		return { ok: false, newBalance: null, error: "Invalid amount." };
+	}
+
+	const supabase = getSupabase();
+	const { data: customer, error: custErr } = await supabase
+		.from("customer")
+		.select("id, wallet_amount, walletAmount")
+		.eq("id", params.customerId)
+		.maybeSingle();
+
+	if (custErr || !customer) {
+		return {
+			ok: false,
+			newBalance: null,
+			error: custErr?.message ?? "Customer not found.",
+		};
+	}
+
+	const row = customer as Record<string, unknown>;
+	const balance =
+		Number(row.wallet_amount ?? row.walletAmount ?? 0) || 0;
+	if (amount > 0 && balance < amount) {
+		return {
+			ok: false,
+			newBalance: balance,
+			error: "Wallet amount insufficient.",
+		};
+	}
+
+	const newBalance = Math.round((balance - amount) * 100) / 100;
+	const txId = crypto.randomUUID();
+	const { error: txErr } = await supabase.from("wallet_transaction").insert({
+		id: txId,
+		amount: String(amount),
+		createdDate: new Date().toISOString(),
+		paymentType: "wallet",
+		transactionId: params.bookingId,
+		note: "Service fee debited",
+		type: "customer",
+		userId: params.customerId,
+		isCredit: false,
+	});
+
+	if (txErr) {
+		console.error("payBookingWithWallet tx", txErr);
+		return { ok: false, newBalance: null, error: txErr.message };
+	}
+
+	const { error: walletErr } = await supabase
+		.from("customer")
+		.update({
+			wallet_amount: String(newBalance),
+			walletAmount: String(newBalance),
+		})
+		.eq("id", params.customerId);
+
+	if (walletErr) {
+		console.error("payBookingWithWallet wallet", walletErr);
+		return {
+			ok: false,
+			newBalance: null,
+			error: "Payment recorded but wallet update failed. Contact support.",
+		};
+	}
+
+	const { error: bookErr } = await supabase
+		.from("booked_service")
+		.update({
+			paymentCompleted: true,
+			paymentType: "wallet",
+		})
+		.eq("id", params.bookingId);
+
+	if (bookErr) {
+		return { ok: false, newBalance: newBalance, error: bookErr.message };
+	}
+
+	return { ok: true, newBalance, error: null };
+}
+
+export async function acceptJobBid(params: {
+	jobId: string;
+	providerId: string;
+	bidPrice: string;
+}): Promise<{ ok: boolean; error: string | null }> {
+	const { error } = await getSupabase()
+		.from("job_request")
+		.update({
+			accepted: true,
+			providerId: params.providerId,
+			bidPrice: params.bidPrice,
+		})
+		.eq("id", params.jobId);
+
+	if (error) {
+		console.error("acceptJobBid", error);
+		return { ok: false, error: error.message };
+	}
+	return { ok: true, error: null };
 }
 
 export async function cancelCustomerBooking(

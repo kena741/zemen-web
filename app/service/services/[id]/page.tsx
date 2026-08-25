@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
 	ArrowLeftIcon,
 	ClockIcon,
@@ -18,6 +18,10 @@ import { UserAvatar } from "@/components/ui/user-avatar";
 import { cn } from "@/lib/utils";
 import { formatAmount } from "@/services/bookings/types";
 import { toggleServiceFavorite } from "@/services/catalog/catalogApi";
+import {
+	fetchServiceReviews,
+	type ServiceReview,
+} from "@/services/customer/reviewsApi";
 import type { ProviderService } from "@/services/services/types";
 import { useAppDispatch } from "@/store/hooks";
 import { useAuth } from "@/store/useAuth";
@@ -51,10 +55,16 @@ export default function ServiceDetailPage() {
 	const [imgIndex, setImgIndex] = useState(0);
 	const [imgFailed, setImgFailed] = useState(false);
 	const [favBusy, setFavBusy] = useState(false);
+	const [reviews, setReviews] = useState<ServiceReview[]>([]);
 
 	const liked = Boolean(userId && service?.likedUser.includes(userId));
 	const rating = service ? averageRating(service) : null;
 	const image = service?.serviceImage[imgIndex] ?? service?.serviceImage[0];
+
+	useEffect(() => {
+		if (!params.id) return;
+		void fetchServiceReviews(params.id).then((res) => setReviews(res.reviews));
+	}, [params.id]);
 
 	async function onToggleFavorite() {
 		if (!service || !userId || favBusy) return;
@@ -217,6 +227,38 @@ export default function ServiceDetailPage() {
 					<p className="mt-4 text-sm font-medium text-[#E53935]">
 						{service.discount}% discount available
 					</p>
+				) : null}
+
+				{service.allowsCustomOffer ? (
+					<p className="mt-3 text-xs text-muted-foreground">
+						This service accepts custom price offers at booking.
+					</p>
+				) : null}
+
+				{reviews.length > 0 ? (
+					<section className="mt-6 mb-24 md:mb-8">
+						<h2 className="text-sm font-semibold">Reviews</h2>
+						<ul className="mt-3 space-y-3">
+							{reviews.slice(0, 8).map((r) => (
+								<li
+									key={r.id}
+									className="rounded-xl bg-white p-3 shadow-sm ring-1 ring-black/5"
+								>
+									<p className="text-sm font-medium">
+										{"★".repeat(Math.min(5, Math.max(1, r.rating)))}
+										<span className="ml-2 text-xs text-muted-foreground">
+											{r.rating}/5
+										</span>
+									</p>
+									{r.comment ? (
+										<p className="mt-1 text-sm text-muted-foreground">
+											{r.comment}
+										</p>
+									) : null}
+								</li>
+							))}
+						</ul>
+					</section>
 				) : null}
 			</div>
 

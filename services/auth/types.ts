@@ -8,6 +8,8 @@ export interface ProviderProfile {
 	userId: string | null;
 	email: string | null;
 	fullName: string | null;
+	firstName: string | null;
+	lastName: string | null;
 	phoneNumber: string | null;
 	userType: string | null;
 	active: boolean;
@@ -55,6 +57,8 @@ export function mapProviderRow(row: Record<string, unknown>): ProviderProfile {
 		userId: row.user_id != null ? String(row.user_id) : null,
 		email: row.email != null ? String(row.email) : null,
 		fullName: joinName(row.firstName, row.lastName, row.userName),
+		firstName: row.firstName != null ? String(row.firstName) : null,
+		lastName: row.lastName != null ? String(row.lastName) : null,
 		phoneNumber: row.phoneNumber != null ? String(row.phoneNumber) : null,
 		userType: row.userType != null ? String(row.userType) : null,
 		active: row.active !== false,

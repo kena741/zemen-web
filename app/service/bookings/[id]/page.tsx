@@ -1,25 +1,56 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { ProfileBackLink } from "@/components/provider/profile-back-link";
 import { StatusBadge } from "@/components/provider/status-badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { ServiceLoading } from "@/components/service/service-loading";
 import { formatAmount, formatDateTime } from "@/services/bookings/types";
-import { cancelCustomerBooking } from "@/services/customer/bookingsApi";
+import {
+	cancelCustomerBooking,
+	payBookingWithWallet,
+} from "@/services/customer/bookingsApi";
+import {
+	fetchOfferByBookingId,
+	type ServiceOffer,
+} from "@/services/customer/offersApi";
+import {
+	fetchReviewForBooking,
+	submitServiceReview,
+} from "@/services/customer/reviewsApi";
+import { patchAuthUser } from "@/store/authSlice";
 import { useAppDispatch } from "@/store/hooks";
 import { invalidateBookings } from "@/store/customerCacheSlice";
+import { useAuth } from "@/store/useAuth";
 import { useCachedBookingDetail } from "@/store/useCustomerCache";
 
 export default function CustomerBookingDetailPage() {
 	const params = useParams<{ id: string }>();
 	const router = useRouter();
 	const dispatch = useAppDispatch();
+	const { user } = useAuth();
 	const { booking, loading, error, refresh } = useCachedBookingDetail(params.id);
 	const [busy, setBusy] = useState(false);
 	const [actionError, setActionError] = useState<string | null>(null);
+	const [offer, setOffer] = useState<ServiceOffer | null>(null);
+	const [hasReview, setHasReview] = useState(false);
+	const [showReview, setShowReview] = useState(false);
+	const [rating, setRating] = useState(5);
+	const [comment, setComment] = useState("");
+
+	useEffect(() => {
+		if (!booking?.id) return;
+		void fetchOfferByBookingId(booking.id).then((res) => setOffer(res.offer));
+		void fetchReviewForBooking(booking.id).then((res) =>
+			setHasReview(Boolean(res.review)),
+		);
+	}, [booking?.id]);
 
 	async function onCancel() {
 		if (!booking || busy) return;
@@ -34,6 +65,62 @@ export default function CustomerBookingDetailPage() {
 		}
 		dispatch(invalidateBookings());
 		refresh();
+	}
+
+	async function onPayWallet() {
+		if (!booking || !user?.id || busy) return;
+		const amount = Number(booking.totalAmount ?? booking.subTotal ?? 0) || 0;
+		if (
+			!window.confirm(
+				`Pay ${formatAmount(amount)} from your wallet for this booking?`,
+			)
+		) {
+			return;
+		}
+		setBusy(true);
+		setActionError(null);
+		const res = await payBookingWithWallet({
+			bookingId: booking.id,
+			customerId: user.customer?.id ?? user.id,
+			amount,
+		});
+		setBusy(false);
+		if (!res.ok) {
+			setActionError(res.error);
+			return;
+		}
+		if (res.newBalance != null && user.customer) {
+			dispatch(
+				patchAuthUser({
+					customer: {
+						...user.customer,
+						walletAmount: String(res.newBalance),
+					},
+				}),
+			);
+		}
+		dispatch(invalidateBookings());
+		refresh();
+	}
+
+	async function onReview() {
+		if (!booking?.serviceId || !user?.id || busy) return;
+		setBusy(true);
+		setActionError(null);
+		const res = await submitServiceReview({
+			customerId: user.id,
+			bookingId: booking.id,
+			serviceId: booking.serviceId,
+			rating,
+			comment,
+		});
+		setBusy(false);
+		if (!res.ok) {
+			setActionError(res.error);
+			return;
+		}
+		setHasReview(true);
+		setShowReview(false);
 	}
 
 	if (loading) {
@@ -51,7 +138,12 @@ export default function CustomerBookingDetailPage() {
 		);
 	}
 
-	const canCancel = (booking.status || "").toLowerCase() === "pending";
+	const status = (booking.status || "").toLowerCase();
+	const canCancel = status === "pending" && !booking.paymentCompleted;
+	const showWalletPay =
+		!booking.paymentCompleted &&
+		(offer?.status === "accepted" || status === "pending_extra_payment");
+	const canReview = status === "completed" && !hasReview && booking.serviceId;
 	const address =
 		booking.bookingAddress?.address ||
 		booking.bookingAddress?.locality ||
@@ -80,8 +172,18 @@ export default function CustomerBookingDetailPage() {
 			</p>
 
 			{actionError || error ? (
-				<p className="mt-3 text-sm text-destructive">
-					{actionError || error}
+				<Alert variant="destructive" className="mt-3">
+					<AlertDescription>{actionError || error}</AlertDescription>
+				</Alert>
+			) : null}
+
+			{offer ? (
+				<p className="mt-3 rounded-lg bg-muted px-3 py-2 text-xs">
+					Custom price offer ·{" "}
+					<span className="capitalize font-medium">{offer.status}</span>
+					{offer.offeredPrice != null
+						? ` · ${formatAmount(offer.offeredPrice)}`
+						: ""}
 				</p>
 			) : null}
 
@@ -94,14 +196,21 @@ export default function CustomerBookingDetailPage() {
 					label="Amount"
 					value={formatAmount(booking.totalAmount ?? booking.subTotal)}
 				/>
-				<Row label="Payment" value={booking.paymentType || "cash"} />
+				<Row
+					label="Payment"
+					value={
+						booking.paymentCompleted
+							? `${booking.paymentType || "paid"} · paid`
+							: booking.paymentType || "unpaid"
+					}
+				/>
 				{address ? <Row label="Address" value={address} /> : null}
 				{booking.description ? (
 					<Row label="Notes" value={booking.description} />
 				) : null}
 				{booking.otp &&
-				["accepted", "ongoing", "inprogress", "driving"].includes(
-					(booking.status || "").toLowerCase(),
+				["accepted", "ongoing", "inprogress", "driving", "on_the_way"].includes(
+					status,
 				) ? (
 					<div className="rounded-lg bg-primary/10 px-3 py-3">
 						<p className="text-xs font-medium text-primary">Start OTP</p>
@@ -118,15 +227,72 @@ export default function CustomerBookingDetailPage() {
 				) : null}
 			</div>
 
+			{showWalletPay ? (
+				<Button
+					className="mt-5 w-full"
+					disabled={busy}
+					onClick={() => void onPayWallet()}
+				>
+					{busy ? "Paying…" : "Pay with wallet"}
+				</Button>
+			) : null}
+
 			{canCancel ? (
 				<Button
 					variant="outline"
-					className="mt-5 w-full text-destructive"
+					className="mt-3 w-full text-destructive"
 					disabled={busy}
 					onClick={onCancel}
 				>
 					{busy ? "Cancelling…" : "Cancel booking"}
 				</Button>
+			) : null}
+
+			{canReview ? (
+				<>
+					{!showReview ? (
+						<Button
+							variant="secondary"
+							className="mt-3 w-full"
+							onClick={() => setShowReview(true)}
+						>
+							Add review
+						</Button>
+					) : (
+						<div className="mt-3 space-y-2 rounded-xl bg-white p-4 shadow-sm ring-1 ring-black/5">
+							<Label htmlFor="rating">Rating (1–5)</Label>
+							<Input
+								id="rating"
+								type="number"
+								min={1}
+								max={5}
+								value={rating}
+								onChange={(e) => setRating(Number(e.target.value) || 5)}
+							/>
+							<Label htmlFor="comment">Comment</Label>
+							<Textarea
+								id="comment"
+								rows={3}
+								value={comment}
+								onChange={(e) => setComment(e.target.value)}
+							/>
+							<div className="flex gap-2">
+								<Button disabled={busy} onClick={() => void onReview()}>
+									Submit review
+								</Button>
+								<Button variant="ghost" onClick={() => setShowReview(false)}>
+									Cancel
+								</Button>
+							</div>
+						</div>
+					)}
+				</>
+			) : null}
+
+			{hasReview ? (
+				<p className="mt-3 text-center text-xs text-muted-foreground">
+					You already reviewed this booking.
+				</p>
 			) : null}
 
 			{booking.providerId ? (

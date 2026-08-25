@@ -16,7 +16,7 @@ export type ServiceOffer = {
 	createdAt: string | null;
 };
 
-function mapOffer(row: Record<string, unknown>): ServiceOffer {
+export function mapOffer(row: Record<string, unknown>): ServiceOffer {
 	return {
 		id: String(row.id ?? ""),
 		serviceId:

@@ -14,6 +14,20 @@ export interface BookingServiceSummary {
 	serviceImage: string[];
 }
 
+export interface ExtraCharge {
+	id: string | null;
+	chargeDetail: string | null;
+	extraCharge: string | null;
+}
+
+export interface ServiceProof {
+	id: string | null;
+	bookingId: string | null;
+	title: string | null;
+	description: string | null;
+	image: string[];
+}
+
 export interface Booking {
 	id: string;
 	customerId: string | null;
@@ -36,6 +50,9 @@ export interface Booking {
 	paymentType: string | null;
 	paymentCompleted: boolean;
 	providerMySelf: boolean;
+	extraChargeAmount: string | null;
+	extraCharge: ExtraCharge | null;
+	serviceProof: ServiceProof | null;
 	bookingAddress: BookingAddress | null;
 	service: BookingServiceSummary | null;
 	createdAt: string | null;
@@ -135,6 +152,51 @@ function parseService(
 	};
 }
 
+function asObject(raw: unknown): Record<string, unknown> | null {
+	if (raw == null) return null;
+	if (typeof raw === "object" && !Array.isArray(raw)) {
+		return raw as Record<string, unknown>;
+	}
+	if (typeof raw === "string" && raw.trim()) {
+		try {
+			const parsed = JSON.parse(raw) as unknown;
+			if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+				return parsed as Record<string, unknown>;
+			}
+		} catch {
+			return null;
+		}
+	}
+	return null;
+}
+
+function parseExtraCharge(raw: unknown): ExtraCharge | null {
+	const map = asObject(raw);
+	if (!map) return null;
+	return {
+		id: asString(map.id),
+		chargeDetail: asString(map.chargeDetail),
+		extraCharge: asString(map.extraCharge),
+	};
+}
+
+function parseServiceProof(raw: unknown): ServiceProof | null {
+	const map = asObject(raw);
+	if (!map) return null;
+	const images = Array.isArray(map.image)
+		? map.image.map(String).filter(Boolean)
+		: map.image != null
+			? [String(map.image)].filter(Boolean)
+			: [];
+	return {
+		id: asString(map.id),
+		bookingId: asString(map.bookingId ?? map.booking_id),
+		title: asString(map.title),
+		description: asString(map.description),
+		image: images,
+	};
+}
+
 export function mapBookingRow(row: Record<string, unknown>): Booking {
 	const serviceId = asString(row.serviceId ?? row.service_id);
 	return {
@@ -159,6 +221,11 @@ export function mapBookingRow(row: Record<string, unknown>): Booking {
 		paymentType: asString(row.paymentType),
 		paymentCompleted: asBool(row.paymentCompleted),
 		providerMySelf: asBool(row.providerMySelf),
+		extraChargeAmount: asString(row.extraChargeAmount),
+		extraCharge: parseExtraCharge(row.extraChargeModel),
+		serviceProof: parseServiceProof(
+			row.service_proof ?? row.serviceProofModel,
+		),
 		bookingAddress: parseAddress(row.bookingAddress),
 		service: parseService(row.serviceDetails, serviceId),
 		createdAt: asString(row.createdAt),

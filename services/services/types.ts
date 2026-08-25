@@ -25,6 +25,7 @@ export interface ProviderService {
 	likedUser: string[];
 	reviewSum: string | null;
 	reviewCount: string | null;
+	allowsCustomOffer: boolean;
 	createdAt: string | null;
 	slug: string | null;
 	providerName: string | null;
@@ -144,6 +145,9 @@ export function mapServiceRow(row: Record<string, unknown>): ProviderService {
 			: [],
 		reviewSum: asString(row.reviewSum ?? row.review_sum) ?? "0",
 		reviewCount: asString(row.reviewCount ?? row.review_count) ?? "0",
+		allowsCustomOffer: asBool(
+			row.allows_custom_offer ?? row.allowsCustomOffer,
+		),
 		createdAt: asString(row.createdAt),
 		slug: asString(row.slug),
 		providerName: asString(

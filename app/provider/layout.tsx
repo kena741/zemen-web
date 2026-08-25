@@ -7,6 +7,7 @@ import { useEffect } from "react";
 import {
 	BanknoteIcon,
 	BellIcon,
+	BriefcaseIcon,
 	CalendarDaysIcon,
 	HomeIcon,
 	LogOutIcon,
@@ -32,6 +33,7 @@ const SIDEBAR_NAV = [
 	{ href: "/provider", label: "Dashboard", icon: HomeIcon },
 	{ href: "/provider/bookings", label: "Bookings", icon: CalendarDaysIcon },
 	{ href: "/provider/offers", label: "Offers", icon: TagIcon },
+	{ href: "/provider/jobs", label: "Jobs", icon: BriefcaseIcon },
 	{ href: "/provider/services", label: "Services", icon: WrenchIcon },
 	{ href: "/provider/handymen", label: "Handymen", icon: UsersIcon },
 	{ href: "/provider/wallet", label: "Wallet", icon: WalletIcon },

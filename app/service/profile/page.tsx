@@ -10,6 +10,7 @@ import {
 	LogOutIcon,
 	MapPinIcon,
 	MessagesSquareIcon,
+	TagIcon,
 	WalletIcon,
 } from "lucide-react";
 
@@ -103,6 +104,12 @@ export default function CustomerProfilePage() {
 						href="/service/favorites"
 						icon={HeartIcon}
 						label="Favourite Services"
+					/>
+					<div className="mx-4 border-t border-border/60" />
+					<MenuLink
+						href="/service/offers"
+						icon={TagIcon}
+						label="My offers"
 					/>
 				</div>
 			</section>

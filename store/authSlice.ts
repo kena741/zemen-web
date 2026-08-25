@@ -94,6 +94,17 @@ const authSlice = createSlice({
 		hydrateAppMode(state) {
 			state.mode = readStoredMode();
 		},
+		patchAuthUser(state, action: PayloadAction<Partial<AuthUser>>) {
+			if (!state.user) return;
+			state.user = {
+				...state.user,
+				...action.payload,
+				provider:
+					action.payload.provider !== undefined
+						? action.payload.provider
+						: state.user.provider,
+			};
+		},
 	},
 	extraReducers: (builder) => {
 		builder
@@ -138,7 +149,8 @@ const authSlice = createSlice({
 	},
 });
 
-export const { clearAuthError, setAppMode, hydrateAppMode } = authSlice.actions;
+export const { clearAuthError, setAppMode, hydrateAppMode, patchAuthUser } =
+	authSlice.actions;
 export default authSlice.reducer;
 
 export const selectAuthUser = (state: { auth: AuthState }) => state.auth.user;
