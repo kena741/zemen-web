@@ -6,6 +6,7 @@ import { useState } from "react";
 import { HandymanForm } from "@/components/provider/handyman-form";
 import { ProfileBackLink } from "@/components/provider/profile-back-link";
 import { AppLoading } from "@/components/ui/app-loading";
+import { useLocale } from "@/lib/i18n";
 import { updateHandyman } from "@/services/handymen/handymenApi";
 import type { HandymanFormValues } from "@/services/handymen/types";
 import { useAppDispatch } from "@/store/hooks";
@@ -14,6 +15,7 @@ import { useAuth } from "@/store/useAuth";
 import { useCachedProviderHandymanDetail } from "@/store/useProviderCache";
 
 export default function EditHandymanPage() {
+	const { t } = useLocale();
 	const params = useParams<{ id: string }>();
 	const id = params?.id ?? "";
 	const router = useRouter();
@@ -27,7 +29,7 @@ export default function EditHandymanPage() {
 		handyman?.providerId &&
 		user?.provider?.id &&
 		handyman.providerId !== user.provider.id
-			? "This handyman does not belong to your account."
+			? t("providerHandymanNotOwned")
 			: null;
 
 	async function handleSubmit(values: HandymanFormValues) {
@@ -50,16 +52,16 @@ export default function EditHandymanPage() {
 		<div className="mx-auto max-w-2xl">
 			<ProfileBackLink
 				href={id ? `/provider/handymen/${id}` : "/provider/handymen"}
-				label="Back"
+				label={t("commonBack")}
 			/>
-			<p className="admin-eyebrow">Team</p>
-			<h1 className="admin-page-title mt-1">Edit handyman</h1>
+			<p className="admin-eyebrow">{t("commonTeam")}</p>
+			<h1 className="admin-page-title mt-1">{t("handymanEdit")}</h1>
 
 			{loading ? (
 				<AppLoading compact />
 			) : ownershipError || loadError || !handyman ? (
 				<p className="mt-6 text-sm text-destructive">
-					{ownershipError || loadError || error || "Not found"}
+					{ownershipError || loadError || error || t("commonNotFound")}
 				</p>
 			) : (
 				<div className="mt-6 rounded-xl border border-border bg-white p-4 shadow-xs sm:p-5">

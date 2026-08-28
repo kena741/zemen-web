@@ -4,69 +4,26 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
-import {
-	BanknoteIcon,
-	BellIcon,
-	BriefcaseIcon,
-	CalendarDaysIcon,
-	HomeIcon,
-	LogOutIcon,
-	MessagesSquareIcon,
-	TagIcon,
-	UserIcon,
-	UsersIcon,
-	WalletIcon,
-	WrenchIcon,
-} from "lucide-react";
+import { LogOutIcon, MessagesSquareIcon, BellIcon } from "lucide-react";
 
 import appIcon from "@/assets/images/app_icon.png";
 import { Button } from "@/components/ui/button";
 import { AppLoading } from "@/components/ui/app-loading";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { BRAND_NAME } from "@/lib/brand";
+import { useLocale } from "@/lib/i18n";
+import {
+	useProviderSidebarNavItems,
+	useProviderTabNavItems,
+} from "@/lib/i18n/nav";
 import { cn } from "@/lib/utils";
 import { selectAuthSessionPending } from "@/store/authSlice";
 import { useAppSelector } from "@/store/hooks";
 import { useAuth } from "@/store/useAuth";
 
-const SIDEBAR_NAV = [
-	{ href: "/provider", label: "Dashboard", icon: HomeIcon },
-	{ href: "/provider/bookings", label: "Bookings", icon: CalendarDaysIcon },
-	{ href: "/provider/offers", label: "Offers", icon: TagIcon },
-	{ href: "/provider/jobs", label: "Jobs", icon: BriefcaseIcon },
-	{ href: "/provider/services", label: "Services", icon: WrenchIcon },
-	{ href: "/provider/handymen", label: "Handymen", icon: UsersIcon },
-	{ href: "/provider/wallet", label: "Wallet", icon: WalletIcon },
-	{ href: "/provider/bank", label: "Bank", icon: BanknoteIcon },
-	{ href: "/provider/inbox", label: "Inbox", icon: MessagesSquareIcon },
-	{
-		href: "/provider/notifications",
-		label: "Notifications",
-		icon: BellIcon,
-	},
-	{ href: "/provider/profile", label: "Profile", icon: UserIcon },
-] as const;
-
-/** Flutter bottom bar: Home · Bookings · Offers · Profile */
-const TAB_NAV = [
-	{ href: "/provider", label: "Home", icon: HomeIcon },
-	{ href: "/provider/bookings", label: "Bookings", icon: CalendarDaysIcon },
-	{ href: "/provider/offers", label: "Offers", icon: TagIcon },
-	{ href: "/provider/profile", label: "Profile", icon: UserIcon },
-] as const;
-
 function isActive(pathname: string | null, href: string) {
 	if (href === "/provider") return pathname === "/provider";
 	return Boolean(pathname?.startsWith(href));
-}
-
-function showBottomNav(pathname: string | null) {
-	if (!pathname) return false;
-	return TAB_NAV.some((tab) =>
-		tab.href === "/provider"
-			? pathname === "/provider"
-			: pathname === tab.href,
-	);
 }
 
 export default function ProviderLayout({
@@ -77,8 +34,15 @@ export default function ProviderLayout({
 	const router = useRouter();
 	const pathname = usePathname();
 	const { user, logout } = useAuth();
+	const { t } = useLocale();
 	const sessionPending = useAppSelector(selectAuthSessionPending);
-	const bottomVisible = showBottomNav(pathname);
+	const sidebarNav = useProviderSidebarNavItems();
+	const tabNav = useProviderTabNavItems();
+	const bottomVisible = tabNav.some((tab) =>
+		tab.href === "/provider"
+			? pathname === "/provider"
+			: pathname === tab.href,
+	);
 
 	useEffect(() => {
 		if (sessionPending) return;
@@ -101,7 +65,6 @@ export default function ProviderLayout({
 
 	return (
 		<div className="flex min-h-svh bg-[#f6f6f6]">
-			{/* Desktop sidebar */}
 			<aside className="hidden w-60 shrink-0 border-r border-border bg-white px-3 py-5 lg:flex lg:flex-col">
 				<div className="mb-8 flex items-center gap-2.5 px-2">
 					<Image
@@ -115,11 +78,11 @@ export default function ProviderLayout({
 						<p className="text-sm font-semibold tracking-tight">
 							{BRAND_NAME}
 						</p>
-						<p className="text-[11px] text-muted-foreground">Provider</p>
+						<p className="text-[11px] text-muted-foreground">{t("provider")}</p>
 					</div>
 				</div>
 				<nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto">
-					{SIDEBAR_NAV.map((item) => {
+					{sidebarNav.map((item) => {
 						const active = isActive(pathname, item.href);
 						const Icon = item.icon;
 						return (
@@ -159,7 +122,7 @@ export default function ProviderLayout({
 						onClick={logout}
 					>
 						<LogOutIcon className="size-4" />
-						Sign out
+						{t("signOut")}
 					</Button>
 				</div>
 			</aside>
@@ -172,23 +135,22 @@ export default function ProviderLayout({
 						: "pb-0",
 				)}
 			>
-				{/* Desktop-only top strip — mobile screens own their headers */}
 				<header className="sticky top-0 z-10 hidden items-center justify-between gap-3 border-b border-border/80 bg-white px-8 py-3 lg:flex">
 					<p className="text-sm text-muted-foreground">
-						Welcome back, {user.name.split(" ")[0]}
+						{t("welcomeBack", { name: user.name.split(" ")[0] })}
 					</p>
 					<div className="flex items-center gap-2">
 						<Link
 							href="/provider/inbox"
 							className="inline-flex size-9 items-center justify-center rounded-full text-[#7C7C7C] hover:bg-muted"
-							aria-label="Inbox"
+							aria-label={t("inboxTitle")}
 						>
 							<MessagesSquareIcon className="size-5" />
 						</Link>
 						<Link
 							href="/provider/notifications"
 							className="inline-flex size-9 items-center justify-center rounded-full text-[#7C7C7C] hover:bg-muted"
-							aria-label="Notifications"
+							aria-label={t("notificationsTitle")}
 						>
 							<BellIcon className="size-5" />
 						</Link>
@@ -206,14 +168,13 @@ export default function ProviderLayout({
 				</main>
 			</div>
 
-			{/* Mobile bottom nav — Flutter pill style */}
 			{bottomVisible ? (
 				<nav
 					className="fixed inset-x-0 bottom-0 z-40 border-t border-black/10 bg-[#f6f6f6] lg:hidden"
 					style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
 				>
 					<div className="flex items-stretch">
-						{TAB_NAV.map((item) => {
+						{tabNav.map((item) => {
 							const active = isActive(pathname, item.href);
 							const Icon = item.icon;
 							return (

@@ -8,6 +8,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AppLoading } from "@/components/ui/app-loading";
 import { Button } from "@/components/ui/button";
 import { UserAvatar } from "@/components/ui/user-avatar";
+import { useLocale } from "@/lib/i18n";
 import { assignBookingWorker } from "@/services/bookings/bookingsApi";
 import { handymanDisplayName } from "@/services/handymen/handymenApi";
 import { useAppDispatch } from "@/store/hooks";
@@ -19,6 +20,7 @@ import {
 } from "@/store/useProviderCache";
 
 export default function AssignHandymanPage() {
+	const { t } = useLocale();
 	const params = useParams<{ id: string }>();
 	const id = params?.id ?? "";
 	const router = useRouter();
@@ -36,15 +38,15 @@ export default function AssignHandymanPage() {
 		if (!booking || busy) return;
 		const picked = handymen.find((h) => h.id === opts.handymanId);
 		const label = opts.self
-			? "yourself"
+			? t("providerYourself").toLowerCase()
 			: picked
 				? handymanDisplayName(picked)
-				: "this handyman";
+				: t("handymanTitle").toLowerCase();
 		if (
 			!window.confirm(
 				opts.self
-					? "Assign this job to yourself?"
-					: `Assign this job to ${label}?`,
+					? t("providerAssignConfirmSelf")
+					: t("providerAssignConfirmHandyman", { name: label }),
 			)
 		) {
 			return;
@@ -76,13 +78,13 @@ export default function AssignHandymanPage() {
 				onClick={() => router.push(`/provider/bookings/${id}`)}
 			>
 				<ArrowLeftIcon className="size-4" />
-				Back
+				{t("commonBack")}
 			</Button>
 
-			<p className="admin-eyebrow">Booking</p>
-			<h1 className="admin-page-title mt-1">Assign worker</h1>
+			<p className="admin-eyebrow">{t("bookingTitle")}</p>
+			<h1 className="admin-page-title mt-1">{t("providerAssignTitle")}</h1>
 			<p className="mt-2 text-sm text-muted-foreground">
-				Accept this booking by assigning yourself or a handyman.
+				{t("providerAssignHint")}
 			</p>
 
 			{error || loadError ? (
@@ -94,11 +96,12 @@ export default function AssignHandymanPage() {
 			{loading || handymenLoading ? (
 				<AppLoading compact />
 			) : !booking ? (
-				<p className="mt-6 text-sm text-destructive">Booking not found</p>
+				<p className="mt-6 text-sm text-destructive">{t("bookingNotFound")}</p>
 			) : booking.status !== "pending" ? (
 				<p className="mt-6 text-sm text-muted-foreground">
-					This booking is already {booking.status}. Assignment is only for
-					pending bookings.
+					{t("providerBookingAlreadyStatus", {
+						status: booking.status ?? "",
+					})}
 				</p>
 			) : (
 				<div className="mt-6 space-y-4">
@@ -111,9 +114,9 @@ export default function AssignHandymanPage() {
 							/>
 							<div>
 								<p className="text-sm font-semibold">
-									{user?.provider?.fullName ?? "You"}
+									{user?.provider?.fullName ?? t("providerYou")}
 								</p>
-								<p className="text-xs text-muted-foreground">Provider</p>
+								<p className="text-xs text-muted-foreground">{t("provider")}</p>
 							</div>
 						</div>
 						<Button
@@ -121,15 +124,15 @@ export default function AssignHandymanPage() {
 							disabled={busy}
 							onClick={() => void assign({ self: true })}
 						>
-							Assign myself
+							{t("providerAssignSelf")}
 						</Button>
 					</div>
 
 					<div>
-						<p className="mb-2 text-sm font-semibold">Handymen</p>
+						<p className="mb-2 text-sm font-semibold">{t("handymanList")}</p>
 						{activeHandymen.length === 0 ? (
 							<p className="rounded-xl border border-dashed border-border px-4 py-8 text-center text-sm text-muted-foreground">
-								No active handymen. Add one from Profile → Handyman List.
+								{t("providerNoHandymen")}
 							</p>
 						) : (
 							<div className="space-y-2">
@@ -149,7 +152,7 @@ export default function AssignHandymanPage() {
 													{handymanDisplayName(h)}
 												</p>
 												<p className="text-xs text-muted-foreground">
-													Handyman
+													{t("handymanTitle")}
 												</p>
 											</div>
 										</div>
@@ -161,7 +164,7 @@ export default function AssignHandymanPage() {
 												void assign({ self: false, handymanId: h.id })
 											}
 										>
-											Assign
+											{t("commonAssign")}
 										</Button>
 									</div>
 								))}

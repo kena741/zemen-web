@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { ProfileBackLink } from "@/components/provider/profile-back-link";
 import { Button } from "@/components/ui/button";
 import { ServiceLoading } from "@/components/service/service-loading";
+import { useLocale } from "@/lib/i18n";
 import { getSupabase } from "@/lib/supabase/client";
 import { formatAmount, formatDateTime } from "@/services/bookings/types";
 import {
@@ -16,6 +17,7 @@ import { useAppDispatch } from "@/store/hooks";
 import { invalidateRequests } from "@/store/customerCacheSlice";
 
 export default function RequestDetailPage() {
+	const { t } = useLocale();
 	const params = useParams<{ id: string }>();
 	const router = useRouter();
 	const dispatch = useAppDispatch();
@@ -43,7 +45,7 @@ export default function RequestDetailPage() {
 
 	async function onDelete() {
 		if (!job || busy) return;
-		if (!window.confirm("Delete this job request?")) return;
+		if (!window.confirm(t("requestDeleteConfirm"))) return;
 		setBusy(true);
 		const res = await deleteJobRequest(String(job.id));
 		setBusy(false);
@@ -60,12 +62,12 @@ export default function RequestDetailPage() {
 		const providerId = String(bid.providerId ?? bid.provider_id ?? "");
 		const bidPrice = String(bid.price ?? bid.bidPrice ?? "");
 		if (!providerId || !bidPrice) {
-			setError("Invalid bid data");
+			setError(t("requestInvalidBid"));
 			return;
 		}
 		if (
 			!window.confirm(
-				`Accept this bid for ${formatAmount(bidPrice)}? You'll book next.`,
+				t("requestAcceptBidConfirm", { amount: formatAmount(bidPrice) }),
 			)
 		) {
 			return;
@@ -103,9 +105,9 @@ export default function RequestDetailPage() {
 	if (!job) {
 		return (
 			<div className="px-4 pt-4">
-				<ProfileBackLink href="/service/requests" label="Requests" />
+				<ProfileBackLink href="/service/requests" label={t("requestsTitle")} />
 				<p className="text-sm text-destructive">
-					{error || "Request not found"}
+					{error || t("requestNotFound")}
 				</p>
 			</div>
 		);
@@ -117,12 +119,12 @@ export default function RequestDetailPage() {
 
 	return (
 		<div className="px-4 pt-4 md:px-6 md:pt-8">
-			<ProfileBackLink href="/service/requests" label="Requests" />
+			<ProfileBackLink href="/service/requests" label={t("requestsTitle")} />
 			<h1 className="admin-page-title">
-				{String(job.title ?? "Job request")}
+				{String(job.title ?? t("requestJobRequest"))}
 			</h1>
 			<p className="mt-1 text-sm text-muted-foreground">
-				{job.accepted === true ? "Accepted" : "Open for bids"}
+				{job.accepted === true ? t("statusAccepted") : t("requestOpenForBids")}
 				{job.createdAt
 					? ` · ${formatDateTime(String(job.createdAt))}`
 					: null}
@@ -135,7 +137,7 @@ export default function RequestDetailPage() {
 			<div className="mt-5 space-y-3 rounded-xl bg-white p-4 shadow-sm ring-1 ring-black/5">
 				{job.description ? (
 					<div>
-						<p className="text-xs text-muted-foreground">Description</p>
+						<p className="text-xs text-muted-foreground">{t("requestDescription")}</p>
 						<p className="mt-0.5 whitespace-pre-wrap text-sm">
 							{String(job.description)}
 						</p>
@@ -143,7 +145,7 @@ export default function RequestDetailPage() {
 				) : null}
 				{job.price ? (
 					<div>
-						<p className="text-xs text-muted-foreground">Budget</p>
+						<p className="text-xs text-muted-foreground">{t("commonBudget")}</p>
 						<p className="mt-0.5 text-sm font-semibold text-primary">
 							{formatAmount(String(job.price))}
 						</p>
@@ -153,12 +155,12 @@ export default function RequestDetailPage() {
 
 			<section className="mt-6">
 				<h2 className="text-sm font-semibold">
-					Bids ({bids.length})
+					{t("requestBids")} ({bids.length})
 				</h2>
 				<div className="mt-3 rounded-xl bg-white shadow-sm ring-1 ring-black/5">
 					{bids.length === 0 ? (
 						<p className="py-8 text-center text-sm text-muted-foreground">
-							No bids yet.
+							{t("requestNoBids")}
 						</p>
 					) : (
 						bids.map((bid, i) => (
@@ -192,7 +194,7 @@ export default function RequestDetailPage() {
 										disabled={busy}
 										onClick={() => void onAcceptBid(bid)}
 									>
-										Accept bid
+										{t("requestAcceptBid")}
 									</Button>
 								) : null}
 							</div>
@@ -208,7 +210,7 @@ export default function RequestDetailPage() {
 					disabled={busy}
 					onClick={onDelete}
 				>
-					{busy ? "Deleting…" : "Delete request"}
+					{busy ? t("requestDeleting") : t("requestDelete")}
 				</Button>
 			) : null}
 		</div>

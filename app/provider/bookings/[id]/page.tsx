@@ -11,6 +11,7 @@ import { AppLoading } from "@/components/ui/app-loading";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useLocale } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { BOOKING_STATUS } from "@/lib/booking-status";
 import {
@@ -41,6 +42,7 @@ function DetailRow({ label, value }: { label: string; value: React.ReactNode }) 
 }
 
 export default function BookingDetailPage() {
+	const { t } = useLocale();
 	const params = useParams<{ id: string }>();
 	const id = params?.id ?? "";
 	const router = useRouter();
@@ -68,7 +70,7 @@ export default function BookingDetailPage() {
 	useEffect(() => {
 		if (!booking || !user?.provider?.id) return;
 		if (booking.providerId && booking.providerId !== user.provider.id) {
-			setError("This booking does not belong to your account.");
+			setError(t("providerBookingNotOwned"));
 		}
 	}, [booking, user?.provider?.id]);
 
@@ -119,7 +121,7 @@ export default function BookingDetailPage() {
 			return;
 		}
 		if (otpInput.trim() !== booking.otp.trim()) {
-			setError("Incorrect OTP. Ask the customer for the booking code.");
+			setError(t("providerIncorrectOtp"));
 			return;
 		}
 		void setStatus(BOOKING_STATUS.inProgress);
@@ -196,9 +198,9 @@ export default function BookingDetailPage() {
 	const canManageWork =
 		status === BOOKING_STATUS.inProgress || status === BOOKING_STATUS.hold;
 	const assigneeLabel = booking?.providerMySelf
-		? "Yourself"
+		? t("providerYourself")
 		: booking?.handymanId
-			? `Handyman · ${booking.handymanId.slice(0, 8)}`
+			? `${t("handymanTitle")} · ${booking.handymanId.slice(0, 8)}`
 			: null;
 
 	return (
@@ -210,22 +212,22 @@ export default function BookingDetailPage() {
 				onClick={() => router.push("/provider/bookings")}
 			>
 				<ArrowLeftIcon className="size-4" />
-				Bookings
+				{t("bookingsTitle")}
 			</Button>
 
 			{loading ? (
 				<AppLoading compact />
 			) : !booking ? (
 				<p className="text-sm text-destructive">
-					{error || loadError || "Booking not found"}
+					{error || loadError || t("bookingNotFound")}
 				</p>
 			) : (
 				<>
 					<div className="flex flex-wrap items-start justify-between gap-3">
 						<div>
-							<p className="admin-eyebrow">Booking</p>
+							<p className="admin-eyebrow">{t("bookingTitle")}</p>
 							<h1 className="admin-page-title mt-1">
-								{booking.service?.serviceName ?? "Service booking"}
+								{booking.service?.serviceName ?? t("providerServiceBooking")}
 							</h1>
 							<p className="mt-1 text-sm text-muted-foreground">
 								#{booking.id.slice(0, 8)}
@@ -241,43 +243,43 @@ export default function BookingDetailPage() {
 					) : null}
 
 					<dl className="mt-6 rounded-xl border border-border bg-white px-4 shadow-xs">
-						<DetailRow label="Customer" value={customerDisplayName(booking)} />
-						<DetailRow label="Phone" value={booking.phoneNumber} />
+						<DetailRow label={t("customer")} value={customerDisplayName(booking)} />
+						<DetailRow label={t("phone")} value={booking.phoneNumber} />
 						{assigneeLabel ? (
-							<DetailRow label="Assigned to" value={assigneeLabel} />
+							<DetailRow label={t("providerAssignedTo")} value={assigneeLabel} />
 						) : null}
 						<DetailRow
-							label="Scheduled"
+							label={t("providerScheduled")}
 							value={formatDateTime(booking.bookingDate ?? booking.startTime)}
 						/>
-						<DetailRow label="Address" value={address} />
+						<DetailRow label={t("bookingAddress")} value={address} />
 						<DetailRow
-							label="Amount"
+							label={t("bookingAmount")}
 							value={formatAmount(booking.totalAmount ?? booking.subTotal)}
 						/>
 						{booking.extraChargeAmount || booking.extraCharge?.extraCharge ? (
 							<DetailRow
-								label="Extra charge"
+								label={t("providerExtraCharge")}
 								value={formatAmount(
 									booking.extraChargeAmount ??
 										booking.extraCharge?.extraCharge,
 								)}
 							/>
 						) : null}
-						<DetailRow label="Payment" value={booking.paymentType} />
+						<DetailRow label={t("bookingPayment")} value={booking.paymentType} />
 						<DetailRow
-							label="Paid"
-							value={booking.paymentCompleted ? "Yes" : "No"}
+							label={t("commonPaid")}
+							value={booking.paymentCompleted ? t("commonYes") : t("commonNo")}
 						/>
 						{booking.description ? (
-							<DetailRow label="Notes" value={booking.description} />
+							<DetailRow label={t("bookingNotes")} value={booking.description} />
 						) : null}
 						{booking.reason ? (
-							<DetailRow label="Reason" value={booking.reason} />
+							<DetailRow label={t("bookingReason")} value={booking.reason} />
 						) : null}
 						{booking.serviceProof?.title ? (
 							<DetailRow
-								label="Service proof"
+								label={t("serviceProof")}
 								value={booking.serviceProof.title}
 							/>
 						) : null}
@@ -289,7 +291,7 @@ export default function BookingDetailPage() {
 								href={`/provider/services/${booking.serviceId}`}
 								className="text-brand-ink underline-offset-4 hover:underline"
 							>
-								View service
+								{t("providerViewService")}
 							</Link>
 						) : null}
 						{booking.customerId ? (
@@ -298,7 +300,7 @@ export default function BookingDetailPage() {
 								className="inline-flex items-center gap-1 text-brand-ink underline-offset-4 hover:underline"
 							>
 								<MessageSquareIcon className="size-3.5" />
-								Message customer
+								{t("providerMessageCustomer")}
 							</Link>
 						) : null}
 					</div>
@@ -310,7 +312,7 @@ export default function BookingDetailPage() {
 								<img
 									key={url}
 									src={url}
-									alt="Proof"
+									alt={t("providerProofAlt")}
 									className="size-20 rounded-lg object-cover ring-1 ring-black/5"
 								/>
 							))}
@@ -324,7 +326,7 @@ export default function BookingDetailPage() {
 									href={`/provider/bookings/${booking.id}/assign`}
 									className={cn(buttonVariants(), "justify-center")}
 								>
-									Assign worker
+									{t("providerAssignWorker")}
 								</Link>
 								{!showReject ? (
 									<Button
@@ -332,16 +334,16 @@ export default function BookingDetailPage() {
 										disabled={busy}
 										onClick={() => setShowReject(true)}
 									>
-										Reject
+										{t("commonReject")}
 									</Button>
 								) : (
 									<div className="space-y-2 rounded-xl border border-border bg-white p-4">
-										<Label htmlFor="reject-reason">Reason (optional)</Label>
+										<Label htmlFor="reject-reason">{t("providerRejectReasonOptional")}</Label>
 										<Input
 											id="reject-reason"
 											value={rejectReason}
 											onChange={(e) => setRejectReason(e.target.value)}
-											placeholder="Why are you declining?"
+											placeholder={t("providerRejectPlaceholder")}
 										/>
 										<div className="flex gap-2">
 											<Button
@@ -354,13 +356,13 @@ export default function BookingDetailPage() {
 													)
 												}
 											>
-												Confirm reject
+												{t("providerConfirmReject")}
 											</Button>
 											<Button
 												variant="ghost"
 												onClick={() => setShowReject(false)}
 											>
-												Cancel
+												{t("commonCancel")}
 											</Button>
 										</div>
 									</div>
@@ -378,7 +380,7 @@ export default function BookingDetailPage() {
 											"justify-center",
 										)}
 									>
-										Assign worker
+										{t("providerAssignWorker")}
 									</Link>
 								) : null}
 								{booking.providerMySelf ? (
@@ -386,12 +388,11 @@ export default function BookingDetailPage() {
 										disabled={busy}
 										onClick={() => void setStatus(BOOKING_STATUS.onTheWay)}
 									>
-										Start drive
+										{t("providerStartDrive")}
 									</Button>
 								) : (
 									<p className="text-sm text-muted-foreground">
-										Handyman assigned. They continue the job in the Handyman
-										app. You can still add proof or message the customer.
+										{t("providerHandymanAssignedHint")}
 									</p>
 								)}
 							</>
@@ -401,27 +402,27 @@ export default function BookingDetailPage() {
 							<>
 								{!showOtp ? (
 									<Button disabled={busy} onClick={handleStartService}>
-										Start service
+										{t("providerStartService")}
 									</Button>
 								) : (
 									<div className="space-y-2 rounded-xl border border-border bg-white p-4">
-										<Label htmlFor="otp">Customer OTP</Label>
+										<Label htmlFor="otp">{t("providerCustomerOtp")}</Label>
 										<Input
 											id="otp"
 											value={otpInput}
 											onChange={(e) => setOtpInput(e.target.value)}
-											placeholder="Enter booking OTP"
+											placeholder={t("providerOtpPlaceholder")}
 											inputMode="numeric"
 										/>
 										<div className="flex gap-2">
 											<Button disabled={busy} onClick={confirmOtp}>
-												Confirm & start
+												{t("providerConfirmStart")}
 											</Button>
 											<Button
 												variant="ghost"
 												onClick={() => setShowOtp(false)}
 											>
-												Cancel
+												{t("commonCancel")}
 											</Button>
 										</div>
 									</div>
@@ -439,16 +440,16 @@ export default function BookingDetailPage() {
 												disabled={busy}
 												onClick={() => setShowHold(true)}
 											>
-												Put on hold
+												{t("providerPutOnHold")}
 											</Button>
 										) : (
 											<div className="space-y-2 rounded-xl border border-border bg-white p-4">
-												<Label htmlFor="hold-reason">Hold reason</Label>
+												<Label htmlFor="hold-reason">{t("providerHoldReason")}</Label>
 												<Input
 													id="hold-reason"
 													value={holdReason}
 													onChange={(e) => setHoldReason(e.target.value)}
-													placeholder="Why is work paused?"
+													placeholder={t("providerHoldPlaceholder")}
 												/>
 												<div className="flex gap-2">
 													<Button
@@ -460,13 +461,13 @@ export default function BookingDetailPage() {
 															)
 														}
 													>
-														Confirm hold
+														{t("providerConfirmHold")}
 													</Button>
 													<Button
 														variant="ghost"
 														onClick={() => setShowHold(false)}
 													>
-														Cancel
+														{t("commonCancel")}
 													</Button>
 												</div>
 											</div>
@@ -478,11 +479,11 @@ export default function BookingDetailPage() {
 										disabled={busy}
 										onClick={() => void setStatus(BOOKING_STATUS.inProgress)}
 									>
-										Continue work
+										{t("providerContinueWork")}
 									</Button>
 								) : null}
 								<Button disabled={busy} onClick={() => void finishWork()}>
-									Submit for customer approval
+									{t("providerSubmitApproval")}
 								</Button>
 							</>
 						) : null}
@@ -498,34 +499,34 @@ export default function BookingDetailPage() {
 										disabled={busy}
 										onClick={() => setShowExtra(true)}
 									>
-										{booking.extraCharge ? "Edit extra charge" : "Add extra charge"}
+										{booking.extraCharge ? t("providerEditExtraCharge") : t("providerAddExtraCharge")}
 									</Button>
 								) : (
 									<div className="space-y-2 rounded-xl border border-border bg-white p-4">
-										<Label htmlFor="extra-detail">Detail</Label>
+										<Label htmlFor="extra-detail">{t("commonDescription")}</Label>
 										<Input
 											id="extra-detail"
 											value={extraDetail}
 											onChange={(e) => setExtraDetail(e.target.value)}
-											placeholder="What is the extra charge for?"
+											placeholder={t("providerExtraDetailPlaceholder")}
 										/>
-										<Label htmlFor="extra-amount">Amount (ETB)</Label>
+										<Label htmlFor="extra-amount">{t("commonAmountEtb")}</Label>
 										<Input
 											id="extra-amount"
 											value={extraAmount}
 											onChange={(e) => setExtraAmount(e.target.value)}
 											inputMode="decimal"
-											placeholder="Min 1"
+											placeholder={t("providerMinAmount")}
 										/>
 										<div className="flex gap-2">
 											<Button disabled={busy} onClick={() => void saveExtra()}>
-												Save charge
+												{t("providerSaveCharge")}
 											</Button>
 											<Button
 												variant="ghost"
 												onClick={() => setShowExtra(false)}
 											>
-												Cancel
+												{t("commonCancel")}
 											</Button>
 										</div>
 									</div>
@@ -537,17 +538,17 @@ export default function BookingDetailPage() {
 										disabled={busy}
 										onClick={() => setShowProof(true)}
 									>
-										{booking.serviceProof ? "Edit service proof" : "Add service proof"}
+										{booking.serviceProof ? t("providerEditServiceProof") : t("providerAddServiceProof")}
 									</Button>
 								) : (
 									<div className="space-y-2 rounded-xl border border-border bg-white p-4">
-										<Label htmlFor="proof-title">Title</Label>
+										<Label htmlFor="proof-title">{t("commonTitle")}</Label>
 										<Input
 											id="proof-title"
 											value={proofTitle}
 											onChange={(e) => setProofTitle(e.target.value)}
 										/>
-										<Label htmlFor="proof-desc">Description</Label>
+										<Label htmlFor="proof-desc">{t("commonDescription")}</Label>
 										<textarea
 											id="proof-desc"
 											value={proofDesc}
@@ -555,7 +556,7 @@ export default function BookingDetailPage() {
 											rows={3}
 											className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
 										/>
-										<Label htmlFor="proof-files">Images (up to 5)</Label>
+										<Label htmlFor="proof-files">{t("providerProofImages")}</Label>
 										<Input
 											id="proof-files"
 											type="file"
@@ -565,13 +566,13 @@ export default function BookingDetailPage() {
 										/>
 										<div className="flex gap-2">
 											<Button disabled={busy} onClick={() => void saveProof()}>
-												Save proof
+												{t("providerSaveProof")}
 											</Button>
 											<Button
 												variant="ghost"
 												onClick={() => setShowProof(false)}
 											>
-												Cancel
+												{t("commonCancel")}
 											</Button>
 										</div>
 									</div>

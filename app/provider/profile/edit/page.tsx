@@ -9,12 +9,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { UserAvatar } from "@/components/ui/user-avatar";
+import { useLocale } from "@/lib/i18n";
 import { updateProviderProfile } from "@/services/provider/profileApi";
 import { patchAuthUser } from "@/store/authSlice";
 import { useAppDispatch } from "@/store/hooks";
 import { useAuth } from "@/store/useAuth";
 
 export default function EditProviderProfilePage() {
+	const { t } = useLocale();
 	const router = useRouter();
 	const dispatch = useAppDispatch();
 	const { user } = useAuth();
@@ -28,7 +30,7 @@ export default function EditProviderProfilePage() {
 	const [error, setError] = useState<string | null>(null);
 
 	if (!provider || !user) {
-		return <p className="text-sm text-muted-foreground">Loading…</p>;
+		return <p className="text-sm text-muted-foreground">{t("commonLoading")}</p>;
 	}
 
 	async function onSubmit(e: React.FormEvent) {
@@ -61,9 +63,9 @@ export default function EditProviderProfilePage() {
 
 	return (
 		<div className="mx-auto max-w-2xl">
-			<ProfileBackLink href="/provider/profile" label="Profile" />
-			<p className="admin-eyebrow">Account</p>
-			<h1 className="admin-page-title mt-1">Edit profile</h1>
+			<ProfileBackLink href="/provider/profile" label={t("profileTitle")} />
+			<p className="admin-eyebrow">{t("profileAccount")}</p>
+			<h1 className="admin-page-title mt-1">{t("profileEdit")}</h1>
 
 			{error ? (
 				<Alert variant="destructive" className="mt-4">
@@ -86,7 +88,7 @@ export default function EditProviderProfilePage() {
 						className="size-16 text-lg"
 					/>
 					<div className="space-y-1.5">
-						<Label htmlFor="photo">Profile photo</Label>
+						<Label htmlFor="photo">{t("providerProfilePhoto")}</Label>
 						<Input
 							id="photo"
 							type="file"
@@ -98,7 +100,7 @@ export default function EditProviderProfilePage() {
 
 				<div className="grid gap-3 sm:grid-cols-2">
 					<div className="space-y-1.5">
-						<Label htmlFor="first">First name</Label>
+						<Label htmlFor="first">{t("firstName")}</Label>
 						<Input
 							id="first"
 							required
@@ -107,7 +109,7 @@ export default function EditProviderProfilePage() {
 						/>
 					</div>
 					<div className="space-y-1.5">
-						<Label htmlFor="last">Last name</Label>
+						<Label htmlFor="last">{t("lastName")}</Label>
 						<Input
 							id="last"
 							value={lastName}
@@ -117,7 +119,7 @@ export default function EditProviderProfilePage() {
 				</div>
 
 				<div className="space-y-1.5">
-					<Label htmlFor="phone">Phone</Label>
+					<Label htmlFor="phone">{t("phone")}</Label>
 					<Input
 						id="phone"
 						value={phoneNumber}
@@ -126,7 +128,7 @@ export default function EditProviderProfilePage() {
 				</div>
 
 				<div className="space-y-1.5">
-					<Label htmlFor="address">Address</Label>
+					<Label htmlFor="address">{t("commonAddress")}</Label>
 					<Input
 						id="address"
 						value={address}
@@ -134,13 +136,10 @@ export default function EditProviderProfilePage() {
 					/>
 				</div>
 
-				<p className="text-xs text-muted-foreground">
-					Email cannot be changed here. Map pin picker remains in the mobile
-					app.
-				</p>
+				<p className="text-xs text-muted-foreground">{t("providerEmailHint")}</p>
 
 				<Button type="submit" disabled={busy}>
-					Save changes
+					{t("providerSaveChanges")}
 				</Button>
 			</form>
 		</div>

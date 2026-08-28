@@ -30,6 +30,9 @@ export interface ProviderService {
 	slug: string | null;
 	providerName: string | null;
 	providerImage: string | null;
+	pricingType: string | null;
+	billingInterval: string | null;
+	billingIntervalCount: number;
 }
 
 export interface ServiceCategory {
@@ -69,6 +72,9 @@ export interface ServiceFormInput {
 	reviewCount?: string | null;
 	feature?: boolean;
 	likedUser?: unknown[];
+	pricingType?: string;
+	billingInterval?: string;
+	billingIntervalCount?: number;
 }
 
 function asString(value: unknown): string | null {
@@ -157,6 +163,10 @@ export function mapServiceRow(row: Record<string, unknown>): ProviderService {
 		providerImage: asString(
 			(row.providerModel as Record<string, unknown> | undefined)?.profileImage,
 		),
+		pricingType: asString(row.pricing_type ?? row.pricingType),
+		billingInterval: asString(row.billing_interval ?? row.billingInterval),
+		billingIntervalCount:
+			Number(row.billing_interval_count ?? row.billingIntervalCount ?? 1) || 1,
 	};
 }
 

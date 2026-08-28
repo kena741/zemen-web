@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist_Mono, Plus_Jakarta_Sans } from "next/font/google";
 
+import { AppProviders } from "@/components/providers/app-providers";
 import { ReduxProvider } from "@/store/ReduxProvider";
 import { BRAND_NAME, BRAND_TAGLINE } from "@/lib/brand";
 
@@ -30,7 +31,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
 			suppressHydrationWarning
 		>
 			<body className="min-h-svh bg-background font-sans text-foreground antialiased">
-				<ReduxProvider>{children}</ReduxProvider>
+				<ReduxProvider>
+					<AppProviders>{children}</AppProviders>
+				</ReduxProvider>
 			</body>
 		</html>
 	);

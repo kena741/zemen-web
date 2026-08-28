@@ -19,9 +19,11 @@ import {
 	WrenchIcon,
 } from "lucide-react";
 
+import { TelegramLink } from "@/components/app/telegram-link";
 import { ProviderMobileTabBar } from "@/components/provider/mobile-chrome";
 import { Button } from "@/components/ui/button";
 import { UserAvatar } from "@/components/ui/user-avatar";
+import { useLocale } from "@/lib/i18n";
 import { formatAmount } from "@/services/bookings/types";
 import { useAuth } from "@/store/useAuth";
 
@@ -69,20 +71,20 @@ function Divider() {
 }
 
 export default function ProviderProfilePage() {
+	const { t } = useLocale();
 	const { user, logout } = useAuth();
 	const provider = user?.provider;
 
 	return (
 		<div className="mx-auto max-w-3xl">
-			<ProviderMobileTabBar title="My Profile" />
+			<ProviderMobileTabBar title={t("providerProfileMy")} />
 
 			<div className="hidden lg:block">
-				<p className="admin-eyebrow">Provider</p>
-				<h1 className="admin-page-title mt-1">Profile</h1>
+				<p className="admin-eyebrow">{t("provider")}</p>
+				<h1 className="admin-page-title mt-1">{t("profileTitle")}</h1>
 			</div>
 
 			<div className="px-4 pb-8 lg:px-0 lg:pt-6">
-				{/* Flutter hero */}
 				<div className="flex flex-col items-center pt-6 text-center lg:pt-0">
 					<UserAvatar
 						src={provider?.profileImage}
@@ -111,43 +113,43 @@ export default function ProviderProfilePage() {
 						className="mt-4 inline-flex items-center gap-1.5 text-sm font-medium text-primary"
 					>
 						<PencilIcon className="size-3.5" />
-						Edit profile
+						{t("profileEdit")}
 					</Link>
 				</div>
 
-				<MenuGroup title="Service">
+				<MenuGroup title={t("providerMenuService")}>
 					<MenuItem
 						href="/provider/services"
 						icon={WrenchIcon}
-						label="Services"
+						label={t("navServices")}
 					/>
 					<Divider />
 					<MenuItem
 						href="/provider/handymen"
 						icon={UsersIcon}
-						label="Handyman List"
+						label={t("profileHandymanList")}
 					/>
 					<Divider />
-					<MenuItem href="/provider/offers" icon={TagIcon} label="Offers" />
+					<MenuItem href="/provider/offers" icon={TagIcon} label={t("offersTitle")} />
 					<Divider />
 					<MenuItem
 						href="/provider/jobs"
 						icon={BriefcaseIcon}
-						label="Job requests"
+						label={t("providerJobRequests")}
 					/>
 				</MenuGroup>
 
-				<MenuGroup title="Payment">
+				<MenuGroup title={t("providerMenuPayment")}>
 					<MenuItem
 						href="/provider/bank"
 						icon={BanknoteIcon}
-						label="Bank Detail"
+						label={t("providerBankDetail")}
 					/>
 					<Divider />
 					<MenuItem
 						href="/provider/wallet"
 						icon={WalletIcon}
-						label="Wallet"
+						label={t("navWallet")}
 						trailing={
 							<span className="mr-1 text-sm font-medium text-primary">
 								{formatAmount(provider?.walletAmount ?? "0")}
@@ -158,43 +160,62 @@ export default function ProviderProfilePage() {
 					<MenuItem
 						href="/provider/wallet"
 						icon={HistoryIcon}
-						label="Wallet History"
+						label={t("profileWalletHistory")}
 					/>
 				</MenuGroup>
 
-				<MenuGroup title="Messages">
+				<MenuGroup title={t("providerMenuMessages")}>
 					<MenuItem
 						href="/provider/inbox"
 						icon={MessagesSquareIcon}
-						label="Inbox"
+						label={t("inboxTitle")}
 					/>
 					<Divider />
 					<MenuItem
 						href="/provider/notifications"
 						icon={BellIcon}
-						label="Notifications"
+						label={t("notificationsTitle")}
 					/>
 				</MenuGroup>
 
-				<MenuGroup title="App setting">
+				<MenuGroup title={t("profileAppSettings")}>
 					<MenuItem
 						href="/provider/profile/password"
 						icon={KeyRoundIcon}
-						label="Change Password"
+						label={t("profileChangePassword")}
 					/>
 					<Divider />
-					<div className="flex items-center gap-3 px-4 py-3.5 opacity-50">
-						<FileCheckIcon className="size-[22px]" strokeWidth={1.75} />
-						<span className="flex-1 text-sm">Verify Documents</span>
-						<span className="text-[10px] text-muted-foreground">Soon</span>
-					</div>
+					<MenuItem
+						href="/provider/verify-id"
+						icon={FileCheckIcon}
+						label={t("profileVerifyDocuments")}
+					/>
 					<Divider />
-					<div className="flex items-center gap-3 px-4 py-3.5 opacity-50">
-						<PercentIcon className="size-[22px]" strokeWidth={1.75} />
-						<span className="flex-1 text-sm">Taxes</span>
-						<span className="text-[10px] text-muted-foreground">Soon</span>
-					</div>
+					<MenuItem href="/provider/taxes" icon={PercentIcon} label={t("taxes")} />
+					<Divider />
+					<MenuItem
+						href="/provider/activation"
+						icon={WalletIcon}
+						label={t("profileAccountActivation")}
+					/>
+					<Divider />
+					<MenuItem href="/provider/tier" icon={PercentIcon} label={t("profileServiceTier")} />
 				</MenuGroup>
+
+				<div className="mt-6 space-y-2">
+					<TelegramLink className="w-full justify-center" />
+					<div className="flex justify-center gap-4 text-xs text-muted-foreground">
+						<Link href="/legal/privacy" className="hover:text-primary">
+							{t("legalPrivacy")}
+						</Link>
+						<Link href="/legal/terms" className="hover:text-primary">
+							{t("legalTerms")}
+						</Link>
+						<Link href="/legal/about" className="hover:text-primary">
+							{t("legalAbout")}
+						</Link>
+					</div>
+				</div>
 
 				<Button
 					variant="outline"
@@ -202,7 +223,7 @@ export default function ProviderProfilePage() {
 					onClick={logout}
 				>
 					<LogOutIcon className="size-4" />
-					Sign out
+					{t("signOut")}
 				</Button>
 			</div>
 		</div>

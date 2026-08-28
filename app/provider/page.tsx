@@ -14,6 +14,7 @@ import { UpcomingBookingCard } from "@/components/provider/booking-grid-card";
 import { ProviderHomeHeader } from "@/components/provider/mobile-chrome";
 import { RevenueChart } from "@/components/provider/revenue-chart";
 import { AppLoading } from "@/components/ui/app-loading";
+import { useLocale } from "@/lib/i18n";
 import { formatAmount } from "@/services/bookings/types";
 import { useAuth } from "@/store/useAuth";
 import { useCachedProviderDashboard } from "@/store/useProviderCache";
@@ -57,6 +58,7 @@ function StatBox({
 }
 
 export default function ProviderDashboardPage() {
+	const { t } = useLocale();
 	const { user } = useAuth();
 	const providerId = user?.provider?.id ?? "";
 	const year = new Date().getFullYear();
@@ -73,17 +75,17 @@ export default function ProviderDashboardPage() {
 	return (
 		<div className="mx-auto w-full max-w-4xl">
 			<ProviderHomeHeader
-				name={user?.provider?.fullName ?? user?.name ?? "Provider"}
+				name={user?.provider?.fullName ?? user?.name ?? t("provider")}
 				image={user?.provider?.profileImage}
 			/>
 
 			<div className="hidden px-0 pt-0 lg:block">
 				<div className="flex items-start justify-between gap-3">
 					<div>
-						<p className="admin-eyebrow">Provider</p>
-						<h1 className="admin-page-title mt-1">Dashboard</h1>
+						<p className="admin-eyebrow">{t("provider")}</p>
+						<h1 className="admin-page-title mt-1">{t("navDashboard")}</h1>
 						<p className="mt-2 max-w-xl text-sm text-muted-foreground">
-							Overview of your bookings, services, and earnings.
+							{t("providerDashboardSubtitle")}
 						</p>
 					</div>
 					<button
@@ -91,7 +93,7 @@ export default function ProviderDashboardPage() {
 						onClick={refresh}
 						className="text-xs font-medium text-primary"
 					>
-						{refreshing ? "Refreshing…" : "Refresh"}
+						{refreshing ? t("commonRefreshing") : t("commonRefresh")}
 					</button>
 				</div>
 			</div>
@@ -103,7 +105,7 @@ export default function ProviderDashboardPage() {
 						onClick={refresh}
 						className="text-xs font-medium text-primary"
 					>
-						{refreshing ? "Refreshing…" : "Refresh"}
+						{refreshing ? t("commonRefreshing") : t("commonRefresh")}
 					</button>
 				</div>
 
@@ -117,24 +119,24 @@ export default function ProviderDashboardPage() {
 					<>
 						<div className="grid grid-cols-2 gap-4 lg:grid-cols-4 lg:gap-3">
 							<StatBox
-								label="Total Booking"
+								label={t("providerTotalBooking")}
 								value={totalBookings}
 								icon={ClipboardListIcon}
 								href="/provider/bookings"
 							/>
 							<StatBox
-								label="Total Service"
+								label={t("providerTotalService")}
 								value={String(data.activeServices)}
 								icon={WrenchIcon}
 								href="/provider/services"
 							/>
 							<StatBox
-								label="Monthly Earning"
+								label={t("providerMonthlyEarning")}
 								value={formatAmount(String(data.revenueThisMonth))}
 								icon={CircleDollarSignIcon}
 							/>
 							<StatBox
-								label="Wallet Balance"
+								label={t("providerWalletBalance")}
 								value={formatAmount(wallet)}
 								icon={WalletIcon}
 								href="/provider/wallet"
@@ -145,13 +147,13 @@ export default function ProviderDashboardPage() {
 							<section className="mt-5">
 								<div className="mb-3 flex items-center justify-between">
 									<h2 className="text-lg font-bold text-[#464646]">
-										Upcoming bookings
+										{t("providerUpcomingBookings")}
 									</h2>
 									<Link
 										href="/provider/bookings"
 										className="text-sm font-semibold text-primary"
 									>
-										View all
+										{t("commonViewAll")}
 									</Link>
 								</div>
 								<div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-1 scrollbar-none lg:mx-0 lg:grid lg:grid-cols-2 lg:overflow-visible lg:px-0 xl:grid-cols-3">
@@ -184,7 +186,7 @@ export default function ProviderDashboardPage() {
 							<div className="rounded-xl bg-white px-4 py-4">
 								<div className="flex items-center gap-2 text-sm text-muted-foreground">
 									<CalendarClockIcon className="size-4" />
-									Completed this month
+									{t("providerCompletedThisMonth")}
 								</div>
 								<p className="mt-1 text-2xl font-semibold tabular-nums">
 									{data.completedThisMonth}
@@ -193,7 +195,7 @@ export default function ProviderDashboardPage() {
 							<div className="rounded-xl bg-white px-4 py-4">
 								<div className="flex items-center gap-2 text-sm text-muted-foreground">
 									<ClipboardListIcon className="size-4" />
-									Pending
+									{t("statusPending")}
 								</div>
 								<p className="mt-1 text-2xl font-semibold tabular-nums">
 									{data.pending}

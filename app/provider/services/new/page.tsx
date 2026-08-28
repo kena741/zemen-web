@@ -5,11 +5,13 @@ import { useRouter } from "next/navigation";
 import { ProfileBackLink } from "@/components/provider/profile-back-link";
 import { ServiceForm } from "@/components/provider/service-form";
 import { AppLoading } from "@/components/ui/app-loading";
+import { useLocale } from "@/lib/i18n";
 import { useAppDispatch } from "@/store/hooks";
 import { invalidateProviderServices } from "@/store/providerCacheSlice";
 import { useAuth } from "@/store/useAuth";
 
 export default function NewServicePage() {
+	const { t } = useLocale();
 	const router = useRouter();
 	const dispatch = useAppDispatch();
 	const { user } = useAuth();
@@ -22,11 +24,11 @@ export default function NewServicePage() {
 
 	return (
 		<div className="mx-auto max-w-2xl">
-			<ProfileBackLink href="/provider/services" label="Services" />
-			<p className="admin-eyebrow">Services</p>
-			<h1 className="admin-page-title mt-1">Add service</h1>
+			<ProfileBackLink href="/provider/services" label={t("providerServicesTitle")} />
+			<p className="admin-eyebrow">{t("providerServicesTitle")}</p>
+			<h1 className="admin-page-title mt-1">{t("providerAddService")}</h1>
 			<p className="mt-2 text-sm text-muted-foreground">
-				Create a new listing for customers to book.
+				{t("providerServiceCreateSubtitle")}
 			</p>
 			<div className="mt-6 rounded-xl border border-border bg-white p-4 shadow-xs sm:p-5">
 				<ServiceForm

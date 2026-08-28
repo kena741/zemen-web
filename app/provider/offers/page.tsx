@@ -6,6 +6,7 @@ import { ImageIcon } from "lucide-react";
 import { ProviderMobileTabBar } from "@/components/provider/mobile-chrome";
 import { AppLoading } from "@/components/ui/app-loading";
 import { Button } from "@/components/ui/button";
+import { useLocale } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import {
 	formatOfferPrice,
@@ -30,6 +31,7 @@ function statusClass(status: string) {
 }
 
 export default function ProviderOffersPage() {
+	const { t } = useLocale();
 	const { user } = useAuth();
 	const dispatch = useAppDispatch();
 	const providerId = user?.provider?.id ?? "";
@@ -55,15 +57,15 @@ export default function ProviderOffersPage() {
 
 	return (
 		<div className="mx-auto max-w-3xl">
-			<ProviderMobileTabBar title="Offers" />
+			<ProviderMobileTabBar title={t("offersTitle")} />
 
 			<div className="hidden lg:block">
 				<div className="flex items-start justify-between gap-3">
 					<div>
-						<p className="admin-eyebrow">Provider</p>
-						<h1 className="admin-page-title mt-1">Offers</h1>
+						<p className="admin-eyebrow">{t("provider")}</p>
+						<h1 className="admin-page-title mt-1">{t("offersTitle")}</h1>
 						<p className="mt-2 text-sm text-muted-foreground">
-							Customer price offers on your services
+							{t("providerOffersSubtitle")}
 						</p>
 					</div>
 					<button
@@ -71,7 +73,7 @@ export default function ProviderOffersPage() {
 						onClick={refresh}
 						className="text-xs font-medium text-primary"
 					>
-						{refreshing ? "Refreshing…" : "Refresh"}
+						{refreshing ? t("commonRefreshing") : t("commonRefresh")}
 					</button>
 				</div>
 			</div>
@@ -83,7 +85,7 @@ export default function ProviderOffersPage() {
 						onClick={refresh}
 						className="text-xs font-medium text-primary"
 					>
-						{refreshing ? "Refreshing…" : "Refresh"}
+						{refreshing ? t("commonRefreshing") : t("commonRefresh")}
 					</button>
 				</div>
 
@@ -97,7 +99,7 @@ export default function ProviderOffersPage() {
 					<AppLoading compact />
 				) : offers.length === 0 ? (
 					<div className="rounded-xl bg-white px-4 py-14 text-center">
-						<p className="text-sm text-muted-foreground">No offers yet.</p>
+						<p className="text-sm text-muted-foreground">{t("providerNoOffers")}</p>
 					</div>
 				) : (
 					<ul className="space-y-2.5">
@@ -124,7 +126,7 @@ export default function ProviderOffersPage() {
 									<div className="min-w-0 flex-1">
 										<div className="flex items-start justify-between gap-2">
 											<p className="line-clamp-1 text-sm font-semibold">
-												{offer.serviceName || "Service offer"}
+												{offer.serviceName || t("providerServiceOffer")}
 											</p>
 											<span
 												className={cn(
@@ -136,7 +138,7 @@ export default function ProviderOffersPage() {
 											</span>
 										</div>
 										<p className="mt-0.5 text-xs text-[#7C7C7C]">
-											{offer.customerName || "Customer"}
+											{offer.customerName || t("customer")}
 										</p>
 										<p className="mt-1 text-sm font-semibold text-primary">
 											{formatOfferPrice(offer.offeredPrice)}
@@ -160,7 +162,7 @@ export default function ProviderOffersPage() {
 											disabled={actingId === offer.id}
 											onClick={() => onRespond(offer, false)}
 										>
-											Reject
+											{t("commonReject")}
 										</Button>
 										<Button
 											size="sm"
@@ -168,7 +170,7 @@ export default function ProviderOffersPage() {
 											disabled={actingId === offer.id}
 											onClick={() => onRespond(offer, true)}
 										>
-											Accept
+											{t("commonAccept")}
 										</Button>
 									</div>
 								) : null}

@@ -8,28 +8,41 @@ import { BookingRow } from "@/components/provider/booking-row";
 import { ProviderMobileTabBar } from "@/components/provider/mobile-chrome";
 import { AppLoading } from "@/components/ui/app-loading";
 import { Input } from "@/components/ui/input";
-import { BOOKING_STATUS, formatBookingStatus } from "@/lib/booking-status";
+import { BOOKING_STATUS } from "@/lib/booking-status";
+import { useLocale } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { customerDisplayName } from "@/services/bookings/types";
 import { useAuth } from "@/store/useAuth";
 import { useCachedProviderBookings } from "@/store/useProviderCache";
 
-const FILTERS = [
-	{ id: "all", label: "All" },
-	{ id: BOOKING_STATUS.pending, label: "Pending" },
-	{ id: BOOKING_STATUS.accepted, label: "Accepted" },
-	{ id: BOOKING_STATUS.inProgress, label: "In progress" },
-	{ id: BOOKING_STATUS.completed, label: "Completed" },
-	{ id: BOOKING_STATUS.rejected, label: "Rejected" },
-] as const;
-
 export default function ProviderBookingsPage() {
+	const { t } = useLocale();
 	const { user } = useAuth();
 	const providerId = user?.provider?.id ?? "";
 	const { data: bookings, loading, error, refresh, refreshing } =
 		useCachedProviderBookings(providerId);
-	const [filter, setFilter] = useState<(typeof FILTERS)[number]["id"]>("all");
+	const [filter, setFilter] = useState<string>("all");
 	const [query, setQuery] = useState("");
+
+	const filters = useMemo(
+		() => [
+			{ id: "all", label: t("commonAll") },
+			{ id: BOOKING_STATUS.pending, label: t("statusPending") },
+			{ id: BOOKING_STATUS.accepted, label: t("statusAccepted") },
+			{ id: BOOKING_STATUS.inProgress, label: t("statusInProgress") },
+			{ id: BOOKING_STATUS.completed, label: t("statusCompleted") },
+			{ id: BOOKING_STATUS.rejected, label: t("statusRejected") },
+		],
+		[t],
+	);
+
+	const filterLabels = useMemo(
+		() =>
+			Object.fromEntries(
+				filters.filter((f) => f.id !== "all").map((f) => [f.id, f.label]),
+			),
+		[filters],
+	);
 
 	const filtered = useMemo(() => {
 		let list = bookings;
@@ -59,19 +72,22 @@ export default function ProviderBookingsPage() {
 		return list;
 	}, [bookings, filter, query]);
 
+	const bookingCountLabel =
+		bookings.length === 1
+			? t("providerBookingsCountOne")
+			: t("providerBookingsCount", { count: bookings.length });
+
 	return (
 		<div className="mx-auto max-w-3xl">
-			<ProviderMobileTabBar title="Booking" />
+			<ProviderMobileTabBar title={t("bookingTitle")} />
 
 			<div className="hidden lg:block">
 				<div className="flex items-start justify-between gap-3">
 					<div>
-						<p className="admin-eyebrow">Provider</p>
-						<h1 className="admin-page-title mt-1">Bookings</h1>
+						<p className="admin-eyebrow">{t("provider")}</p>
+						<h1 className="admin-page-title mt-1">{t("bookingsTitle")}</h1>
 						<p className="mt-2 text-sm text-muted-foreground">
-							{loading
-								? "Loading…"
-								: `${bookings.length} booking${bookings.length === 1 ? "" : "s"}`}
+							{loading ? t("commonLoading") : bookingCountLabel}
 						</p>
 					</div>
 					<button
@@ -79,7 +95,7 @@ export default function ProviderBookingsPage() {
 						onClick={refresh}
 						className="text-xs font-medium text-primary"
 					>
-						{refreshing ? "Refreshing…" : "Refresh"}
+						{refreshing ? t("commonRefreshing") : t("commonRefresh")}
 					</button>
 				</div>
 			</div>
@@ -91,7 +107,7 @@ export default function ProviderBookingsPage() {
 						onClick={refresh}
 						className="text-xs font-medium text-primary"
 					>
-						{refreshing ? "Refreshing…" : "Refresh"}
+						{refreshing ? t("commonRefreshing") : t("commonRefresh")}
 					</button>
 				</div>
 
@@ -100,13 +116,13 @@ export default function ProviderBookingsPage() {
 					<Input
 						value={query}
 						onChange={(e) => setQuery(e.target.value)}
-						placeholder="Search bookings"
+						placeholder={t("providerSearchBookings")}
 						className="h-11 rounded-xl border-0 bg-white pl-9 shadow-none ring-0"
 					/>
 				</div>
 
 				<div className="-mx-4 mt-3 flex h-[38px] gap-2 overflow-x-auto px-4 scrollbar-none">
-					{FILTERS.map((f) => {
+					{filters.map((f) => {
 						const active = filter === f.id;
 						return (
 							<button
@@ -135,11 +151,13 @@ export default function ProviderBookingsPage() {
 						<AppLoading compact />
 					) : filtered.length === 0 ? (
 						<p className="py-12 text-center text-sm text-muted-foreground">
-							No{" "}
 							{filter === "all"
-								? ""
-								: `${formatBookingStatus(filter).toLowerCase()} `}
-							bookings.
+								? t("providerNoBookings")
+								: t("providerNoFilteredBookings", {
+										status: (
+											filterLabels[filter] ?? filter
+										).toLowerCase(),
+									})}
 						</p>
 					) : (
 						<div className="grid grid-cols-2 gap-3 pb-4">
@@ -155,7 +173,7 @@ export default function ProviderBookingsPage() {
 						<AppLoading compact />
 					) : filtered.length === 0 ? (
 						<p className="py-10 text-center text-sm text-muted-foreground">
-							No bookings.
+							{t("providerNoBookings")}
 						</p>
 					) : (
 						filtered.map((b) => <BookingRow key={b.id} booking={b} />)

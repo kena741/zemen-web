@@ -5,6 +5,7 @@ export type ServiceReview = {
 	rating: number;
 	comment: string | null;
 	customerId: string | null;
+	customerName: string | null;
 	bookingId: string | null;
 	serviceId: string | null;
 	date: string | null;
@@ -20,6 +21,12 @@ function mapReview(row: Record<string, unknown>): ServiceReview {
 				? String(row.customerId)
 				: row.customer_id != null
 					? String(row.customer_id)
+					: null,
+		customerName:
+			row.customerName != null
+				? String(row.customerName)
+				: row.customer_name != null
+					? String(row.customer_name)
 					: null,
 		bookingId:
 			row.bookingId != null

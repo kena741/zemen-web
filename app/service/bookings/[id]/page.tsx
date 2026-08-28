@@ -1,8 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
+import { RecurringBadge } from "@/components/recurring/recurring-badge";
 import { ProfileBackLink } from "@/components/provider/profile-back-link";
 import { StatusBadge } from "@/components/provider/status-badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -11,7 +13,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ServiceLoading } from "@/components/service/service-loading";
+import { useLocale } from "@/lib/i18n";
 import { formatAmount, formatDateTime } from "@/services/bookings/types";
+import { isRecurringPricingType } from "@/lib/recurring";
+import { savePaymentPending } from "@/lib/payment-pending";
 import {
 	cancelCustomerBooking,
 	payBookingWithWallet,
@@ -31,6 +36,7 @@ import { useAuth } from "@/store/useAuth";
 import { useCachedBookingDetail } from "@/store/useCustomerCache";
 
 export default function CustomerBookingDetailPage() {
+	const { t } = useLocale();
 	const params = useParams<{ id: string }>();
 	const router = useRouter();
 	const dispatch = useAppDispatch();
@@ -54,7 +60,7 @@ export default function CustomerBookingDetailPage() {
 
 	async function onCancel() {
 		if (!booking || busy) return;
-		if (!window.confirm("Cancel this pending booking?")) return;
+		if (!window.confirm(t("bookingCancelConfirm"))) return;
 		setBusy(true);
 		setActionError(null);
 		const res = await cancelCustomerBooking(booking.id);
@@ -72,7 +78,7 @@ export default function CustomerBookingDetailPage() {
 		const amount = Number(booking.totalAmount ?? booking.subTotal ?? 0) || 0;
 		if (
 			!window.confirm(
-				`Pay ${formatAmount(amount)} from your wallet for this booking?`,
+				t("bookingPayWalletConfirm", { amount: formatAmount(amount) }),
 			)
 		) {
 			return;
@@ -103,6 +109,43 @@ export default function CustomerBookingDetailPage() {
 		refresh();
 	}
 
+	async function onPayNextCycleChapa() {
+		if (!booking || !user?.id || busy) return;
+		const amount = Number(booking.totalAmount ?? booking.subTotal ?? 0) || 0;
+		savePaymentPending({
+			purpose: "booking",
+			userId: user.id,
+			accountType: "customer",
+			amount: String(amount),
+			bookingId: booking.id,
+			nextCycle: true,
+			billingInterval: booking.service?.billingInterval ?? undefined,
+			billingIntervalCount: booking.service?.billingIntervalCount ?? undefined,
+		});
+		setBusy(true);
+		const res = await fetch("/api/pay/chapa", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({
+				amount,
+				email: user.email,
+				first_name: booking.firstName,
+				last_name: booking.lastName,
+				phone_number: booking.phoneNumber,
+				purpose: "booking",
+				return_path: `/pay/done?purpose=booking&amount=${amount}`,
+				booking_id: booking.id,
+			}),
+		});
+		const data = (await res.json()) as { checkout_url?: string; error?: string };
+		setBusy(false);
+		if (!res.ok || !data.checkout_url) {
+			setActionError(data.error || t("bookServiceChapaFailed"));
+			return;
+		}
+		window.location.href = data.checkout_url;
+	}
+
 	async function onReview() {
 		if (!booking?.serviceId || !user?.id || busy) return;
 		setBusy(true);
@@ -130,9 +173,9 @@ export default function CustomerBookingDetailPage() {
 	if (!booking) {
 		return (
 			<div className="px-4 pt-4">
-				<ProfileBackLink href="/service/bookings" label="Bookings" />
+				<ProfileBackLink href="/service/bookings" label={t("bookingsTitle")} />
 				<p className="text-sm text-destructive">
-					{error || "Booking not found"}
+					{error || t("bookingNotFound")}
 				</p>
 			</div>
 		);
@@ -144,6 +187,16 @@ export default function CustomerBookingDetailPage() {
 		!booking.paymentCompleted &&
 		(offer?.status === "accepted" || status === "pending_extra_payment");
 	const canReview = status === "completed" && !hasReview && booking.serviceId;
+	const isRecurring =
+		isRecurringPricingType(booking.service?.pricingType ?? null) ||
+		booking.nextCycleDue ||
+		Boolean(booking.currentPeriodEnd);
+	const showNextCyclePay =
+		isRecurring &&
+		booking.paymentCompleted &&
+		(booking.nextCycleDue ||
+			(booking.currentPeriodEnd &&
+				new Date(booking.currentPeriodEnd).getTime() <= Date.now()));
 	const address =
 		booking.bookingAddress?.address ||
 		booking.bookingAddress?.locality ||
@@ -152,20 +205,26 @@ export default function CustomerBookingDetailPage() {
 	return (
 		<div className="px-4 pt-4 md:px-6 md:pt-8">
 			<div className="flex items-center justify-between gap-2">
-				<ProfileBackLink href="/service/bookings" label="Bookings" />
+				<ProfileBackLink href="/service/bookings" label={t("bookingsTitle")} />
 				<button
 					type="button"
 					onClick={refresh}
 					className="mb-3 text-xs font-medium text-primary"
 				>
-					Refresh
+					{t("commonRefresh")}
 				</button>
 			</div>
 			<div className="flex flex-wrap items-center gap-2">
 				<h1 className="admin-page-title">
-					{booking.service?.serviceName || "Booking"}
+					{booking.service?.serviceName || t("bookingTitle")}
 				</h1>
 				<StatusBadge status={booking.status} />
+				{isRecurring ? (
+					<RecurringBadge
+						interval={booking.service?.billingInterval}
+						count={booking.service?.billingIntervalCount}
+					/>
+				) : null}
 			</div>
 			<p className="mt-1 text-sm text-muted-foreground">
 				#{booking.id.slice(0, 8)}
@@ -179,7 +238,7 @@ export default function CustomerBookingDetailPage() {
 
 			{offer ? (
 				<p className="mt-3 rounded-lg bg-muted px-3 py-2 text-xs">
-					Custom price offer ·{" "}
+					{t("bookingCustomOffer")} ·{" "}
 					<span className="capitalize font-medium">{offer.status}</span>
 					{offer.offeredPrice != null
 						? ` · ${formatAmount(offer.offeredPrice)}`
@@ -189,43 +248,76 @@ export default function CustomerBookingDetailPage() {
 
 			<div className="mt-5 space-y-3 rounded-xl bg-white p-4 shadow-sm ring-1 ring-black/5">
 				<Row
-					label="When"
+					label={t("bookingWhen")}
 					value={formatDateTime(booking.bookingDate ?? booking.startTime)}
 				/>
 				<Row
-					label="Amount"
+					label={t("bookingAmount")}
 					value={formatAmount(booking.totalAmount ?? booking.subTotal)}
 				/>
 				<Row
-					label="Payment"
+					label={t("bookingPayment")}
 					value={
 						booking.paymentCompleted
-							? `${booking.paymentType || "paid"} · paid`
-							: booking.paymentType || "unpaid"
+							? t("bookingPaidWith", {
+									type: booking.paymentType || t("commonPaid"),
+								})
+							: booking.paymentType || t("commonUnpaid")
 					}
 				/>
-				{address ? <Row label="Address" value={address} /> : null}
+				{address ? <Row label={t("bookingAddress")} value={address} /> : null}
+				{booking.handymanId ? (
+					<Row
+						label={t("bookingHandyman")}
+						value={
+							<Link
+								href={`/service/bookings/${booking.id}/handyman`}
+								className="text-primary underline"
+							>
+								{t("bookingViewHandyman")}
+							</Link>
+						}
+					/>
+				) : null}
+				{booking.currentPeriodEnd ? (
+					<Row
+						label={t("bookingPeriodEnds")}
+						value={formatDateTime(booking.currentPeriodEnd)}
+					/>
+				) : null}
 				{booking.description ? (
-					<Row label="Notes" value={booking.description} />
+					<Row label={t("bookingNotes")} value={booking.description} />
 				) : null}
 				{booking.otp &&
 				["accepted", "ongoing", "inprogress", "driving", "on_the_way"].includes(
 					status,
 				) ? (
 					<div className="rounded-lg bg-primary/10 px-3 py-3">
-						<p className="text-xs font-medium text-primary">Start OTP</p>
+						<p className="text-xs font-medium text-primary">
+							{t("bookingStartOtp")}
+						</p>
 						<p className="mt-1 text-2xl font-bold tracking-[0.3em] text-primary">
 							{booking.otp}
 						</p>
 						<p className="mt-1 text-xs text-muted-foreground">
-							Share with the provider when they arrive
+							{t("bookingShareOtp")}
 						</p>
 					</div>
 				) : null}
 				{booking.reason ? (
-					<Row label="Reason" value={booking.reason} />
+					<Row label={t("bookingReason")} value={booking.reason} />
 				) : null}
 			</div>
+
+			{showNextCyclePay ? (
+				<Button
+					className="mt-5 w-full"
+					disabled={busy}
+					onClick={() => void onPayNextCycleChapa()}
+				>
+					{busy ? t("bookingStarting") : t("bookingPayNextCycle")}
+				</Button>
+			) : null}
 
 			{showWalletPay ? (
 				<Button
@@ -233,7 +325,7 @@ export default function CustomerBookingDetailPage() {
 					disabled={busy}
 					onClick={() => void onPayWallet()}
 				>
-					{busy ? "Paying…" : "Pay with wallet"}
+					{busy ? t("bookingPaying") : t("bookingPayWallet")}
 				</Button>
 			) : null}
 
@@ -244,7 +336,7 @@ export default function CustomerBookingDetailPage() {
 					disabled={busy}
 					onClick={onCancel}
 				>
-					{busy ? "Cancelling…" : "Cancel booking"}
+					{busy ? t("bookingCancelling") : t("bookingCancel")}
 				</Button>
 			) : null}
 
@@ -256,11 +348,11 @@ export default function CustomerBookingDetailPage() {
 							className="mt-3 w-full"
 							onClick={() => setShowReview(true)}
 						>
-							Add review
+							{t("bookingAddReview")}
 						</Button>
 					) : (
 						<div className="mt-3 space-y-2 rounded-xl bg-white p-4 shadow-sm ring-1 ring-black/5">
-							<Label htmlFor="rating">Rating (1–5)</Label>
+							<Label htmlFor="rating">{t("bookingRating")}</Label>
 							<Input
 								id="rating"
 								type="number"
@@ -269,7 +361,7 @@ export default function CustomerBookingDetailPage() {
 								value={rating}
 								onChange={(e) => setRating(Number(e.target.value) || 5)}
 							/>
-							<Label htmlFor="comment">Comment</Label>
+							<Label htmlFor="comment">{t("bookingComment")}</Label>
 							<Textarea
 								id="comment"
 								rows={3}
@@ -278,10 +370,10 @@ export default function CustomerBookingDetailPage() {
 							/>
 							<div className="flex gap-2">
 								<Button disabled={busy} onClick={() => void onReview()}>
-									Submit review
+									{t("bookingSubmitReview")}
 								</Button>
 								<Button variant="ghost" onClick={() => setShowReview(false)}>
-									Cancel
+									{t("commonCancel")}
 								</Button>
 							</div>
 						</div>
@@ -291,7 +383,7 @@ export default function CustomerBookingDetailPage() {
 
 			{hasReview ? (
 				<p className="mt-3 text-center text-xs text-muted-foreground">
-					You already reviewed this booking.
+					{t("bookingAlreadyReviewed")}
 				</p>
 			) : null}
 
@@ -303,18 +395,18 @@ export default function CustomerBookingDetailPage() {
 						router.push(`/service/inbox/${booking.providerId}`)
 					}
 				>
-					Message provider
+					{t("bookingMessageProvider")}
 				</Button>
 			) : null}
 		</div>
 	);
 }
 
-function Row({ label, value }: { label: string; value: string }) {
+function Row({ label, value }: { label: string; value: React.ReactNode }) {
 	return (
 		<div>
 			<p className="text-xs text-muted-foreground">{label}</p>
-			<p className="mt-0.5 text-sm font-medium whitespace-pre-wrap">{value}</p>
+			<div className="mt-0.5 text-sm font-medium whitespace-pre-wrap">{value}</div>
 		</div>
 	);
 }

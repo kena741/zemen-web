@@ -1,4 +1,5 @@
 import type { AppMode } from "@/lib/brand";
+import { getEdgeFunctionsBaseUrl } from "@/lib/env";
 import {
 	looksLikePhoneIdentifier,
 	normalizeLocalEthiopianPhone,
@@ -108,6 +109,46 @@ async function resolveLoginEmail(
 	}
 
 	return { email: raw.toLowerCase(), error: null };
+}
+
+async function loginCustomerViaEdge(
+	email: string,
+	password: string,
+): Promise<{ session: { access_token: string; refresh_token: string } | null; error: string | null }> {
+	const base = getEdgeFunctionsBaseUrl();
+	const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim();
+	if (!base || !anonKey) {
+		return { session: null, error: "Login service unavailable" };
+	}
+
+	try {
+		const res = await fetch(`${base}/login-customer`, {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+				Authorization: `Bearer ${anonKey}`,
+			},
+			body: JSON.stringify({ email, password }),
+		});
+		const data = (await res.json()) as {
+			success?: boolean;
+			error?: string;
+			access_token?: string;
+			refresh_token?: string;
+		};
+		if (!res.ok || !data.success || !data.access_token || !data.refresh_token) {
+			return { session: null, error: data.error ?? "Login failed" };
+		}
+		return {
+			session: {
+				access_token: data.access_token,
+				refresh_token: data.refresh_token,
+			},
+			error: null,
+		};
+	} catch {
+		return { session: null, error: "No internet connection" };
+	}
 }
 
 export async function fetchProviderProfile(
@@ -255,6 +296,28 @@ export async function loginWithEmailOrPhone(params: {
 		email: resolved.email,
 		password,
 	});
+
+	if ((error || !data.user) && mode === "service") {
+		const msg = (error?.message ?? "").toLowerCase();
+		if (msg.includes("email not confirmed") || msg.includes("not confirmed")) {
+			const edge = await loginCustomerViaEdge(resolved.email, password);
+			if (edge.session) {
+				const { data: sessionData, error: sessionErr } =
+					await getSupabase().auth.setSession({
+						access_token: edge.session.access_token,
+						refresh_token: edge.session.refresh_token,
+					});
+				if (!sessionErr && sessionData.user) {
+					const built = await buildAuthUser(
+						sessionData.user.id,
+						sessionData.user.email ?? resolved.email,
+						mode,
+					);
+					if (built.user) return built;
+				}
+			}
+		}
+	}
 
 	if (error || !data.user) {
 		return {

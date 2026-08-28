@@ -2,33 +2,38 @@
 
 import { ProfileBackLink } from "@/components/provider/profile-back-link";
 import { ServiceLoading } from "@/components/service/service-loading";
+import { useLocale } from "@/lib/i18n";
 import { formatDateTime } from "@/services/bookings/types";
 import { useAuth } from "@/store/useAuth";
 import { useCachedNotifications } from "@/store/useCustomerCache";
 
 export default function CustomerNotificationsPage() {
+	const { t } = useLocale();
 	const { user } = useAuth();
 	const customerId = user?.id ?? "";
 	const { data: items, loading, error, refresh, refreshing } =
 		useCachedNotifications(customerId);
 
+	const countLabel =
+		items.length === 1
+			? t("notificationsCountOne")
+			: t("notificationsCount", { count: items.length });
+
 	return (
 		<div className="px-4 pt-4 md:px-6 md:pt-8">
 			<div className="flex items-center justify-between gap-2">
-				<ProfileBackLink href="/service" label="Home" />
+				<ProfileBackLink href="/service" label={t("navHome")} />
 				<button
 					type="button"
 					onClick={refresh}
 					className="mb-3 text-xs font-medium text-primary"
 				>
-					{refreshing ? "Refreshing…" : "Refresh"}
+					{refreshing ? t("commonRefreshing") : t("commonRefresh")}
 				</button>
 			</div>
-			<h1 className="admin-page-title">Notifications</h1>
+			<h1 className="admin-page-title">{t("notificationsTitle")}</h1>
 			<p className="mt-1 text-sm text-muted-foreground">
-				{loading
-					? "Loading…"
-					: `${items.length} notification${items.length === 1 ? "" : "s"}`}
+				{loading ? t("commonLoading") : countLabel}
 			</p>
 
 			{error ? (
@@ -40,7 +45,7 @@ export default function CustomerNotificationsPage() {
 					<ServiceLoading compact />
 				) : items.length === 0 ? (
 					<p className="py-10 text-center text-sm text-muted-foreground">
-						No notifications yet.
+						{t("notificationsEmpty")}
 					</p>
 				) : (
 					items.map((n) => (
@@ -50,7 +55,7 @@ export default function CustomerNotificationsPage() {
 						>
 							<div className="flex items-start justify-between gap-3">
 								<p className="text-sm font-semibold">
-									{n.title || "Notification"}
+									{n.title || t("notificationFallback")}
 								</p>
 								{!n.isRead ? (
 									<span className="mt-1 size-2 shrink-0 rounded-full bg-primary" />

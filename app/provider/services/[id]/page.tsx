@@ -8,7 +8,9 @@ import { ArrowLeftIcon, PencilIcon, StarIcon, Trash2Icon } from "lucide-react";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AppLoading } from "@/components/ui/app-loading";
+import { ChapaCheckout } from "@/components/payments/chapa-checkout";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { useLocale } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { formatAmount } from "@/services/bookings/types";
 import {
@@ -36,6 +38,7 @@ function DetailRow({ label, value }: { label: string; value: React.ReactNode }) 
 }
 
 export default function ServiceDetailPage() {
+	const { t } = useLocale();
 	const params = useParams<{ id: string }>();
 	const id = params?.id ?? "";
 	const router = useRouter();
@@ -46,13 +49,14 @@ export default function ServiceDetailPage() {
 	const [busy, setBusy] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const [info, setInfo] = useState<string | null>(null);
+	const [featuredFee, setFeaturedFee] = useState<number | null>(null);
 
 	useEffect(() => {
 		if (!service || !user?.provider?.id) return;
 		if (service.providerId && service.providerId !== user.provider.id) {
-			setError("This service does not belong to your account.");
+			setError(t("providerServiceNotOwned"));
 		}
-	}, [service, user?.provider?.id]);
+	}, [service, user?.provider?.id, t]);
 
 	async function toggleActive() {
 		if (!service) return;
@@ -83,13 +87,19 @@ export default function ServiceDetailPage() {
 		setBusy(true);
 		setError(null);
 		setInfo(null);
+		setFeaturedFee(null);
 		const res = await requestServiceFeatured(service.id);
 		setBusy(false);
+		if (res.requiresPayment && res.fee > 0) {
+			setFeaturedFee(res.fee);
+			setInfo(t("providerFeaturedPayHint", { amount: formatAmount(res.fee) }));
+			return;
+		}
 		if (!res.ok) {
 			setError(res.error);
 			return;
 		}
-		setInfo("Featured request submitted. An admin will review it.");
+		setInfo(t("providerFeaturedSubmitted"));
 		dispatch(invalidateProviderServices());
 		refresh();
 	}
@@ -98,7 +108,9 @@ export default function ServiceDetailPage() {
 		if (!service) return;
 		if (
 			!window.confirm(
-				`Delete “${service.serviceName ?? "this service"}”? This cannot be undone.`,
+				t("providerDeleteServiceConfirm", {
+					name: service.serviceName ?? t("serviceTitle"),
+				}),
 			)
 		) {
 			return;
@@ -130,14 +142,14 @@ export default function ServiceDetailPage() {
 				onClick={() => router.push("/provider/services")}
 			>
 				<ArrowLeftIcon className="size-4" />
-				Services
+				{t("providerServicesTitle")}
 			</Button>
 
 			{loading ? (
 				<AppLoading compact />
 			) : !service ? (
 				<p className="text-sm text-destructive">
-					{error || loadError || "Service not found"}
+					{error || loadError || t("providerServiceNotFound")}
 				</p>
 			) : (
 				<>
@@ -168,15 +180,15 @@ export default function ServiceDetailPage() {
 
 					<div className="flex flex-wrap items-start justify-between gap-3">
 						<div>
-							<p className="admin-eyebrow">Service</p>
+							<p className="admin-eyebrow">{t("serviceTitle")}</p>
 							<h1 className="admin-page-title mt-1">
-								{service.serviceName ?? "Untitled service"}
+								{service.serviceName ?? t("providerServiceUntitled")}
 							</h1>
 							<p className="mt-1 text-sm text-muted-foreground">
-								{service.status ? "Active" : "Inactive"}
-								{service.feature ? " · Featured" : null}
-								{featuredPending ? " · Feature pending" : null}
-								{service.approved === false ? " · Pending approval" : null}
+								{service.status ? t("providerServiceActive") : t("providerServiceInactive")}
+								{service.feature ? ` · ${t("providerServiceFeaturedLabel")}` : null}
+								{featuredPending ? ` · ${t("providerFeaturePending")}` : null}
+								{service.approved === false ? ` · ${t("providerPendingApproval")}` : null}
 							</p>
 						</div>
 						<Link
@@ -187,7 +199,7 @@ export default function ServiceDetailPage() {
 							)}
 						>
 							<PencilIcon className="size-3.5" />
-							Edit
+							{t("commonEdit")}
 						</Link>
 					</div>
 
@@ -209,27 +221,37 @@ export default function ServiceDetailPage() {
 					) : null}
 
 					<dl className="mt-6 rounded-xl border border-border bg-white px-4 shadow-xs">
-						<DetailRow label="Price" value={formatAmount(service.price)} />
+						<DetailRow label={t("commonPrice")} value={formatAmount(service.price)} />
 						<DetailRow
-							label="Category"
+							label={t("commonCategory")}
 							value={
 								[service.categoryName, service.subCategoryName]
 									.filter(Boolean)
 									.join(" · ") || null
 							}
 						/>
-						<DetailRow label="Type" value={service.type} />
+						<DetailRow label={t("commonType")} value={service.type} />
 						<DetailRow
-							label="Location mode"
+							label={t("providerLocationMode")}
 							value={service.serviceLocationMode}
 						/>
-						<DetailRow label="Address" value={service.address} />
+						<DetailRow label={t("commonAddress")} value={service.address} />
 						<DetailRow
-							label="Reviews"
-							value={`${service.reviewSum ?? "0"} · ${service.reviewCount ?? "0"} reviews`}
+							label={t("serviceReviews")}
+							value={
+								<Link
+									href={`/provider/services/${service.id}/reviews`}
+									className="text-primary hover:underline"
+								>
+									{t("providerReviewsCount", {
+										rating: service.reviewSum ?? "0",
+										count: service.reviewCount ?? "0",
+									})}
+								</Link>
+							}
 						/>
 						{service.discount && service.discount !== "0" ? (
-							<DetailRow label="Discount" value={`${service.discount}%`} />
+							<DetailRow label={t("commonDiscount")} value={`${service.discount}%`} />
 						) : null}
 					</dl>
 
@@ -239,7 +261,7 @@ export default function ServiceDetailPage() {
 							disabled={busy}
 							onClick={() => void toggleActive()}
 						>
-							{service.status ? "Deactivate" : "Activate"}
+							{service.status ? t("providerServiceDeactivate") : t("providerServiceActivate")}
 						</Button>
 
 						{canRequestFeatured ? (
@@ -250,20 +272,41 @@ export default function ServiceDetailPage() {
 								onClick={() => void handleFeatured()}
 							>
 								<StarIcon className="size-3.5" />
-								Make featured
+								{t("providerServiceFeatured")}
 							</Button>
 						) : null}
 
 						{featuredPending ? (
 							<span className="inline-flex items-center rounded-md bg-amber-100 px-2.5 py-1.5 text-xs font-medium text-amber-900">
-								Featured request pending review
+								{t("providerServiceFeaturedPending")}
 							</span>
+						) : null}
+
+						{featuredFee ? (
+							<ChapaCheckout
+								className="w-full"
+								email={user?.email}
+								firstName={user?.provider?.firstName ?? user?.name}
+								lastName={user?.provider?.lastName ?? ""}
+								phone={user?.provider?.phoneNumber}
+								purpose="featured"
+								accountType="provider"
+								userId={user?.id ?? ""}
+								providerId={user?.provider?.id}
+								serviceId={service.id}
+								amount={String(featuredFee)}
+								returnPath="/pay/done?purpose=featured"
+								showAmountInput={false}
+								label={t("providerFeaturedListing", {
+									amount: formatAmount(featuredFee),
+								})}
+							/>
 						) : null}
 
 						{service.feature ? (
 							<span className="inline-flex items-center gap-1 rounded-md bg-secondary px-2.5 py-1.5 text-xs font-medium text-secondary-foreground">
 								<StarIcon className="size-3.5" />
-								Featured
+								{t("providerServiceFeaturedLabel")}
 							</span>
 						) : null}
 
@@ -274,7 +317,7 @@ export default function ServiceDetailPage() {
 							onClick={() => void handleDelete()}
 						>
 							<Trash2Icon className="size-3.5" />
-							Delete
+							{t("commonDelete")}
 						</Button>
 					</div>
 				</>

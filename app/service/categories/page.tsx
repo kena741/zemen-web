@@ -4,9 +4,11 @@ import { useRouter } from "next/navigation";
 
 import { ProfileBackLink } from "@/components/provider/profile-back-link";
 import { ServiceLoading } from "@/components/service/service-loading";
+import { useLocale } from "@/lib/i18n";
 import { useCachedCategories } from "@/store/useCustomerCache";
 
 export default function CategoriesPage() {
+	const { t } = useLocale();
 	const router = useRouter();
 	const { data: categories, loading, error, refresh, refreshing } =
 		useCachedCategories();
@@ -14,18 +16,18 @@ export default function CategoriesPage() {
 	return (
 		<div className="px-4 pt-4 md:px-6 md:pt-8">
 			<div className="flex items-center justify-between gap-2">
-				<ProfileBackLink href="/service" label="Home" />
+				<ProfileBackLink href="/service" label={t("navHome")} />
 				<button
 					type="button"
 					onClick={refresh}
 					className="mb-3 text-xs font-medium text-primary"
 				>
-					{refreshing ? "Refreshing…" : "Refresh"}
+					{refreshing ? t("commonRefreshing") : t("commonRefresh")}
 				</button>
 			</div>
-			<h1 className="admin-page-title">Categories</h1>
+			<h1 className="admin-page-title">{t("categoriesTitle")}</h1>
 			<p className="mt-1 text-sm text-muted-foreground">
-				Browse services by category
+				{t("categoriesSubtitle")}
 			</p>
 
 			{error ? (

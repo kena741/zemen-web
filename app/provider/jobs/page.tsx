@@ -7,6 +7,7 @@ import { ChevronRightIcon } from "lucide-react";
 import { ProfileBackLink } from "@/components/provider/profile-back-link";
 import { AppLoading } from "@/components/ui/app-loading";
 import { Button } from "@/components/ui/button";
+import { useLocale } from "@/lib/i18n";
 import { formatAmount, formatDateTime } from "@/services/bookings/types";
 import {
 	fetchMyBidJobs,
@@ -16,8 +17,8 @@ import {
 import { useAuth } from "@/store/useAuth";
 
 export default function ProviderJobsPage() {
+	const { t } = useLocale();
 	const { user } = useAuth();
-	/** Bid providerId matches Flutter auth uid. */
 	const providerId = user?.id ?? "";
 	const [tab, setTab] = useState<"open" | "bids">("open");
 	const [jobs, setJobs] = useState<ProviderJobRequest[]>([]);
@@ -50,19 +51,19 @@ export default function ProviderJobsPage() {
 	return (
 		<div className="mx-auto max-w-3xl">
 			<div className="flex items-center justify-between gap-2">
-				<ProfileBackLink href="/provider/profile" label="Profile" />
+				<ProfileBackLink href="/provider/profile" label={t("profileTitle")} />
 				<button
 					type="button"
 					onClick={() => void load()}
 					className="mb-3 text-xs font-medium text-primary"
 				>
-					Refresh
+					{t("commonRefresh")}
 				</button>
 			</div>
-			<p className="admin-eyebrow">Marketplace</p>
-			<h1 className="admin-page-title mt-1">Job requests</h1>
+			<p className="admin-eyebrow">{t("commonMarketplace")}</p>
+			<h1 className="admin-page-title mt-1">{t("providerJobRequests")}</h1>
 			<p className="mt-2 text-sm text-muted-foreground">
-				Browse open customer requests and place bids.
+				{t("providerJobsSubtitle")}
 			</p>
 
 			<div className="mt-4 flex gap-2">
@@ -71,21 +72,21 @@ export default function ProviderJobsPage() {
 					variant={tab === "open" ? "default" : "outline"}
 					onClick={() => setTab("open")}
 				>
-					Open jobs
+					{t("providerOpenJobs")}
 				</Button>
 				<Button
 					size="sm"
 					variant={tab === "bids" ? "default" : "outline"}
 					onClick={() => setTab("bids")}
 				>
-					My bids
+					{t("providerMyBids")}
 				</Button>
 			</div>
 
 			<input
 				value={q}
 				onChange={(e) => setQ(e.target.value)}
-				placeholder="Search jobs…"
+				placeholder={t("providerSearchJobs")}
 				className="mt-4 flex h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
 			/>
 
@@ -98,13 +99,17 @@ export default function ProviderJobsPage() {
 					<AppLoading compact />
 				) : filtered.length === 0 ? (
 					<p className="py-10 text-center text-sm text-muted-foreground">
-						{tab === "open" ? "No open jobs right now." : "No bids yet."}
+						{tab === "open" ? t("providerNoOpenJobs") : t("providerNoBids")}
 					</p>
 				) : (
 					filtered.map((job) => {
 						const myBid = job.bidList.find(
 							(b) => b.providerId === providerId,
 						);
+						const bidCountLabel =
+							job.bidList.length === 1
+								? t("providerBidCountOne")
+								: t("providerBidCount", { count: job.bidList.length });
 						return (
 							<Link
 								key={job.id}
@@ -113,16 +118,16 @@ export default function ProviderJobsPage() {
 							>
 								<div className="min-w-0 flex-1">
 									<p className="truncate text-sm font-semibold">
-										{job.title || "Job request"}
+										{job.title || t("providerJobRequest")}
 									</p>
 									<p className="mt-0.5 text-xs text-muted-foreground">
-										Budget {formatAmount(job.price)}
+										{t("providerBudget", { amount: formatAmount(job.price) })}
 										{job.createdAt
 											? ` · ${formatDateTime(job.createdAt)}`
 											: ""}
 										{myBid?.price
-											? ` · Your bid ${formatAmount(myBid.price)}`
-											: ` · ${job.bidList.length} bid${job.bidList.length === 1 ? "" : "s"}`}
+											? ` · ${t("providerYourBidAmount", { amount: formatAmount(myBid.price) })}`
+											: ` · ${bidCountLabel}`}
 									</p>
 								</div>
 								<ChevronRightIcon className="size-4 shrink-0 text-muted-foreground" />

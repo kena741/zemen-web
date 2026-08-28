@@ -8,6 +8,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ServiceLoading } from "@/components/service/service-loading";
+import { useLocale } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { formatDateTime } from "@/services/bookings/types";
 import {
@@ -20,13 +21,14 @@ import type { ChatMessage } from "@/services/chat/types";
 import { useAuth } from "@/store/useAuth";
 
 export default function CustomerChatPage() {
+	const { t } = useLocale();
 	const params = useParams<{ peerId: string }>();
 	const peerId = params?.peerId ?? "";
 	const router = useRouter();
 	const { user } = useAuth();
 	const userId = user?.id ?? "";
 	const [messages, setMessages] = useState<ChatMessage[]>([]);
-	const [peerName, setPeerName] = useState("Chat");
+	const [peerName, setPeerName] = useState(t("chatDefault"));
 	const [text, setText] = useState("");
 	const [loading, setLoading] = useState(true);
 	const [busy, setBusy] = useState(false);
@@ -97,7 +99,7 @@ export default function CustomerChatPage() {
 				</Button>
 				<div>
 					<p className="text-sm font-semibold">{peerName}</p>
-					<p className="text-xs text-muted-foreground">Conversation</p>
+					<p className="text-xs text-muted-foreground">{t("chatConversation")}</p>
 				</div>
 			</div>
 
@@ -112,7 +114,7 @@ export default function CustomerChatPage() {
 					<ServiceLoading compact />
 				) : messages.length === 0 ? (
 					<p className="py-8 text-center text-sm text-muted-foreground">
-						No messages yet. Say hello.
+						{t("chatEmpty")}
 					</p>
 				) : (
 					messages.map((m) => {
@@ -158,7 +160,7 @@ export default function CustomerChatPage() {
 				<Input
 					value={text}
 					onChange={(e) => setText(e.target.value)}
-					placeholder="Type a message…"
+					placeholder={t("chatPlaceholder")}
 					className="flex-1 bg-white"
 				/>
 				<Button type="submit" disabled={busy || !text.trim()} size="icon">

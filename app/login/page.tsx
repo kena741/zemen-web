@@ -1,11 +1,13 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { EyeIcon, EyeOffIcon, Loader2Icon } from "lucide-react";
 
 import appIcon from "@/assets/images/app_icon.png";
+import { TelegramLink } from "@/components/app/telegram-link";
 import { LoginMeshBackground } from "@/components/login/login-mesh-bg";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -17,16 +19,17 @@ import {
 	InputGroupInput,
 } from "@/components/ui/input-group";
 import {
-	APP_MODE_LABEL,
 	BRAND_NAME,
 	homePathForMode,
 	type AppMode,
 } from "@/lib/brand";
+import { useLocale } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/store/useAuth";
 
 export default function LoginPage() {
 	const router = useRouter();
+	const { t } = useLocale();
 	const {
 		login,
 		loginPending,
@@ -45,6 +48,10 @@ export default function LoginPage() {
 	useEffect(() => {
 		if (user) router.replace(homePathForMode(user.mode));
 	}, [user, router]);
+
+	function modeLabel(option: AppMode) {
+		return option === "provider" ? t("provider") : t("customer");
+	}
 
 	async function handleLogin(e: React.FormEvent) {
 		e.preventDefault();
@@ -84,13 +91,13 @@ export default function LoginPage() {
 				<div className="w-full max-w-[25rem] overflow-hidden rounded-2xl border border-black/5 bg-white shadow-[0_15px_35px_rgba(23,23,23,0.08),0_5px_15px_rgba(0,0,0,0.04)] sm:rounded-xl">
 					<div className="px-5 py-7 sm:px-8 sm:py-8">
 						<h1 className="text-center text-[20px] font-semibold tracking-tight text-foreground sm:text-[22px]">
-							Sign in to your account
+							{t("signInToAccount")}
 						</h1>
 
 						<div
 							className="mt-6 grid grid-cols-2 gap-1 rounded-lg bg-muted p-1"
 							role="tablist"
-							aria-label="Sign in as"
+							aria-label={t("signInAsRole")}
 						>
 							{(["provider", "service"] as const).map((option) => {
 								const selected = mode === option;
@@ -108,15 +115,15 @@ export default function LoginPage() {
 												: "text-muted-foreground hover:text-foreground",
 										)}
 									>
-										{APP_MODE_LABEL[option]}
+										{modeLabel(option)}
 									</button>
 								);
 							})}
 						</div>
 						<p className="mt-2 text-center text-[12px] text-muted-foreground">
 							{mode === "provider"
-								? "Continue as a service provider partner."
-								: "Continue as a customer (Zemen Service)."}
+								? t("signInProviderHint")
+								: t("signInCustomerHint")}
 						</p>
 
 						{uiError ? (
@@ -125,7 +132,7 @@ export default function LoginPage() {
 								className="mt-6"
 								aria-live="polite"
 							>
-								<AlertTitle>Sign in failed</AlertTitle>
+								<AlertTitle>{t("signInFailed")}</AlertTitle>
 								<AlertDescription>
 									<div className="flex flex-col gap-2">
 										<div>{uiError}</div>
@@ -135,14 +142,13 @@ export default function LoginPage() {
 												className="text-left text-sm font-medium underline underline-offset-2"
 												onClick={() => selectMode("service")}
 											>
-												Switch to Customer
+												{t("switchToCustomer")}
 											</button>
 										) : null}
 										{uiError.toLowerCase().includes("confirm") ||
 										uiError.toLowerCase().includes("verify your email") ? (
 											<p className="text-sm">
-												Check your email inbox (and spam folder) for the
-												confirmation link.
+												{t("signInConfirmEmailHint")}
 											</p>
 										) : null}
 									</div>
@@ -160,7 +166,7 @@ export default function LoginPage() {
 										htmlFor="emailOrPhone"
 										className="text-[13px] font-medium text-muted-foreground"
 									>
-										Email or phone
+										{t("emailOrPhone")}
 									</FieldLabel>
 									<InputGroup className="rounded-md border-[#d7e3d2] shadow-none has-[[data-slot=input-group-control]:focus-visible]:border-[#d7e3d2] has-[[data-slot=input-group-control]:focus-visible]:ring-0">
 										<InputGroupInput
@@ -171,7 +177,7 @@ export default function LoginPage() {
 											autoComplete="username"
 											spellCheck={false}
 											required
-											placeholder="name@company.com or +251…"
+											placeholder={t("emailOrPhonePlaceholder")}
 											value={emailOrPhone}
 											onChange={(e) => setEmailOrPhone(e.target.value)}
 											className="h-10 bg-white shadow-none focus-visible:ring-0"
@@ -184,7 +190,7 @@ export default function LoginPage() {
 										htmlFor="password"
 										className="text-[13px] font-medium text-muted-foreground"
 									>
-										Password
+										{t("password")}
 									</FieldLabel>
 									<InputGroup className="rounded-md border-[#d7e3d2] shadow-none has-[[data-slot=input-group-control]:focus-visible]:border-[#d7e3d2] has-[[data-slot=input-group-control]:focus-visible]:ring-0">
 										<InputGroupInput
@@ -193,7 +199,7 @@ export default function LoginPage() {
 											type={showPassword ? "text" : "password"}
 											autoComplete="current-password"
 											required
-											placeholder="Your password"
+											placeholder={t("passwordPlaceholder")}
 											value={password}
 											onChange={(e) => setPassword(e.target.value)}
 											className="h-10 bg-white shadow-none focus-visible:ring-0"
@@ -203,7 +209,7 @@ export default function LoginPage() {
 												type="button"
 												size="icon-xs"
 												aria-label={
-													showPassword ? "Hide password" : "Show password"
+													showPassword ? t("hidePassword") : t("showPassword")
 												}
 												aria-pressed={showPassword}
 												onClick={() => setShowPassword((v) => !v)}
@@ -232,20 +238,28 @@ export default function LoginPage() {
 									/>
 								) : null}
 								{loginPending
-									? "Signing in…"
-									: `Sign in as ${APP_MODE_LABEL[mode]}`}
+									? t("signingIn")
+									: t("signInAs", { mode: modeLabel(mode) })}
 							</Button>
+							<p className="text-center text-sm text-muted-foreground">
+								<Link href="/forgot-password" className="text-primary hover:underline">
+									{t("forgotPassword")}
+								</Link>
+							</p>
 						</form>
 					</div>
 
 					<div className="border-t border-border bg-muted/60 px-6 py-4 text-center text-[13px] text-muted-foreground sm:px-8">
-						Need access? Contact your administrator.
+						<Link href="/signup" className="font-medium text-primary hover:underline">
+							{t("createAnAccount")}
+						</Link>
 					</div>
 				</div>
 			</div>
 
-			<footer className="relative z-10 px-6 py-4 text-[12px] text-muted-foreground sm:px-8">
-				© {new Date().getFullYear()} {BRAND_NAME}
+			<footer className="relative z-10 flex flex-col items-center gap-3 px-6 py-4 text-[12px] text-muted-foreground sm:px-8">
+				<TelegramLink />
+				<p>© {new Date().getFullYear()} {BRAND_NAME}</p>
 			</footer>
 		</main>
 	);

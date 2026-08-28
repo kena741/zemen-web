@@ -9,11 +9,13 @@ import { ServiceCard } from "@/components/provider/service-card";
 import { AppLoading } from "@/components/ui/app-loading";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useLocale } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/store/useAuth";
 import { useCachedProviderServices } from "@/store/useProviderCache";
 
 export default function ProviderServicesPage() {
+	const { t } = useLocale();
 	const { user } = useAuth();
 	const providerId = user?.provider?.id ?? "";
 	const { data: services, loading, error, refresh, refreshing } =
@@ -33,30 +35,33 @@ export default function ProviderServicesPage() {
 		},
 	);
 
+	const countLabel =
+		services.length === 1
+			? t("providerServicesCountOne")
+			: t("providerServicesCount", { count: services.length });
+
 	return (
 		<div className="mx-auto w-full max-w-5xl pb-20 lg:pb-0">
 			<div className="lg:hidden">
 				<div className="flex items-center justify-between gap-2">
-					<ProfileBackLink href="/provider/profile" label="Profile" />
+					<ProfileBackLink href="/provider/profile" label={t("profileTitle")} />
 					<button
 						type="button"
 						onClick={refresh}
 						className="mb-3 text-xs font-medium text-primary"
 					>
-						{refreshing ? "Refreshing…" : "Refresh"}
+						{refreshing ? t("commonRefreshing") : t("commonRefresh")}
 					</button>
 				</div>
-				<h1 className="text-lg font-normal text-[#464646]">All Service</h1>
+				<h1 className="text-lg font-normal text-[#464646]">{t("providerServicesAll")}</h1>
 			</div>
 
 			<div className="hidden flex-wrap items-end justify-between gap-3 lg:flex">
 				<div className="min-w-0">
-					<p className="admin-eyebrow">Provider</p>
-					<h1 className="admin-page-title mt-1">Services</h1>
+					<p className="admin-eyebrow">{t("provider")}</p>
+					<h1 className="admin-page-title mt-1">{t("providerServicesTitle")}</h1>
 					<p className="mt-1.5 text-sm text-muted-foreground">
-						{loading
-							? "Loading…"
-							: `${services.length} listing${services.length === 1 ? "" : "s"}`}
+						{loading ? t("commonLoading") : countLabel}
 					</p>
 				</div>
 				<div className="flex gap-2">
@@ -65,14 +70,14 @@ export default function ProviderServicesPage() {
 						onClick={refresh}
 						className="text-xs font-medium text-primary"
 					>
-						{refreshing ? "Refreshing…" : "Refresh"}
+						{refreshing ? t("commonRefreshing") : t("commonRefresh")}
 					</button>
 					<Button
 						variant="outline"
 						size="sm"
 						onClick={() => setShowInactive((v) => !v)}
 					>
-						{showInactive ? "Hide inactive" : "Show inactive"}
+						{showInactive ? t("providerHideInactive") : t("providerShowInactive")}
 					</Button>
 					<Link
 						href="/provider/services/new"
@@ -82,7 +87,7 @@ export default function ProviderServicesPage() {
 						)}
 					>
 						<PlusIcon className="size-3.5" />
-						Add service
+						{t("providerAddService")}
 					</Link>
 				</div>
 			</div>
@@ -92,7 +97,7 @@ export default function ProviderServicesPage() {
 				<Input
 					value={query}
 					onChange={(e) => setQuery(e.target.value)}
-					placeholder="Search Services"
+					placeholder={t("providerSearchServices")}
 					className="h-10 rounded-lg border-0 bg-white pl-9 lg:h-11 lg:rounded-xl"
 				/>
 			</div>
@@ -104,7 +109,7 @@ export default function ProviderServicesPage() {
 					className="flex-1"
 					onClick={() => setShowInactive((v) => !v)}
 				>
-					{showInactive ? "Hide inactive" : "Show inactive"}
+					{showInactive ? t("providerHideInactive") : t("providerShowInactive")}
 				</Button>
 			</div>
 
@@ -116,9 +121,7 @@ export default function ProviderServicesPage() {
 				<AppLoading compact />
 			) : visible.length === 0 ? (
 				<div className="mt-5 rounded-xl bg-white px-4 py-12 text-center">
-					<p className="text-sm text-muted-foreground">
-						No services yet. Create your first listing.
-					</p>
+					<p className="text-sm text-muted-foreground">{t("providerNoServices")}</p>
 				</div>
 			) : (
 				<div className="mt-4 grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-3">
@@ -146,7 +149,7 @@ export default function ProviderServicesPage() {
 					)}
 				>
 					<PlusIcon className="size-4" />
-					Add Service
+					{t("providerAddService")}
 				</Link>
 			</div>
 		</div>

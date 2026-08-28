@@ -56,6 +56,15 @@ export function ServiceForm({
 		initial?.longitude != null ? String(initial.longitude) : "",
 	);
 	const [status, setStatus] = useState(initial?.status ?? true);
+	const [pricingType, setPricingType] = useState(
+		initial?.pricingType ?? "ONE_TIME",
+	);
+	const [billingInterval, setBillingInterval] = useState(
+		initial?.billingInterval ?? "MONTH",
+	);
+	const [billingIntervalCount, setBillingIntervalCount] = useState(
+		String(initial?.billingIntervalCount ?? 1),
+	);
 	const [existingImages, setExistingImages] = useState<string[]>(
 		initial?.serviceImage ?? [],
 	);
@@ -173,6 +182,9 @@ export function ServiceForm({
 				reviewSum: initial?.reviewSum,
 				reviewCount: initial?.reviewCount,
 				feature: initial?.feature ?? false,
+				pricingType,
+				billingInterval,
+				billingIntervalCount: Number(billingIntervalCount) || 1,
 			},
 		});
 
@@ -272,6 +284,37 @@ export function ServiceForm({
 						onChange={(e) => setDiscount(e.target.value)}
 					/>
 				</div>
+			</div>
+
+			<div className="grid gap-3 sm:grid-cols-2">
+				<div className="space-y-1.5">
+					<Label htmlFor="pricing-type">Pricing</Label>
+					<select
+						id="pricing-type"
+						value={pricingType}
+						onChange={(e) => setPricingType(e.target.value)}
+						className="h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm"
+					>
+						<option value="ONE_TIME">One-time</option>
+						<option value="RECURRING">Recurring</option>
+					</select>
+				</div>
+				{pricingType === "RECURRING" ? (
+					<div className="space-y-1.5">
+						<Label htmlFor="billing-interval">Billing interval</Label>
+						<select
+							id="billing-interval"
+							value={billingInterval}
+							onChange={(e) => setBillingInterval(e.target.value)}
+							className="h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm"
+						>
+							<option value="WEEK">Weekly</option>
+							<option value="MONTH">Monthly</option>
+							<option value="QUARTER">Quarterly</option>
+							<option value="YEAR">Yearly</option>
+						</select>
+					</div>
+				) : null}
 			</div>
 
 			<div className="space-y-1.5">

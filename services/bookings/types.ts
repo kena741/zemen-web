@@ -12,6 +12,9 @@ export interface BookingServiceSummary {
 	price: string | null;
 	duration: string | null;
 	serviceImage: string[];
+	pricingType?: string | null;
+	billingInterval?: string | null;
+	billingIntervalCount?: number | null;
 }
 
 export interface ExtraCharge {
@@ -56,6 +59,9 @@ export interface Booking {
 	bookingAddress: BookingAddress | null;
 	service: BookingServiceSummary | null;
 	createdAt: string | null;
+	currentPeriodStart: string | null;
+	currentPeriodEnd: string | null;
+	nextCycleDue: boolean;
 }
 
 function asString(value: unknown): string | null {
@@ -149,6 +155,10 @@ function parseService(
 		price: asString(map.price),
 		duration: asString(map.duration),
 		serviceImage: images,
+		pricingType: asString(map.pricing_type ?? map.pricingType),
+		billingInterval: asString(map.billing_interval ?? map.billingInterval),
+		billingIntervalCount:
+			Number(map.billing_interval_count ?? map.billingIntervalCount ?? 1) || 1,
 	};
 }
 
@@ -229,6 +239,11 @@ export function mapBookingRow(row: Record<string, unknown>): Booking {
 		bookingAddress: parseAddress(row.bookingAddress),
 		service: parseService(row.serviceDetails, serviceId),
 		createdAt: asString(row.createdAt),
+		currentPeriodStart: asString(
+			row.currentPeriodStart ?? row.current_period_start,
+		),
+		currentPeriodEnd: asString(row.currentPeriodEnd ?? row.current_period_end),
+		nextCycleDue: asBool(row.nextCycleDue ?? row.next_cycle_due),
 	};
 }
 

@@ -6,6 +6,7 @@ import { useCallback, useEffect, useState } from "react";
 import { ProfileBackLink } from "@/components/provider/profile-back-link";
 import { ServiceLoading } from "@/components/service/service-loading";
 import { Button } from "@/components/ui/button";
+import { useLocale } from "@/lib/i18n";
 import {
 	cancelCustomerOffer,
 	fetchCustomerOffers,
@@ -16,6 +17,7 @@ import { formatDateTime } from "@/services/bookings/types";
 import { useAuth } from "@/store/useAuth";
 
 export default function CustomerOffersPage() {
+	const { t } = useLocale();
 	const { user } = useAuth();
 	const customerId = user?.id ?? "";
 	const [offers, setOffers] = useState<ServiceOffer[]>([]);
@@ -37,7 +39,7 @@ export default function CustomerOffersPage() {
 	}, [load]);
 
 	async function onCancel(id: string) {
-		if (!window.confirm("Cancel this pending custom price?")) return;
+		if (!window.confirm(t("offersCancelConfirm"))) return;
 		setBusyId(id);
 		const res = await cancelCustomerOffer(id);
 		setBusyId(null);
@@ -51,18 +53,18 @@ export default function CustomerOffersPage() {
 	return (
 		<div className="px-4 pt-4 md:px-6 md:pt-8">
 			<div className="flex items-center justify-between gap-2">
-				<ProfileBackLink href="/service/profile" label="Profile" />
+				<ProfileBackLink href="/service/profile" label={t("profileTitle")} />
 				<button
 					type="button"
 					onClick={() => void load()}
 					className="mb-3 text-xs font-medium text-primary"
 				>
-					Refresh
+					{t("commonRefresh")}
 				</button>
 			</div>
-			<h1 className="admin-page-title">My offers</h1>
+			<h1 className="admin-page-title">{t("offersTitle")}</h1>
 			<p className="mt-1 text-sm text-muted-foreground">
-				Custom prices you sent to providers
+				{t("offersSubtitle")}
 			</p>
 
 			{error ? (
@@ -74,7 +76,7 @@ export default function CustomerOffersPage() {
 					<ServiceLoading compact />
 				) : offers.length === 0 ? (
 					<p className="py-10 text-center text-sm text-muted-foreground">
-						No custom price offers yet.
+						{t("offersEmpty")}
 					</p>
 				) : (
 					offers.map((o) => (
@@ -85,7 +87,7 @@ export default function CustomerOffersPage() {
 							<div className="flex items-start justify-between gap-2">
 								<div className="min-w-0">
 									<p className="truncate text-sm font-semibold">
-										{o.serviceName || "Service"}
+										{o.serviceName || t("serviceTitle")}
 									</p>
 									<p className="mt-0.5 text-sm text-primary">
 										{formatOfferPrice(o.offeredPrice)}
@@ -101,7 +103,7 @@ export default function CustomerOffersPage() {
 											href={`/service/bookings/${o.bookingId}`}
 											className="text-xs font-medium text-primary"
 										>
-											Booking
+											{t("bookingTitle")}
 										</Link>
 									) : null}
 									{o.status === "pending" ? (
@@ -111,7 +113,7 @@ export default function CustomerOffersPage() {
 											disabled={busyId === o.id}
 											onClick={() => void onCancel(o.id)}
 										>
-											Cancel
+											{t("commonCancel")}
 										</Button>
 									) : null}
 									{o.status === "accepted" && o.bookingId ? (
@@ -119,7 +121,7 @@ export default function CustomerOffersPage() {
 											href={`/service/bookings/${o.bookingId}`}
 											className="text-xs font-medium text-primary"
 										>
-											Pay / view
+											{t("offersPayView")}
 										</Link>
 									) : null}
 								</div>

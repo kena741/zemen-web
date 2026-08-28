@@ -3,12 +3,14 @@
 import Link from "next/link";
 import { useState } from "react";
 
+import { ChapaTopUp } from "@/components/payments/chapa-top-up";
 import { ProfileBackLink } from "@/components/provider/profile-back-link";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AppLoading } from "@/components/ui/app-loading";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useLocale } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { formatAmount, formatDateTime } from "@/services/bookings/types";
 import { requestWithdrawal } from "@/services/wallet/walletApi";
@@ -21,6 +23,7 @@ import {
 } from "@/store/useProviderCache";
 
 export default function WalletPage() {
+	const { t } = useLocale();
 	const { user } = useAuth();
 	const dispatch = useAppDispatch();
 	const authUserId = user?.id ?? "";
@@ -45,12 +48,12 @@ export default function WalletPage() {
 	async function submitWithdraw(e: React.FormEvent) {
 		e.preventDefault();
 		if (!defaultBank) {
-			setError("Add a bank account before withdrawing.");
+			setError(t("providerWalletAddBankFirst"));
 			return;
 		}
 		const value = Number(amount);
 		if (!value || value <= 0) {
-			setError("Enter a valid amount");
+			setError(t("providerWalletValidAmount"));
 			return;
 		}
 		setBusy(true);
@@ -61,7 +64,7 @@ export default function WalletPage() {
 			note,
 			paymentMethodId: defaultBank.id,
 			holderName: defaultBank.holderName ?? "",
-			bankName: defaultBank.bankName ?? defaultBank.methodName ?? "Bank",
+			bankName: defaultBank.bankName ?? defaultBank.methodName ?? t("navBank"),
 			accountNumber: defaultBank.accountNumber ?? "",
 			swiftCode: defaultBank.swiftCode,
 		});
@@ -80,23 +83,34 @@ export default function WalletPage() {
 	return (
 		<div className="mx-auto max-w-3xl">
 			<div className="flex items-center justify-between gap-2">
-				<ProfileBackLink href="/provider/profile" label="Profile" />
+				<ProfileBackLink href="/provider/profile" label={t("profileTitle")} />
 				<button
 					type="button"
 					onClick={refresh}
 					className="mb-3 text-xs font-medium text-primary"
 				>
-					{refreshing ? "Refreshing…" : "Refresh"}
+					{refreshing ? t("commonRefreshing") : t("commonRefresh")}
 				</button>
 			</div>
-			<p className="admin-eyebrow">Payments</p>
-			<h1 className="admin-page-title mt-1">Wallet</h1>
+			<p className="admin-eyebrow">{t("commonPayments")}</p>
+			<h1 className="admin-page-title mt-1">{t("walletTitle")}</h1>
 
 			<div className="admin-brand-band mt-6 px-5 py-6">
-				<p className="admin-brand-band-label">Available balance</p>
+				<p className="admin-brand-band-label">{t("walletBalance")}</p>
 				<p className="mt-2 text-3xl font-semibold tracking-tight tabular-nums">
 					{loading ? "…" : formatAmount(String(wallet.balance))}
 				</p>
+				<div className="mt-4">
+					<ChapaTopUp
+						email={user?.email}
+						firstName={user?.provider?.firstName ?? user?.name}
+						lastName={user?.provider?.lastName ?? ""}
+						phone={user?.provider?.phoneNumber}
+						userId={user?.provider?.id ?? user?.id ?? ""}
+						accountType="provider"
+						returnPath="/pay/done?purpose=wallet"
+					/>
+				</div>
 				<div className="mt-4 flex flex-wrap gap-2">
 					<Button
 						size="sm"
@@ -104,7 +118,7 @@ export default function WalletPage() {
 						className="bg-white/15 text-primary-foreground hover:bg-white/25"
 						onClick={() => setShowWithdraw((v) => !v)}
 					>
-						{showWithdraw ? "Cancel" : "Request withdrawal"}
+						{showWithdraw ? t("commonCancel") : t("requestWithdrawal")}
 					</Button>
 					<Link
 						href="/provider/bank"
@@ -113,7 +127,7 @@ export default function WalletPage() {
 							"bg-white/15 text-primary-foreground hover:bg-white/25",
 						)}
 					>
-						Bank details
+						{t("bankTitle")}
 					</Link>
 				</div>
 			</div>
@@ -131,18 +145,21 @@ export default function WalletPage() {
 				>
 					{defaultBank ? (
 						<p className="text-sm text-muted-foreground">
-							Payout to {defaultBank.bankName} · {defaultBank.accountNumber}
+							{t("providerWalletPayoutTo", {
+								bank: defaultBank.bankName ?? "",
+								account: defaultBank.accountNumber ?? "",
+							})}
 						</p>
 					) : (
 						<p className="text-sm text-destructive">
-							No bank account.{" "}
+							{t("providerWalletNoBank")}{" "}
 							<Link href="/provider/bank" className="underline">
-								Add one
+								{t("providerWalletAddOne")}
 							</Link>
 						</p>
 					)}
 					<div className="space-y-1.5">
-						<Label htmlFor="amount">Amount (ETB)</Label>
+						<Label htmlFor="amount">{t("commonAmountEtb")}</Label>
 						<Input
 							id="amount"
 							type="number"
@@ -154,7 +171,7 @@ export default function WalletPage() {
 						/>
 					</div>
 					<div className="space-y-1.5">
-						<Label htmlFor="note">Note (optional)</Label>
+						<Label htmlFor="note">{t("commonNoteOptional")}</Label>
 						<Input
 							id="note"
 							value={note}
@@ -162,7 +179,7 @@ export default function WalletPage() {
 						/>
 					</div>
 					<Button type="submit" disabled={busy || !defaultBank}>
-						Submit request
+						{t("providerWalletSubmitRequest")}
 					</Button>
 				</form>
 			) : null}
@@ -173,14 +190,14 @@ export default function WalletPage() {
 					variant={tab === "tx" ? "default" : "outline"}
 					onClick={() => setTab("tx")}
 				>
-					Transactions
+					{t("providerWalletTransactions")}
 				</Button>
 				<Button
 					size="sm"
 					variant={tab === "withdraw" ? "default" : "outline"}
 					onClick={() => setTab("withdraw")}
 				>
-					Withdrawals
+					{t("providerWalletWithdrawals")}
 				</Button>
 			</div>
 
@@ -190,7 +207,7 @@ export default function WalletPage() {
 				) : tab === "tx" ? (
 					wallet.transactions.length === 0 ? (
 						<p className="py-10 text-center text-sm text-muted-foreground">
-							No wallet transactions yet.
+							{t("providerWalletNoTransactions")}
 						</p>
 					) : (
 						wallet.transactions.map((tx) => (
@@ -200,7 +217,7 @@ export default function WalletPage() {
 							>
 								<div className="min-w-0">
 									<p className="text-sm font-medium">
-										{tx.note || tx.paymentType || "Transaction"}
+										{tx.note || tx.paymentType || t("providerWalletTransaction")}
 									</p>
 									<p className="mt-0.5 text-xs text-muted-foreground">
 										{formatDateTime(tx.createdDate)}
@@ -220,7 +237,7 @@ export default function WalletPage() {
 					)
 				) : wallet.withdrawals.length === 0 ? (
 					<p className="py-10 text-center text-sm text-muted-foreground">
-						No withdrawal requests yet.
+						{t("providerWalletNoWithdrawals")}
 					</p>
 				) : (
 					wallet.withdrawals.map((w) => (
@@ -230,7 +247,7 @@ export default function WalletPage() {
 						>
 							<div className="min-w-0">
 								<p className="text-sm font-medium capitalize">
-									{w.paymentStatus || "pending"}
+									{w.paymentStatus || t("statusPending")}
 								</p>
 								<p className="mt-0.5 text-xs text-muted-foreground">
 									{w.bankName} · {formatDateTime(w.createdDate)}

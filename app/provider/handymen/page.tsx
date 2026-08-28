@@ -8,12 +8,14 @@ import { ProfileBackLink } from "@/components/provider/profile-back-link";
 import { AppLoading } from "@/components/ui/app-loading";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { UserAvatar } from "@/components/ui/user-avatar";
+import { useLocale } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { handymanDisplayName } from "@/services/handymen/handymenApi";
 import { useAuth } from "@/store/useAuth";
 import { useCachedProviderHandymen } from "@/store/useProviderCache";
 
 export default function HandymenPage() {
+	const { t } = useLocale();
 	const { user } = useAuth();
 	const providerId = user?.provider?.id ?? "";
 	const { data: handymen, loading, error, refresh, refreshing } =
@@ -24,26 +26,29 @@ export default function HandymenPage() {
 		? handymen
 		: handymen.filter((h) => h.active && h.isActive);
 
+	const countLabel =
+		handymen.length === 1
+			? t("providerHandymenCountOne")
+			: t("providerHandymenCount", { count: handymen.length });
+
 	return (
 		<div className="mx-auto max-w-3xl">
 			<div className="flex items-center justify-between gap-2">
-				<ProfileBackLink href="/provider/profile" label="Profile" />
+				<ProfileBackLink href="/provider/profile" label={t("profileTitle")} />
 				<button
 					type="button"
 					onClick={refresh}
 					className="mb-3 text-xs font-medium text-primary"
 				>
-					{refreshing ? "Refreshing…" : "Refresh"}
+					{refreshing ? t("commonRefreshing") : t("commonRefresh")}
 				</button>
 			</div>
 			<div className="flex flex-wrap items-end justify-between gap-3">
 				<div>
-					<p className="admin-eyebrow">Team</p>
-					<h1 className="admin-page-title mt-1">Handymen</h1>
+					<p className="admin-eyebrow">{t("commonTeam")}</p>
+					<h1 className="admin-page-title mt-1">{t("handymanList")}</h1>
 					<p className="mt-2 text-sm text-muted-foreground">
-						{loading
-							? "Loading…"
-							: `${handymen.length} team member${handymen.length === 1 ? "" : "s"}`}
+						{loading ? t("commonLoading") : countLabel}
 					</p>
 				</div>
 				<div className="flex flex-wrap gap-2">
@@ -52,7 +57,7 @@ export default function HandymenPage() {
 						size="sm"
 						onClick={() => setShowInactive((v) => !v)}
 					>
-						{showInactive ? "Hide inactive" : "Show inactive"}
+						{showInactive ? t("providerHideInactive") : t("providerShowInactive")}
 					</Button>
 					<Link
 						href="/provider/handymen/new"
@@ -62,7 +67,7 @@ export default function HandymenPage() {
 						)}
 					>
 						<PlusIcon className="size-3.5" />
-						Add handyman
+						{t("handymanAdd")}
 					</Link>
 				</div>
 			</div>
@@ -76,7 +81,7 @@ export default function HandymenPage() {
 					<AppLoading compact />
 				) : visible.length === 0 ? (
 					<p className="py-10 text-center text-sm text-muted-foreground">
-						No handymen yet.
+						{t("providerNoHandymenYet")}
 					</p>
 				) : (
 					visible.map((h) => {
@@ -98,7 +103,7 @@ export default function HandymenPage() {
 										{name}
 										{inactive ? (
 											<span className="ml-2 text-[10px] font-medium text-muted-foreground">
-												Inactive
+												{t("commonInactive")}
 											</span>
 										) : null}
 									</p>

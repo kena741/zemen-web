@@ -280,6 +280,9 @@ export async function upsertService(params: {
 			categoryId: params.input.categoryId,
 			subCategoryName: params.input.subCategoryName,
 		},
+		pricing_type: params.input.pricingType ?? "ONE_TIME",
+		billing_interval: params.input.billingInterval ?? "MONTH",
+		billing_interval_count: params.input.billingIntervalCount ?? 1,
 	};
 
 	if (params.isEdit) {
@@ -342,13 +345,19 @@ export async function getFeaturedRequestFee(): Promise<{
 
 export async function requestServiceFeatured(
 	serviceId: string,
-): Promise<{ ok: boolean; error: string | null; fee: number }> {
+): Promise<{
+	ok: boolean;
+	error: string | null;
+	fee: number;
+	requiresPayment?: boolean;
+}> {
 	const feeRes = await getFeaturedRequestFee();
 	if (feeRes.fee > 0) {
 		return {
-			ok: false,
+			ok: true,
 			fee: feeRes.fee,
-			error: `Featured listing requires a ${feeRes.fee} ETB fee. Complete payment in the mobile app.`,
+			requiresPayment: true,
+			error: null,
 		};
 	}
 

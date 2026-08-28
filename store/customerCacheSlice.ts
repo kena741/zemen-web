@@ -415,6 +415,9 @@ const customerCacheSlice = createSlice({
 		invalidateInbox(state) {
 			state.inbox = emptyEntry([]);
 		},
+		invalidateAddresses(state) {
+			state.addresses = emptyEntry([]);
+		},
 		patchServiceInCache(
 			state,
 			action: PayloadAction<{ id: string; patch: Partial<ProviderService> }>,
@@ -697,6 +700,7 @@ export const {
 	invalidateFavorites,
 	invalidateRequests,
 	invalidateInbox,
+	invalidateAddresses,
 	patchServiceInCache,
 	upsertBookingInCache,
 } = customerCacheSlice.actions;

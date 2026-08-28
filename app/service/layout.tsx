@@ -4,36 +4,28 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
-import {
-	CalendarDaysIcon,
-	ClipboardListIcon,
-	HomeIcon,
-	UserIcon,
-} from "lucide-react";
 
 import appIcon from "@/assets/images/app_icon.png";
 import { ServiceLoading } from "@/components/service/service-loading";
 import { BRAND_NAME } from "@/lib/brand";
+import { useLocale } from "@/lib/i18n";
+import { useServiceTabNavItems } from "@/lib/i18n/nav";
 import { cn } from "@/lib/utils";
 import { selectAuthSessionPending } from "@/store/authSlice";
 import { useAppSelector } from "@/store/hooks";
 import { useAuth } from "@/store/useAuth";
-
-const TAB_NAV = [
-	{ href: "/service", label: "Home", icon: HomeIcon },
-	{ href: "/service/bookings", label: "Bookings", icon: CalendarDaysIcon },
-	{ href: "/service/requests", label: "Requests", icon: ClipboardListIcon },
-	{ href: "/service/profile", label: "Profile", icon: UserIcon },
-] as const;
 
 function isTabActive(pathname: string | null, href: string) {
 	if (href === "/service") return pathname === "/service";
 	return Boolean(pathname?.startsWith(href));
 }
 
-function showBottomNav(pathname: string | null) {
+function showBottomNav(
+	pathname: string | null,
+	tabs: ReturnType<typeof useServiceTabNavItems>,
+) {
 	if (!pathname) return false;
-	return TAB_NAV.some((tab) =>
+	return tabs.some((tab) =>
 		tab.href === "/service"
 			? pathname === "/service"
 			: pathname === tab.href,
@@ -48,8 +40,10 @@ export default function ServiceLayout({
 	const router = useRouter();
 	const pathname = usePathname();
 	const { user } = useAuth();
+	const { t } = useLocale();
+	const tabNav = useServiceTabNavItems();
 	const sessionPending = useAppSelector(selectAuthSessionPending);
-	const bottomVisible = showBottomNav(pathname);
+	const bottomVisible = showBottomNav(pathname, tabNav);
 
 	useEffect(() => {
 		if (sessionPending) return;
@@ -72,7 +66,6 @@ export default function ServiceLayout({
 
 	return (
 		<div className="min-h-svh bg-[#f6faf4]">
-			{/* Desktop top bar */}
 			<header className="sticky top-0 z-30 hidden border-b border-border/60 bg-white/90 backdrop-blur-md md:block">
 				<div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-6 py-3">
 					<Link href="/service" className="flex items-center gap-2.5">
@@ -88,12 +81,12 @@ export default function ServiceLayout({
 								{BRAND_NAME}
 							</p>
 							<p className="text-[11px] text-muted-foreground">
-								Customer
+								{t("customer")}
 							</p>
 						</div>
 					</Link>
 					<nav className="flex items-center gap-1">
-						{TAB_NAV.map((item) => {
+						{tabNav.map((item) => {
 							const active = isTabActive(pathname, item.href);
 							const Icon = item.icon;
 							return (
@@ -127,14 +120,13 @@ export default function ServiceLayout({
 				{children}
 			</main>
 
-			{/* Mobile bottom nav — Flutter tabs: Home · Bookings · Requests · Profile */}
 			{bottomVisible ? (
 				<nav
 					className="fixed inset-x-0 bottom-0 z-40 border-t border-border/50 bg-[#f6faf4] md:hidden"
 					style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
 				>
 					<div className="flex items-stretch">
-						{TAB_NAV.map((item) => {
+						{tabNav.map((item) => {
 							const active = isTabActive(pathname, item.href);
 							const Icon = item.icon;
 							return (

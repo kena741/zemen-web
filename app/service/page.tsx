@@ -19,11 +19,13 @@ import { ServiceLoading } from "@/components/service/service-loading";
 import { Input } from "@/components/ui/input";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { BRAND_NAME } from "@/lib/brand";
+import { useLocale } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/store/useAuth";
 import { useCachedHomeFeed } from "@/store/useCustomerCache";
 
 export default function ServiceHomePage() {
+	const { t } = useLocale();
 	const router = useRouter();
 	const { user } = useAuth();
 	const [pending, startTransition] = useTransition();
@@ -72,7 +74,7 @@ export default function ServiceHomePage() {
 	}, [services, query, sortMode]);
 
 	const greeting =
-		user?.customer?.fullName?.split(" ")[0] || user?.name || "there";
+		user?.customer?.fullName?.split(" ")[0] || user?.name || t("homeGuest");
 
 	return (
 		<div className="min-h-svh md:min-h-0">
@@ -100,11 +102,11 @@ export default function ServiceHomePage() {
 								</p>
 							</div>
 							<p className="mt-2 text-sm text-primary-foreground/85">
-								Hi, {greeting}
+								{t("welcomeBack", { name: greeting })}
 							</p>
 							<p className="mt-0.5 flex items-center gap-1 text-xs text-primary-foreground/70">
 								<MapPinIcon className="size-3.5 shrink-0" />
-								<span className="truncate">Find services near you</span>
+								<span className="truncate">{t("homeFindNearby")}</span>
 							</p>
 						</div>
 						<div className="flex shrink-0 items-center gap-1">
@@ -114,26 +116,26 @@ export default function ServiceHomePage() {
 								disabled={refreshing}
 								className="rounded-full px-2 py-2 text-[11px] font-medium text-primary-foreground/80 hover:bg-white/10 disabled:opacity-50"
 							>
-								{refreshing ? "…" : "Refresh"}
+								{refreshing ? "…" : t("commonRefresh")}
 							</button>
 							<Link
 								href="/service/favorites"
 								className="rounded-full p-2 hover:bg-white/10"
-								aria-label="Favorites"
+								aria-label={t("favoritesTitle")}
 							>
 								<HeartIcon className="size-5" />
 							</Link>
 							<Link
 								href="/service/inbox"
 								className="rounded-full p-2 hover:bg-white/10"
-								aria-label="Inbox"
+								aria-label={t("inboxTitle")}
 							>
 								<MessagesSquareIcon className="size-5" />
 							</Link>
 							<Link
 								href="/service/notifications"
 								className="rounded-full p-2 hover:bg-white/10"
-								aria-label="Notifications"
+								aria-label={t("notificationsTitle")}
 							>
 								<BellIcon className="size-5" />
 							</Link>
@@ -148,7 +150,7 @@ export default function ServiceHomePage() {
 								const v = e.target.value;
 								startTransition(() => setQuery(v));
 							}}
-							placeholder="Search Services"
+							placeholder={t("homeSearchServices")}
 							className="h-10 rounded-lg border-0 bg-white pl-9 text-[13px] text-foreground shadow-sm placeholder:text-muted-foreground/70"
 						/>
 					</div>
@@ -158,10 +160,12 @@ export default function ServiceHomePage() {
 			<div className="hidden px-6 pt-8 md:block">
 				<div className="flex items-center justify-between gap-4">
 					<div>
-						<p className="admin-eyebrow">Customer</p>
-						<h1 className="admin-page-title mt-1">Hi, {greeting}</h1>
+						<p className="admin-eyebrow">{t("customer")}</p>
+						<h1 className="admin-page-title mt-1">
+							{t("welcomeBack", { name: greeting })}
+						</h1>
 						<p className="mt-1 text-sm text-muted-foreground">
-							Book trusted home services
+							{t("homeSubtitle")}
 						</p>
 					</div>
 					<div className="flex items-center gap-2">
@@ -170,19 +174,19 @@ export default function ServiceHomePage() {
 							onClick={refresh}
 							className="rounded-lg border border-border bg-white px-3 py-2 text-sm"
 						>
-							{refreshing ? "Refreshing…" : "Refresh"}
+							{refreshing ? t("commonRefreshing") : t("commonRefresh")}
 						</button>
 						<Link
 							href="/service/favorites"
 							className="rounded-lg border border-border bg-white px-3 py-2 text-sm"
 						>
-							Favorites
+							{t("favoritesTitle")}
 						</Link>
 						<Link
 							href="/service/inbox"
 							className="rounded-lg border border-border bg-white px-3 py-2 text-sm"
 						>
-							Inbox
+							{t("inboxTitle")}
 						</Link>
 						<UserAvatar
 							src={user?.customer?.profileImage}
@@ -196,7 +200,7 @@ export default function ServiceHomePage() {
 					<Input
 						value={query}
 						onChange={(e) => setQuery(e.target.value)}
-						placeholder="Search Services"
+						placeholder={t("homeSearchServices")}
 						className="h-10 rounded-lg bg-white pl-9"
 					/>
 				</div>
@@ -214,14 +218,14 @@ export default function ServiceHomePage() {
 						<section>
 							<div className="mb-3 flex items-center justify-between">
 								<h2 className="text-base font-semibold tracking-tight">
-									Categories
+									{t("homeCategories")}
 								</h2>
 								<button
 									type="button"
 									onClick={() => router.push("/service/categories")}
 									className="text-xs font-medium text-primary"
 								>
-									See all
+									{t("homeSeeAll")}
 								</button>
 							</div>
 							<div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-1 scrollbar-none">
@@ -267,13 +271,13 @@ export default function ServiceHomePage() {
 								className="flex w-full items-center justify-between gap-3 rounded-xl bg-primary px-4 py-3.5 text-left text-primary-foreground shadow-sm transition active:scale-[0.99]"
 							>
 								<div>
-									<p className="text-sm font-semibold">Need something custom?</p>
+									<p className="text-sm font-semibold">{t("homeCustomTitle")}</p>
 									<p className="mt-0.5 text-xs text-primary-foreground/80">
-										Post a job request and get offers
+										{t("homeCustomBody")}
 									</p>
 								</div>
 								<span className="rounded-lg bg-white/15 px-3 py-1.5 text-xs font-semibold">
-									Request
+									{t("requestsTitle")}
 								</span>
 							</button>
 						</section>
@@ -282,7 +286,7 @@ export default function ServiceHomePage() {
 							<section>
 								<div className="mb-3 flex items-center justify-between">
 									<h2 className="text-base font-semibold tracking-tight">
-										Featured
+										{t("homeFeatured")}
 									</h2>
 									<button
 										type="button"
@@ -291,7 +295,7 @@ export default function ServiceHomePage() {
 										}
 										className="text-xs font-medium text-primary"
 									>
-										See all
+										{t("homeSeeAll")}
 									</button>
 								</div>
 								<div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-1 scrollbar-none">
@@ -315,7 +319,7 @@ export default function ServiceHomePage() {
 						<section>
 							<div className="mb-3 flex items-center justify-between gap-2">
 								<h2 className="text-base font-semibold tracking-tight">
-									{query.trim() ? "Results" : "Services"}
+									{query.trim() ? t("homeResults") : t("servicesTitle")}
 								</h2>
 								<div className="flex items-center gap-2">
 									{!query.trim() ? (
@@ -330,7 +334,7 @@ export default function ServiceHomePage() {
 														: "text-muted-foreground",
 												)}
 											>
-												Popular
+												{t("homePopular")}
 											</button>
 											<button
 												type="button"
@@ -342,14 +346,14 @@ export default function ServiceHomePage() {
 														: "text-muted-foreground",
 												)}
 											>
-												Nearby
+												{t("homeNearby")}
 											</button>
 											<button
 												type="button"
 												onClick={() => router.push("/service/services")}
 												className="text-xs font-medium text-primary"
 											>
-												See all
+												{t("homeSeeAll")}
 											</button>
 										</>
 									) : null}
@@ -359,8 +363,8 @@ export default function ServiceHomePage() {
 								<div className="rounded-xl bg-white px-4 py-8 text-center shadow-sm ring-1 ring-black/5">
 									<p className="text-sm text-muted-foreground">
 										{query.trim()
-											? `No services match “${query.trim()}”.`
-											: "No services found."}
+											? t("homeNoMatch", { query: query.trim() })
+											: t("homeNoServices")}
 									</p>
 									{query.trim() ? (
 										<button
@@ -370,7 +374,7 @@ export default function ServiceHomePage() {
 											}
 											className="mt-4 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground"
 										>
-											Request a custom service
+											{t("homeRequestCustom")}
 										</button>
 									) : null}
 								</div>

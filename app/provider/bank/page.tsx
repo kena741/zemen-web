@@ -8,6 +8,7 @@ import { AppLoading } from "@/components/ui/app-loading";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useLocale } from "@/lib/i18n";
 import {
 	deleteBankMethod,
 	saveBankMethod,
@@ -19,6 +20,7 @@ import { useAuth } from "@/store/useAuth";
 import { useCachedProviderBank } from "@/store/useProviderCache";
 
 export default function BankDetailsPage() {
+	const { t } = useLocale();
 	const { user } = useAuth();
 	const dispatch = useAppDispatch();
 	const authUserId = user?.id ?? "";
@@ -74,7 +76,7 @@ export default function BankDetailsPage() {
 	}
 
 	async function remove(id: string) {
-		if (!window.confirm("Delete this bank account?")) return;
+		if (!window.confirm(t("providerDeleteBankConfirm"))) return;
 		setBusy(true);
 		const res = await deleteBankMethod(id);
 		setBusy(false);
@@ -85,21 +87,21 @@ export default function BankDetailsPage() {
 	return (
 		<div className="mx-auto max-w-3xl">
 			<div className="flex items-center justify-between gap-2">
-				<ProfileBackLink href="/provider/profile" label="Profile" />
+				<ProfileBackLink href="/provider/profile" label={t("profileTitle")} />
 				<button
 					type="button"
 					onClick={refresh}
 					className="mb-3 text-xs font-medium text-primary"
 				>
-					{refreshing ? "Refreshing…" : "Refresh"}
+					{refreshing ? t("commonRefreshing") : t("commonRefresh")}
 				</button>
 			</div>
 			<div className="flex flex-wrap items-end justify-between gap-3">
 				<div>
-					<p className="admin-eyebrow">Payouts</p>
-					<h1 className="admin-page-title mt-1">Bank details</h1>
+					<p className="admin-eyebrow">{t("commonPayouts")}</p>
+					<h1 className="admin-page-title mt-1">{t("bankTitle")}</h1>
 					<p className="mt-2 text-sm text-muted-foreground">
-						Accounts used for withdrawals
+						{t("providerBankSubtitle")}
 					</p>
 				</div>
 				<Button
@@ -107,7 +109,7 @@ export default function BankDetailsPage() {
 					variant={showForm ? "outline" : "default"}
 					onClick={() => setShowForm((v) => !v)}
 				>
-					{showForm ? "Cancel" : "Add bank"}
+					{showForm ? t("commonCancel") : t("providerAddBank")}
 				</Button>
 			</div>
 
@@ -123,7 +125,7 @@ export default function BankDetailsPage() {
 					className="mt-5 space-y-3 rounded-xl border border-border bg-white p-4 shadow-xs"
 				>
 					<div className="space-y-1.5">
-						<Label htmlFor="holder">Account holder</Label>
+						<Label htmlFor="holder">{t("providerAccountHolder")}</Label>
 						<Input
 							id="holder"
 							required
@@ -132,7 +134,7 @@ export default function BankDetailsPage() {
 						/>
 					</div>
 					<div className="space-y-1.5">
-						<Label htmlFor="bank">Bank name</Label>
+						<Label htmlFor="bank">{t("providerBankName")}</Label>
 						<Input
 							id="bank"
 							required
@@ -141,7 +143,7 @@ export default function BankDetailsPage() {
 						/>
 					</div>
 					<div className="space-y-1.5">
-						<Label htmlFor="account">Account number</Label>
+						<Label htmlFor="account">{t("providerAccountNumber")}</Label>
 						<Input
 							id="account"
 							required
@@ -151,7 +153,7 @@ export default function BankDetailsPage() {
 					</div>
 					<div className="grid gap-3 sm:grid-cols-2">
 						<div className="space-y-1.5">
-							<Label htmlFor="swift">Swift / code</Label>
+							<Label htmlFor="swift">{t("providerSwiftCode")}</Label>
 							<Input
 								id="swift"
 								value={swiftCode}
@@ -159,7 +161,7 @@ export default function BankDetailsPage() {
 							/>
 						</div>
 						<div className="space-y-1.5">
-							<Label htmlFor="city">Branch city</Label>
+							<Label htmlFor="city">{t("providerBranchCity")}</Label>
 							<Input
 								id="city"
 								value={branchCity}
@@ -168,7 +170,7 @@ export default function BankDetailsPage() {
 						</div>
 					</div>
 					<Button type="submit" disabled={busy}>
-						Save as default
+						{t("providerSaveAsDefault")}
 					</Button>
 				</form>
 			) : null}
@@ -178,7 +180,7 @@ export default function BankDetailsPage() {
 					<AppLoading compact />
 				) : banks.length === 0 ? (
 					<p className="rounded-xl border border-border bg-white px-4 py-10 text-center text-sm text-muted-foreground shadow-xs">
-						No bank accounts saved yet.
+						{t("providerNoBankAccounts")}
 					</p>
 				) : (
 					banks.map((b) => (
@@ -189,7 +191,7 @@ export default function BankDetailsPage() {
 							<div className="flex flex-wrap items-start justify-between gap-2">
 								<div>
 									<p className="text-sm font-semibold">
-										{b.bankName || b.methodName || "Bank"}
+										{b.bankName || b.methodName || t("navBank")}
 									</p>
 									<p className="mt-0.5 text-sm text-muted-foreground">
 										{b.holderName}
@@ -200,7 +202,7 @@ export default function BankDetailsPage() {
 								</div>
 								{b.isDefault ? (
 									<span className="rounded-md bg-secondary px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-secondary-foreground">
-										Default
+										{t("commonDefault")}
 									</span>
 								) : null}
 							</div>
@@ -212,7 +214,7 @@ export default function BankDetailsPage() {
 										disabled={busy}
 										onClick={() => void makeDefault(b.id)}
 									>
-										Set default
+										{t("providerSetDefault")}
 									</Button>
 								) : null}
 								<Button
@@ -221,7 +223,7 @@ export default function BankDetailsPage() {
 									disabled={busy}
 									onClick={() => void remove(b.id)}
 								>
-									Delete
+									{t("commonDelete")}
 								</Button>
 							</div>
 						</div>

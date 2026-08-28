@@ -15,6 +15,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AppLoading } from "@/components/ui/app-loading";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { UserAvatar } from "@/components/ui/user-avatar";
+import { useLocale } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import {
 	deleteHandyman,
@@ -36,6 +37,7 @@ function Row({ label, value }: { label: string; value: React.ReactNode }) {
 }
 
 export default function HandymanDetailPage() {
+	const { t } = useLocale();
 	const params = useParams<{ id: string }>();
 	const id = params?.id ?? "";
 	const router = useRouter();
@@ -50,7 +52,7 @@ export default function HandymanDetailPage() {
 	useEffect(() => {
 		if (!handyman || !user?.provider?.id) return;
 		if (handyman.providerId && handyman.providerId !== user.provider.id) {
-			setError("This handyman does not belong to your account.");
+			setError(t("providerHandymanNotOwned"));
 		}
 	}, [handyman, user?.provider?.id]);
 
@@ -75,7 +77,7 @@ export default function HandymanDetailPage() {
 		if (!handyman) return;
 		if (
 			!window.confirm(
-				`Delete “${handymanDisplayName(handyman)}”? Their login will also be removed.`,
+				t("handymanDeleteConfirm"),
 			)
 		) {
 			return;
@@ -101,14 +103,14 @@ export default function HandymanDetailPage() {
 				onClick={() => router.push("/provider/handymen")}
 			>
 				<ArrowLeftIcon className="size-4" />
-				Handymen
+				{t("handymanList")}
 			</Button>
 
 			{loading ? (
 				<AppLoading compact />
 			) : !handyman ? (
 				<p className="text-sm text-destructive">
-					{error || loadError || "Not found"}
+					{error || loadError || t("commonNotFound")}
 				</p>
 			) : (
 				<>
@@ -120,7 +122,7 @@ export default function HandymanDetailPage() {
 								size="xl"
 							/>
 							<div>
-								<p className="admin-eyebrow">Handyman</p>
+								<p className="admin-eyebrow">{t("handymanTitle")}</p>
 								<h1 className="admin-page-title mt-1">
 									{handymanDisplayName(handyman)}
 								</h1>
@@ -137,7 +139,7 @@ export default function HandymanDetailPage() {
 							)}
 						>
 							<PencilIcon className="size-3.5" />
-							Edit
+							{t("commonEdit")}
 						</Link>
 					</div>
 
@@ -148,9 +150,9 @@ export default function HandymanDetailPage() {
 					) : null}
 
 					<dl className="mt-6 rounded-xl border border-border bg-white px-4 shadow-xs">
-						<Row label="Email" value={handyman.email} />
+						<Row label={t("email")} value={handyman.email} />
 						<Row
-							label="Phone"
+							label={t("phone")}
 							value={
 								handyman.phoneNumber
 									? `${handyman.countryCode ?? "+251"} ${handyman.phoneNumber}`
@@ -158,7 +160,7 @@ export default function HandymanDetailPage() {
 							}
 						/>
 						<Row
-							label="Password"
+							label={t("password")}
 							value={
 								handyman.password ? (
 									<span className="inline-flex items-center gap-2">
@@ -174,7 +176,7 @@ export default function HandymanDetailPage() {
 											className="text-muted-foreground hover:text-foreground"
 											onClick={() => setShowPassword((v) => !v)}
 											aria-label={
-												showPassword ? "Hide password" : "Show password"
+												showPassword ? t("providerHidePassword") : t("providerShowPassword")
 											}
 										>
 											{showPassword ? (
@@ -189,15 +191,15 @@ export default function HandymanDetailPage() {
 								)
 							}
 						/>
-						<Row label="Category" value={handyman.category} />
-						<Row label="Subcategory" value={handyman.subCategory} />
-						<Row label="Address" value={handyman.address} />
+						<Row label={t("commonCategory")} value={handyman.category} />
+						<Row label={t("providerSubcategory")} value={handyman.subCategory} />
+						<Row label={t("commonAddress")} value={handyman.address} />
 						<Row
-							label="Status"
+							label={t("commonStatus")}
 							value={
 								handyman.active && handyman.isActive
-									? "Available"
-									: "Inactive"
+									? t("commonAvailable")
+									: t("commonInactive")
 							}
 						/>
 					</dl>
@@ -208,7 +210,7 @@ export default function HandymanDetailPage() {
 							disabled={busy}
 							onClick={() => void toggle()}
 						>
-							{handyman.isActive ? "Deactivate" : "Activate"}
+							{handyman.isActive ? t("handymanDeactivate") : t("handymanActivate")}
 						</Button>
 						<Button
 							variant="destructive"
@@ -217,7 +219,7 @@ export default function HandymanDetailPage() {
 							onClick={() => void handleDelete()}
 						>
 							<Trash2Icon className="size-3.5" />
-							Delete
+							{t("commonDelete")}
 						</Button>
 					</div>
 				</>

@@ -15,6 +15,9 @@ import {
 import { Button, buttonVariants } from "@/components/ui/button";
 import { ServiceLoading } from "@/components/service/service-loading";
 import { UserAvatar } from "@/components/ui/user-avatar";
+import { RecurringBadge } from "@/components/recurring/recurring-badge";
+import { useLocale } from "@/lib/i18n";
+import { isRecurringPricingType } from "@/lib/recurring";
 import { cn } from "@/lib/utils";
 import { formatAmount } from "@/services/bookings/types";
 import { toggleServiceFavorite } from "@/services/catalog/catalogApi";
@@ -41,6 +44,7 @@ function averageRating(service: ProviderService): number | null {
 }
 
 export default function ServiceDetailPage() {
+	const { t } = useLocale();
 	const params = useParams<{ id: string }>();
 	const router = useRouter();
 	const dispatch = useAppDispatch();
@@ -50,7 +54,6 @@ export default function ServiceDetailPage() {
 		service,
 		loading,
 		error,
-		refresh,
 	} = useCachedServiceDetail(params.id);
 	const [imgIndex, setImgIndex] = useState(0);
 	const [imgFailed, setImgFailed] = useState(false);
@@ -98,10 +101,10 @@ export default function ServiceDetailPage() {
 					onClick={() => router.push("/service")}
 					className="mb-3 text-sm text-primary"
 				>
-					← Home
+					← {t("navHome")}
 				</button>
 				<p className="text-sm text-destructive">
-					{error || "Service not found"}
+					{error || t("serviceNotFound")}
 				</p>
 			</div>
 		);
@@ -127,7 +130,7 @@ export default function ServiceDetailPage() {
 					type="button"
 					onClick={() => router.back()}
 					className="absolute top-3 left-3 flex size-10 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur-sm md:top-4 md:left-4"
-					aria-label="Back"
+					aria-label={t("commonBack")}
 				>
 					<ArrowLeftIcon className="size-5" />
 				</button>
@@ -136,7 +139,7 @@ export default function ServiceDetailPage() {
 					onClick={onToggleFavorite}
 					disabled={favBusy || !userId}
 					className="absolute top-3 right-3 flex size-10 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur-sm md:top-4 md:right-4"
-					aria-label="Favorite"
+					aria-label={t("serviceFavorite")}
 				>
 					<HeartIcon
 						className={liked ? "size-5 fill-[#E53935] text-[#E53935]" : "size-5"}
@@ -167,8 +170,16 @@ export default function ServiceDetailPage() {
 						<h1 className="text-xl font-semibold tracking-tight">
 							{service.serviceName}
 						</h1>
+						{isRecurringPricingType(service.pricingType) ? (
+							<div className="mt-2">
+								<RecurringBadge
+									interval={service.billingInterval}
+									count={service.billingIntervalCount}
+								/>
+							</div>
+						) : null}
 						<p className="mt-1 text-sm text-muted-foreground">
-							{service.subCategoryName || service.categoryName || "Service"}
+							{service.subCategoryName || service.categoryName || t("serviceTitle")}
 						</p>
 					</div>
 					<p className="shrink-0 text-lg font-bold tabular-nums text-primary">
@@ -182,7 +193,9 @@ export default function ServiceDetailPage() {
 							<StarIcon className="size-4 fill-amber-400 text-amber-400" />
 							{rating.toFixed(1)}
 							<span className="text-xs">
-								({service.reviewCount} reviews)
+								{t("serviceReviewCount", {
+									count: String(service.reviewCount ?? 0),
+								})}
 							</span>
 						</span>
 					) : null}
@@ -208,15 +221,15 @@ export default function ServiceDetailPage() {
 					/>
 					<div className="min-w-0">
 						<p className="truncate text-sm font-semibold">
-							{service.providerName || "Provider"}
+							{service.providerName || t("provider")}
 						</p>
-						<p className="text-xs text-muted-foreground">Service provider</p>
+						<p className="text-xs text-muted-foreground">{t("serviceProvider")}</p>
 					</div>
 				</div>
 
 				{service.description ? (
 					<section className="mt-5">
-						<h2 className="text-sm font-semibold">About this service</h2>
+						<h2 className="text-sm font-semibold">{t("serviceAbout")}</h2>
 						<p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground">
 							{service.description}
 						</p>
@@ -225,19 +238,19 @@ export default function ServiceDetailPage() {
 
 				{service.discount && service.discount !== "0" ? (
 					<p className="mt-4 text-sm font-medium text-[#E53935]">
-						{service.discount}% discount available
+						{t("serviceDiscountAvailable", { percent: service.discount })}
 					</p>
 				) : null}
 
 				{service.allowsCustomOffer ? (
 					<p className="mt-3 text-xs text-muted-foreground">
-						This service accepts custom price offers at booking.
+						{t("serviceCustomOfferHint")}
 					</p>
 				) : null}
 
 				{reviews.length > 0 ? (
 					<section className="mt-6 mb-24 md:mb-8">
-						<h2 className="text-sm font-semibold">Reviews</h2>
+						<h2 className="text-sm font-semibold">{t("serviceReviews")}</h2>
 						<ul className="mt-3 space-y-3">
 							{reviews.slice(0, 8).map((r) => (
 								<li
@@ -262,7 +275,6 @@ export default function ServiceDetailPage() {
 				) : null}
 			</div>
 
-			{/* Sticky book CTA */}
 			<div
 				className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-white px-4 py-3 md:static md:mt-8 md:border-0 md:bg-transparent md:px-6 md:py-0"
 				style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}
@@ -275,13 +287,13 @@ export default function ServiceDetailPage() {
 							"hidden flex-1 sm:inline-flex",
 						)}
 					>
-						Message
+						{t("serviceMessage")}
 					</Link>
 					<Button
 						className="flex-1"
 						onClick={() => router.push(`/service/book/${service.id}`)}
 					>
-						Book now
+						{t("serviceBook")}
 					</Button>
 				</div>
 			</div>

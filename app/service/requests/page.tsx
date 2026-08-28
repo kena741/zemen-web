@@ -6,11 +6,13 @@ import { ChevronRightIcon, PlusIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { ServiceLoading } from "@/components/service/service-loading";
+import { useLocale } from "@/lib/i18n";
 import { formatDateTime } from "@/services/bookings/types";
 import { useAuth } from "@/store/useAuth";
 import { useCachedRequests } from "@/store/useCustomerCache";
 
 export default function RequestsPage() {
+	const { t } = useLocale();
 	const router = useRouter();
 	const { user } = useAuth();
 	const customerKey = user?.id ?? "";
@@ -22,10 +24,10 @@ export default function RequestsPage() {
 			<div className="flex items-start justify-between gap-3">
 				<div>
 					<h1 className="text-xl font-semibold tracking-tight md:text-[1.65rem]">
-						Requests
+						{t("requestsTitle")}
 					</h1>
 					<p className="mt-1 text-sm text-muted-foreground">
-						Custom job posts & bids
+						{t("requestsSubtitle")}
 					</p>
 				</div>
 				<div className="flex items-center gap-2">
@@ -34,7 +36,7 @@ export default function RequestsPage() {
 						onClick={refresh}
 						className="text-xs font-medium text-primary"
 					>
-						{refreshing ? "…" : "Refresh"}
+						{refreshing ? "…" : t("commonRefresh")}
 					</button>
 					<Button
 						size="sm"
@@ -42,7 +44,7 @@ export default function RequestsPage() {
 						onClick={() => router.push("/service/requests/new")}
 					>
 						<PlusIcon className="size-4" />
-						New
+						{t("commonNew")}
 					</Button>
 				</div>
 			</div>
@@ -57,19 +59,19 @@ export default function RequestsPage() {
 				) : jobs.length === 0 ? (
 					<div className="px-4 py-12 text-center">
 						<p className="text-sm text-muted-foreground">
-							No job requests yet.
+							{t("requestNoJobRequests")}
 						</p>
 						<Button
 							className="mt-4"
 							onClick={() => router.push("/service/requests/new")}
 						>
-							Post a request
+							{t("requestPost")}
 						</Button>
 					</div>
 				) : (
 					jobs.map((job) => {
 						const id = String(job.id ?? "");
-						const title = String(job.title ?? "Job request");
+						const title = String(job.title ?? t("requestJobRequest"));
 						const description =
 							job.description != null ? String(job.description) : "";
 						const accepted = job.accepted === true;
@@ -98,8 +100,10 @@ export default function RequestsPage() {
 									) : null}
 									<p className="mt-1 text-xs text-muted-foreground">
 										{accepted
-											? "Accepted"
-											: `${bids} bid${bids === 1 ? "" : "s"}`}
+											? t("statusAccepted")
+											: bids === 1
+												? t("requestBidCountOne")
+												: t("requestBidCount", { count: bids })}
 										{createdAt ? ` · ${formatDateTime(createdAt)}` : null}
 									</p>
 								</div>

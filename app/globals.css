@@ -54,6 +54,29 @@
   --shadow-2xl: 0 25px 50px -12px hsl(110 30% 10% / 0.18);
 }
 
+.dark {
+  --background: #0f140d;
+  --foreground: #f4faf0;
+  --card: #151c12;
+  --card-foreground: #f4faf0;
+  --popover: #151c12;
+  --popover-foreground: #f4faf0;
+  --primary: #4a9a2a;
+  --primary-foreground: #0f140d;
+  --secondary: #1a2416;
+  --secondary-foreground: #e8f5e3;
+  --muted: #1a2416;
+  --muted-foreground: #9cb394;
+  --accent: #1f2e19;
+  --accent-foreground: #e8f5e3;
+  --border: #2a3824;
+  --input: #2a3824;
+  --ring: #4a9a2a;
+  --sidebar: #12180f;
+  --sidebar-foreground: #f4faf0;
+  --sidebar-border: #2a3824;
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);

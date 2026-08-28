@@ -4,18 +4,29 @@ import { useMemo, useState } from "react";
 
 import { BookingRow } from "@/components/provider/booking-row";
 import { ServiceLoading } from "@/components/service/service-loading";
+import { useLocale } from "@/lib/i18n";
+import type { MessageKey } from "@/lib/i18n/messages/en";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/store/useAuth";
 import { useCachedBookings } from "@/store/useCustomerCache";
 
-const FILTERS = [
-	{ id: "all", label: "All" },
-	{ id: "pending", label: "Pending" },
-	{ id: "accepted", label: "Accepted" },
-	{ id: "ongoing", label: "Ongoing" },
-	{ id: "completed", label: "Completed" },
-	{ id: "rejected", label: "Cancelled" },
+const FILTER_IDS = [
+	"all",
+	"pending",
+	"accepted",
+	"ongoing",
+	"completed",
+	"rejected",
 ] as const;
+
+const FILTER_KEYS: Record<(typeof FILTER_IDS)[number], MessageKey> = {
+	all: "commonAll",
+	pending: "statusPending",
+	accepted: "statusAccepted",
+	ongoing: "statusOngoing",
+	completed: "statusCompleted",
+	rejected: "statusCancelled",
+};
 
 function matchesFilter(status: string | null, filter: string) {
 	if (filter === "all") return true;
@@ -37,11 +48,12 @@ function matchesFilter(status: string | null, filter: string) {
 }
 
 export default function CustomerBookingsPage() {
+	const { t } = useLocale();
 	const { user } = useAuth();
 	const customerId = user?.id ?? "";
 	const { data: bookings, loading, error, refresh, refreshing } =
 		useCachedBookings(customerId);
-	const [filter, setFilter] = useState<(typeof FILTERS)[number]["id"]>("all");
+	const [filter, setFilter] = useState<(typeof FILTER_IDS)[number]>("all");
 
 	const filtered = useMemo(
 		() => bookings.filter((b) => matchesFilter(b.status, filter)),
@@ -52,38 +64,40 @@ export default function CustomerBookingsPage() {
 		<div className="px-4 pt-4 md:px-6 md:pt-8">
 			<div className="flex items-start justify-between gap-3">
 				<div className="md:hidden">
-					<h1 className="text-xl font-semibold tracking-tight">Bookings</h1>
+					<h1 className="text-xl font-semibold tracking-tight">
+						{t("bookingsTitle")}
+					</h1>
 					<p className="mt-1 text-sm text-muted-foreground">
-						Your service appointments
+						{t("bookingsSubtitle")}
 					</p>
 				</div>
 				<div className="hidden md:block">
-					<p className="admin-eyebrow">Bookings</p>
-					<h1 className="admin-page-title mt-1">My bookings</h1>
+					<p className="admin-eyebrow">{t("bookingsTitle")}</p>
+					<h1 className="admin-page-title mt-1">{t("bookingsMyBookings")}</h1>
 				</div>
 				<button
 					type="button"
 					onClick={refresh}
 					className="shrink-0 text-xs font-medium text-primary"
 				>
-					{refreshing ? "Refreshing…" : "Refresh"}
+					{refreshing ? t("commonRefreshing") : t("commonRefresh")}
 				</button>
 			</div>
 
 			<div className="-mx-4 mt-4 flex gap-2 overflow-x-auto px-4 pb-1 scrollbar-none">
-				{FILTERS.map((f) => (
+				{FILTER_IDS.map((id) => (
 					<button
-						key={f.id}
+						key={id}
 						type="button"
-						onClick={() => setFilter(f.id)}
+						onClick={() => setFilter(id)}
 						className={cn(
 							"shrink-0 rounded-full px-3.5 py-1.5 text-xs font-medium transition-colors",
-							filter === f.id
+							filter === id
 								? "bg-primary text-primary-foreground"
 								: "bg-white text-muted-foreground ring-1 ring-black/5",
 						)}
 					>
-						{f.label}
+						{t(FILTER_KEYS[id])}
 					</button>
 				))}
 			</div>
@@ -97,7 +111,7 @@ export default function CustomerBookingsPage() {
 					<ServiceLoading compact />
 				) : filtered.length === 0 ? (
 					<p className="py-10 text-center text-sm text-muted-foreground">
-						No bookings here yet.
+						{t("bookingsEmpty")}
 					</p>
 				) : (
 					filtered.map((b) => (
@@ -106,7 +120,7 @@ export default function CustomerBookingsPage() {
 							booking={b}
 							href={`/service/bookings/${b.id}`}
 							subtitle={
-								b.bookingAddress?.address || b.status || "Booking"
+								b.bookingAddress?.address || b.status || t("bookingTitle")
 							}
 						/>
 					))

@@ -8,10 +8,12 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useLocale } from "@/lib/i18n";
 import { getSupabase } from "@/lib/supabase/client";
 import { useAuth } from "@/store/useAuth";
 
 export default function ChangePasswordPage() {
+	const { t } = useLocale();
 	const router = useRouter();
 	const { user } = useAuth();
 	const [currentPassword, setCurrentPassword] = useState("");
@@ -27,21 +29,21 @@ export default function ChangePasswordPage() {
 		setSuccess(false);
 
 		if (newPassword.length < 6) {
-			setError("New password must be at least 6 characters.");
+			setError(t("providerPasswordMinLength"));
 			return;
 		}
 		if (newPassword !== confirmPassword) {
-			setError("New password and confirmation do not match.");
+			setError(t("providerPasswordMismatch"));
 			return;
 		}
 		if (newPassword === currentPassword) {
-			setError("New password must be different from the current one.");
+			setError(t("providerPasswordMustDiffer"));
 			return;
 		}
 
 		const email = user?.email ?? user?.provider?.email;
 		if (!email) {
-			setError("No email on this account.");
+			setError(t("providerPasswordNoEmail"));
 			return;
 		}
 
@@ -54,7 +56,7 @@ export default function ChangePasswordPage() {
 		});
 		if (verify.error) {
 			setBusy(false);
-			setError("Current password is incorrect.");
+			setError(t("providerPasswordIncorrect"));
 			return;
 		}
 
@@ -84,9 +86,9 @@ export default function ChangePasswordPage() {
 
 	return (
 		<div className="mx-auto max-w-md">
-			<ProfileBackLink href="/provider/profile" label="Profile" />
-			<p className="admin-eyebrow">Security</p>
-			<h1 className="admin-page-title mt-1">Change password</h1>
+			<ProfileBackLink href="/provider/profile" label={t("profileTitle")} />
+			<p className="admin-eyebrow">{t("commonSecurity")}</p>
+			<h1 className="admin-page-title mt-1">{t("profileChangePassword")}</h1>
 
 			{error ? (
 				<Alert variant="destructive" className="mt-4">
@@ -95,13 +97,13 @@ export default function ChangePasswordPage() {
 			) : null}
 			{success ? (
 				<Alert className="mt-4">
-					<AlertDescription>Password updated.</AlertDescription>
+					<AlertDescription>{t("providerPasswordUpdated")}</AlertDescription>
 				</Alert>
 			) : null}
 
 			<form onSubmit={handleSubmit} className="mt-6 space-y-3">
 				<div className="space-y-1.5">
-					<Label htmlFor="current">Current password</Label>
+					<Label htmlFor="current">{t("providerCurrentPassword")}</Label>
 					<Input
 						id="current"
 						type="password"
@@ -111,7 +113,7 @@ export default function ChangePasswordPage() {
 					/>
 				</div>
 				<div className="space-y-1.5">
-					<Label htmlFor="next">New password</Label>
+					<Label htmlFor="next">{t("newPassword")}</Label>
 					<Input
 						id="next"
 						type="password"
@@ -121,7 +123,7 @@ export default function ChangePasswordPage() {
 					/>
 				</div>
 				<div className="space-y-1.5">
-					<Label htmlFor="confirm">Confirm new password</Label>
+					<Label htmlFor="confirm">{t("providerConfirmNewPassword")}</Label>
 					<Input
 						id="confirm"
 						type="password"
@@ -131,7 +133,7 @@ export default function ChangePasswordPage() {
 					/>
 				</div>
 				<Button type="submit" disabled={busy} className="w-full">
-					{busy ? "Updating…" : "Update password"}
+					{busy ? t("commonUpdating") : t("providerUpdatePassword")}
 				</Button>
 			</form>
 		</div>
