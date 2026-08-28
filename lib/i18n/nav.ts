@@ -25,52 +25,59 @@ export interface NavItem {
 	icon: LucideIcon;
 }
 
-export function useServiceTabNav(): NavItem[] {
-	const { t } = useLocale();
-	return [
-		{ href: "/service", labelKey: "navHome", icon: HomeIcon },
-		{ href: "/service/bookings", labelKey: "navBookings", icon: CalendarDaysIcon },
-		{ href: "/service/requests", labelKey: "navRequests", icon: ClipboardListIcon },
-		{ href: "/service/profile", labelKey: "navProfile", icon: UserIcon },
-	].map((item) => ({ ...item, label: t(item.labelKey) })) as NavItem & { label: string }[];
+export interface NavItemWithLabel extends NavItem {
+	label: string;
 }
 
-export function useServiceTabNavItems() {
-	const { t } = useLocale();
-	const items = [
-		{ href: "/service", labelKey: "navHome" as const, icon: HomeIcon },
-		{ href: "/service/bookings", labelKey: "navBookings" as const, icon: CalendarDaysIcon },
-		{ href: "/service/requests", labelKey: "navRequests" as const, icon: ClipboardListIcon },
-		{ href: "/service/profile", labelKey: "navProfile" as const, icon: UserIcon },
-	];
+function withLabels<const T extends readonly NavItem[]>(
+	items: T,
+	t: (key: MessageKey) => string,
+): (T[number] & { label: string })[] {
 	return items.map((item) => ({ ...item, label: t(item.labelKey) }));
 }
 
-export function useProviderSidebarNavItems() {
+export function useServiceTabNavItems(): NavItemWithLabel[] {
 	const { t } = useLocale();
-	const items = [
-		{ href: "/provider", labelKey: "navDashboard" as const, icon: HomeIcon },
-		{ href: "/provider/bookings", labelKey: "navBookings" as const, icon: CalendarDaysIcon },
-		{ href: "/provider/offers", labelKey: "navOffers" as const, icon: TagIcon },
-		{ href: "/provider/jobs", labelKey: "navJobs" as const, icon: BriefcaseIcon },
-		{ href: "/provider/services", labelKey: "navServices" as const, icon: WrenchIcon },
-		{ href: "/provider/handymen", labelKey: "navHandymen" as const, icon: UsersIcon },
-		{ href: "/provider/wallet", labelKey: "navWallet" as const, icon: WalletIcon },
-		{ href: "/provider/bank", labelKey: "navBank" as const, icon: BanknoteIcon },
-		{ href: "/provider/inbox", labelKey: "navInbox" as const, icon: MessagesSquareIcon },
-		{ href: "/provider/notifications", labelKey: "notifications" as const, icon: BellIcon },
-		{ href: "/provider/profile", labelKey: "navProfile" as const, icon: UserIcon },
-	];
-	return items.map((item) => ({ ...item, label: t(item.labelKey) }));
+	return withLabels(
+		[
+			{ href: "/service", labelKey: "navHome", icon: HomeIcon },
+			{ href: "/service/bookings", labelKey: "navBookings", icon: CalendarDaysIcon },
+			{ href: "/service/requests", labelKey: "navRequests", icon: ClipboardListIcon },
+			{ href: "/service/profile", labelKey: "navProfile", icon: UserIcon },
+		] as const,
+		t,
+	);
 }
 
-export function useProviderTabNavItems() {
+export function useProviderSidebarNavItems(): NavItemWithLabel[] {
 	const { t } = useLocale();
-	const items = [
-		{ href: "/provider", labelKey: "navHome" as const, icon: HomeIcon },
-		{ href: "/provider/bookings", labelKey: "navBookings" as const, icon: CalendarDaysIcon },
-		{ href: "/provider/offers", labelKey: "navOffers" as const, icon: TagIcon },
-		{ href: "/provider/profile", labelKey: "navProfile" as const, icon: UserIcon },
-	];
-	return items.map((item) => ({ ...item, label: t(item.labelKey) }));
+	return withLabels(
+		[
+			{ href: "/provider", labelKey: "navDashboard", icon: HomeIcon },
+			{ href: "/provider/bookings", labelKey: "navBookings", icon: CalendarDaysIcon },
+			{ href: "/provider/offers", labelKey: "navOffers", icon: TagIcon },
+			{ href: "/provider/jobs", labelKey: "navJobs", icon: BriefcaseIcon },
+			{ href: "/provider/services", labelKey: "navServices", icon: WrenchIcon },
+			{ href: "/provider/handymen", labelKey: "navHandymen", icon: UsersIcon },
+			{ href: "/provider/wallet", labelKey: "navWallet", icon: WalletIcon },
+			{ href: "/provider/bank", labelKey: "navBank", icon: BanknoteIcon },
+			{ href: "/provider/inbox", labelKey: "navInbox", icon: MessagesSquareIcon },
+			{ href: "/provider/notifications", labelKey: "notifications", icon: BellIcon },
+			{ href: "/provider/profile", labelKey: "navProfile", icon: UserIcon },
+		] as const,
+		t,
+	);
+}
+
+export function useProviderTabNavItems(): NavItemWithLabel[] {
+	const { t } = useLocale();
+	return withLabels(
+		[
+			{ href: "/provider", labelKey: "navHome", icon: HomeIcon },
+			{ href: "/provider/bookings", labelKey: "navBookings", icon: CalendarDaysIcon },
+			{ href: "/provider/offers", labelKey: "navOffers", icon: TagIcon },
+			{ href: "/provider/profile", labelKey: "navProfile", icon: UserIcon },
+		] as const,
+		t,
+	);
 }
