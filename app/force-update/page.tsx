@@ -1,25 +1,26 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import Link from "next/link";
 
 import { AuthShell } from "@/components/auth/auth-shell";
+import { buttonVariants } from "@/components/ui/button";
 import { useLocale } from "@/lib/i18n";
+import { cn } from "@/lib/utils";
 
 export default function ForceUpdatePage() {
 	const { t } = useLocale();
-	const [message, setMessage] = useState(t("forceUpdateDefaultBody"));
-
-	useEffect(() => {
-		import("@/services/config/appConfigApi").then(({ fetchWebAppConfig }) => {
-			void fetchWebAppConfig().then((c) => {
-				if (c.updateMessage) setMessage(c.updateMessage);
-			});
-		});
-	}, []);
 
 	return (
 		<AuthShell title={t("forceUpdateTitle")}>
-			<p className="mt-6 text-center text-sm text-muted-foreground">{message}</p>
+			<p className="mt-6 text-center text-sm text-muted-foreground">
+				{t("forceUpdateDefaultBody")}
+			</p>
+			<Link
+				href="/login"
+				className={cn(buttonVariants(), "mt-8 w-full")}
+			>
+				{t("signIn")}
+			</Link>
 		</AuthShell>
 	);
 }

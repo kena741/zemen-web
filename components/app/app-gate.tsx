@@ -39,10 +39,6 @@ export function AppGate({ children }: { children: ReactNode }) {
 				router.replace("/maintenance");
 				return;
 			}
-			if (config.updateNeeded) {
-				router.replace("/force-update");
-				return;
-			}
 			setReady(true);
 		}
 
