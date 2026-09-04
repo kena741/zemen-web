@@ -19,6 +19,7 @@ import { ServiceLoading } from "@/components/service/service-loading";
 import { Input } from "@/components/ui/input";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { BRAND_NAME } from "@/lib/brand";
+import { useGuestBrowse } from "@/lib/use-guest-browse";
 import { useLocale } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/store/useAuth";
@@ -28,6 +29,7 @@ export default function ServiceHomePage() {
 	const { t } = useLocale();
 	const router = useRouter();
 	const { user } = useAuth();
+	const { isGuest } = useGuestBrowse();
 	const [pending, startTransition] = useTransition();
 	const [query, setQuery] = useState("");
 	const [sortMode, setSortMode] = useState<"popular" | "nearby">("popular");
@@ -73,8 +75,11 @@ export default function ServiceHomePage() {
 		});
 	}, [services, query, sortMode]);
 
+	const isGuestBrowse = !user && isGuest;
 	const greeting =
-		user?.customer?.fullName?.split(" ")[0] || user?.name || t("homeGuest");
+		user?.customer?.fullName?.split(" ")[0] ||
+		user?.name ||
+		t("homeGuest");
 
 	return (
 		<div className="min-h-svh md:min-h-0">
@@ -104,10 +109,16 @@ export default function ServiceHomePage() {
 							<p className="mt-2 text-sm text-primary-foreground/85">
 								{t("welcomeBack", { name: greeting })}
 							</p>
-							<p className="mt-0.5 flex items-center gap-1 text-xs text-primary-foreground/70">
-								<MapPinIcon className="size-3.5 shrink-0" />
-								<span className="truncate">{t("homeFindNearby")}</span>
-							</p>
+							{isGuestBrowse ? (
+								<p className="mt-0.5 text-xs text-primary-foreground/70">
+									{t("guestBrowseHint")}
+								</p>
+							) : (
+								<p className="mt-0.5 flex items-center gap-1 text-xs text-primary-foreground/70">
+									<MapPinIcon className="size-3.5 shrink-0" />
+									<span className="truncate">{t("homeFindNearby")}</span>
+								</p>
+							)}
 						</div>
 						<div className="flex shrink-0 items-center gap-1">
 							<button
@@ -165,7 +176,7 @@ export default function ServiceHomePage() {
 							{t("welcomeBack", { name: greeting })}
 						</h1>
 						<p className="mt-1 text-sm text-muted-foreground">
-							{t("homeSubtitle")}
+							{isGuestBrowse ? t("guestBrowseHint") : t("homeSubtitle")}
 						</p>
 					</div>
 					<div className="flex items-center gap-2">

@@ -8,6 +8,11 @@ import { useEffect } from "react";
 import appIcon from "@/assets/images/app_icon.png";
 import { ServiceLoading } from "@/components/service/service-loading";
 import { BRAND_NAME } from "@/lib/brand";
+import {
+	isGuestAllowedPath,
+	isGuestBrowse,
+	loginPathForGuest,
+} from "@/lib/guest";
 import { useLocale } from "@/lib/i18n";
 import { useServiceTabNavItems } from "@/lib/i18n/nav";
 import { cn } from "@/lib/utils";
@@ -45,18 +50,25 @@ export default function ServiceLayout({
 	const sessionPending = useAppSelector(selectAuthSessionPending);
 	const bottomVisible = showBottomNav(pathname, tabNav);
 
+	const guest = !user && isGuestBrowse();
+	const guestOk = guest && isGuestAllowedPath(pathname);
+
 	useEffect(() => {
 		if (sessionPending) return;
-		if (!user) {
-			router.replace("/login");
+		if (user) {
+			if (user.mode !== "service") router.replace("/provider");
 			return;
 		}
-		if (user.mode !== "service") {
-			router.replace("/provider");
+		if (isGuestBrowse()) {
+			if (!isGuestAllowedPath(pathname)) {
+				router.replace(loginPathForGuest(pathname));
+			}
+			return;
 		}
-	}, [user, router, sessionPending]);
+		router.replace(loginPathForGuest(pathname));
+	}, [user, router, sessionPending, pathname]);
 
-	if (sessionPending || !user || user.mode !== "service") {
+	if (sessionPending || (user && user.mode !== "service") || (!user && !guestOk)) {
 		return (
 			<div className="flex min-h-svh items-center justify-center bg-[#f6faf4]">
 				<ServiceLoading className="min-h-0" />

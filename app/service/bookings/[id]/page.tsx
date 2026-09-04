@@ -15,8 +15,16 @@ import { Textarea } from "@/components/ui/textarea";
 import { ServiceLoading } from "@/components/service/service-loading";
 import { useLocale } from "@/lib/i18n";
 import { formatAmount, formatDateTime } from "@/services/bookings/types";
-import { isRecurringPricingType } from "@/lib/recurring";
+import {
+	calendarDaysUntil,
+	isNextCyclePaymentDue,
+	isRecurringPricingType,
+	periodNounKey,
+	type RecurringPaymentSettings,
+	RECURRING_PAYMENT_SETTINGS_DEFAULT,
+} from "@/lib/recurring";
 import { savePaymentPending } from "@/lib/payment-pending";
+import { fetchRecurringPaymentSettings } from "@/services/config/recurringSettingsApi";
 import {
 	cancelCustomerBooking,
 	payBookingWithWallet,
@@ -49,6 +57,13 @@ export default function CustomerBookingDetailPage() {
 	const [showReview, setShowReview] = useState(false);
 	const [rating, setRating] = useState(5);
 	const [comment, setComment] = useState("");
+	const [recurringSettings, setRecurringSettings] =
+		useState<RecurringPaymentSettings>(RECURRING_PAYMENT_SETTINGS_DEFAULT);
+	const [showNextCycleConfirm, setShowNextCycleConfirm] = useState(false);
+
+	useEffect(() => {
+		void fetchRecurringPaymentSettings().then(setRecurringSettings);
+	}, []);
 
 	useEffect(() => {
 		if (!booking?.id) return;
@@ -109,9 +124,42 @@ export default function CustomerBookingDetailPage() {
 		refresh();
 	}
 
+	async function onPayNextCycleWallet() {
+		if (!booking || !user?.id || busy) return;
+		const amount = Number(booking.subTotal ?? booking.totalAmount ?? 0) || 0;
+		setBusy(true);
+		setActionError(null);
+		const res = await payBookingWithWallet({
+			bookingId: booking.id,
+			customerId: user.customer?.id ?? user.id,
+			amount,
+			nextCycle: true,
+			billingInterval: booking.service?.billingInterval ?? undefined,
+			billingIntervalCount: booking.service?.billingIntervalCount ?? undefined,
+		});
+		setBusy(false);
+		setShowNextCycleConfirm(false);
+		if (!res.ok) {
+			setActionError(res.error);
+			return;
+		}
+		if (res.newBalance != null && user.customer) {
+			dispatch(
+				patchAuthUser({
+					customer: {
+						...user.customer,
+						walletAmount: String(res.newBalance),
+					},
+				}),
+			);
+		}
+		dispatch(invalidateBookings());
+		refresh();
+	}
+
 	async function onPayNextCycleChapa() {
 		if (!booking || !user?.id || busy) return;
-		const amount = Number(booking.totalAmount ?? booking.subTotal ?? 0) || 0;
+		const amount = Number(booking.subTotal ?? booking.totalAmount ?? 0) || 0;
 		savePaymentPending({
 			purpose: "booking",
 			userId: user.id,
@@ -123,6 +171,7 @@ export default function CustomerBookingDetailPage() {
 			billingIntervalCount: booking.service?.billingIntervalCount ?? undefined,
 		});
 		setBusy(true);
+		setShowNextCycleConfirm(false);
 		const res = await fetch("/api/pay/chapa", {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
@@ -191,12 +240,18 @@ export default function CustomerBookingDetailPage() {
 		isRecurringPricingType(booking.service?.pricingType ?? null) ||
 		booking.nextCycleDue ||
 		Boolean(booking.currentPeriodEnd);
-	const showNextCyclePay =
-		isRecurring &&
-		booking.paymentCompleted &&
-		(booking.nextCycleDue ||
-			(booking.currentPeriodEnd &&
-				new Date(booking.currentPeriodEnd).getTime() <= Date.now()));
+	const showNextCyclePay = isNextCyclePaymentDue({
+		isRecurring,
+		paymentCompleted: booking.paymentCompleted,
+		status: booking.status,
+		nextCycleDue: booking.nextCycleDue,
+		currentPeriodEnd: booking.currentPeriodEnd,
+		paymentWindowDays: recurringSettings.paymentWindowDays,
+	});
+	const daysLeft = calendarDaysUntil(booking.currentPeriodEnd);
+	const periodNoun = t(periodNounKey(booking.service?.billingInterval));
+	const nextCycleAmount =
+		Number(booking.subTotal ?? booking.totalAmount ?? 0) || 0;
 	const address =
 		booking.bookingAddress?.address ||
 		booking.bookingAddress?.locality ||
@@ -285,6 +340,13 @@ export default function CustomerBookingDetailPage() {
 						value={formatDateTime(booking.currentPeriodEnd)}
 					/>
 				) : null}
+				{isRecurring && daysLeft != null ? (
+					<p className="text-xs text-muted-foreground">
+						{daysLeft < 0
+							? t("bookingCycleEnded")
+							: t("bookingDaysLeft", { days: String(daysLeft) })}
+					</p>
+				) : null}
 				{booking.description ? (
 					<Row label={t("bookingNotes")} value={booking.description} />
 				) : null}
@@ -310,13 +372,53 @@ export default function CustomerBookingDetailPage() {
 			</div>
 
 			{showNextCyclePay ? (
-				<Button
-					className="mt-5 w-full"
-					disabled={busy}
-					onClick={() => void onPayNextCycleChapa()}
-				>
-					{busy ? t("bookingStarting") : t("bookingPayNextCycle")}
-				</Button>
+				<div className="mt-5 space-y-3 rounded-xl bg-white p-4 shadow-sm ring-1 ring-black/5">
+					<p className="text-sm text-muted-foreground">
+						{t("bookingNextCycleNotice", { period: periodNoun })}
+					</p>
+					{!showNextCycleConfirm ? (
+						<Button
+							className="w-full"
+							disabled={busy}
+							onClick={() => setShowNextCycleConfirm(true)}
+						>
+							{t("bookingPayNextCycleFor", { period: periodNoun })} ·{" "}
+							{formatAmount(nextCycleAmount)}
+						</Button>
+					) : (
+						<div className="space-y-2">
+							<p className="text-sm font-medium">{t("bookingConfirmPayTitle")}</p>
+							<p className="text-xs text-muted-foreground">
+								{formatAmount(nextCycleAmount)}
+							</p>
+							<div className="flex flex-col gap-2 sm:flex-row">
+								<Button
+									className="flex-1"
+									disabled={busy}
+									onClick={() => void onPayNextCycleWallet()}
+								>
+									{busy ? t("bookingPaying") : t("bookingPayWithWallet")}
+								</Button>
+								<Button
+									variant="outline"
+									className="flex-1"
+									disabled={busy}
+									onClick={() => void onPayNextCycleChapa()}
+								>
+									{busy ? t("bookingStarting") : t("bookingPayWithChapa")}
+								</Button>
+							</div>
+							<Button
+								variant="ghost"
+								className="w-full"
+								disabled={busy}
+								onClick={() => setShowNextCycleConfirm(false)}
+							>
+								{t("commonCancel")}
+							</Button>
+						</div>
+					)}
+				</div>
 			) : null}
 
 			{showWalletPay ? (

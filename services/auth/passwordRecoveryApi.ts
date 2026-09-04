@@ -26,8 +26,7 @@ export async function resetPasswordByPhone(params: {
 	mode: AppMode;
 }): Promise<{ error: string | null }> {
 	const edgeBase = getEdgeFunctionsBaseUrl();
-	const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim();
-	if (!edgeBase || !anonKey) {
+	if (!edgeBase) {
 		return { error: "Password reset is not configured on this deployment" };
 	}
 
@@ -40,10 +39,7 @@ export async function resetPasswordByPhone(params: {
 	try {
 		const res = await fetch(`${edgeBase}/${path}`, {
 			method: "POST",
-			headers: {
-				"Content-Type": "application/json",
-				Authorization: `Bearer ${anonKey}`,
-			},
+			headers: { "Content-Type": "application/json" },
 			body: JSON.stringify({
 				phone: local,
 				code: params.code.trim(),

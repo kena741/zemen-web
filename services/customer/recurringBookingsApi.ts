@@ -1,13 +1,16 @@
 import { addBillingInterval } from "@/lib/recurring";
+import { getSupabase } from "@/lib/supabase/client";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-export async function advanceRecurringBookingPeriod(params: {
-	admin: SupabaseClient;
-	bookingId: string;
-	billingInterval?: string | null;
-	billingIntervalCount?: number | null;
-}): Promise<{ ok: boolean; error: string | null }> {
-	const { data, error } = await params.admin
+async function advanceWithClient(
+	client: SupabaseClient,
+	params: {
+		bookingId: string;
+		billingInterval?: string | null;
+		billingIntervalCount?: number | null;
+	},
+): Promise<{ ok: boolean; error: string | null }> {
+	const { data, error } = await client
 		.from("booked_service")
 		.select(
 			"currentPeriodStart, currentPeriodEnd, current_period_start, current_period_end",
@@ -30,7 +33,7 @@ export async function advanceRecurringBookingPeriod(params: {
 		params.billingIntervalCount ?? 1,
 	);
 
-	const { error: updateErr } = await params.admin
+	const { error: updateErr } = await client
 		.from("booked_service")
 		.update({
 			currentPeriodStart: nextStart.toISOString(),
@@ -43,4 +46,21 @@ export async function advanceRecurringBookingPeriod(params: {
 
 	if (updateErr) return { ok: false, error: updateErr.message };
 	return { ok: true, error: null };
+}
+
+export async function advanceRecurringBookingPeriod(params: {
+	admin: SupabaseClient;
+	bookingId: string;
+	billingInterval?: string | null;
+	billingIntervalCount?: number | null;
+}): Promise<{ ok: boolean; error: string | null }> {
+	return advanceWithClient(params.admin, params);
+}
+
+export async function advanceRecurringBookingPeriodClient(params: {
+	bookingId: string;
+	billingInterval?: string | null;
+	billingIntervalCount?: number | null;
+}): Promise<{ ok: boolean; error: string | null }> {
+	return advanceWithClient(getSupabase(), params);
 }

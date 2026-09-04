@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { ArrowLeftIcon, MessageSquareIcon } from "lucide-react";
 
 import { StatusBadge } from "@/components/provider/status-badge";
+import { RecurringBadge } from "@/components/recurring/recurring-badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AppLoading } from "@/components/ui/app-loading";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -14,6 +15,10 @@ import { Label } from "@/components/ui/label";
 import { useLocale } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { BOOKING_STATUS } from "@/lib/booking-status";
+import {
+	calendarDaysUntil,
+	isRecurringPricingType,
+} from "@/lib/recurring";
 import {
 	saveBookingExtraCharge,
 	saveBookingServiceProof,
@@ -202,6 +207,11 @@ export default function BookingDetailPage() {
 		: booking?.handymanId
 			? `${t("handymanTitle")} · ${booking.handymanId.slice(0, 8)}`
 			: null;
+	const isRecurring =
+		isRecurringPricingType(booking?.service?.pricingType ?? null) ||
+		Boolean(booking?.nextCycleDue) ||
+		Boolean(booking?.currentPeriodEnd);
+	const daysLeft = calendarDaysUntil(booking?.currentPeriodEnd);
 
 	return (
 		<div className="mx-auto max-w-2xl">
@@ -226,9 +236,17 @@ export default function BookingDetailPage() {
 					<div className="flex flex-wrap items-start justify-between gap-3">
 						<div>
 							<p className="admin-eyebrow">{t("bookingTitle")}</p>
-							<h1 className="admin-page-title mt-1">
-								{booking.service?.serviceName ?? t("providerServiceBooking")}
-							</h1>
+							<div className="mt-1 flex flex-wrap items-center gap-2">
+								<h1 className="admin-page-title">
+									{booking.service?.serviceName ?? t("providerServiceBooking")}
+								</h1>
+								{isRecurring ? (
+									<RecurringBadge
+										interval={booking.service?.billingInterval}
+										count={booking.service?.billingIntervalCount}
+									/>
+								) : null}
+							</div>
 							<p className="mt-1 text-sm text-muted-foreground">
 								#{booking.id.slice(0, 8)}
 							</p>
@@ -271,6 +289,28 @@ export default function BookingDetailPage() {
 							label={t("commonPaid")}
 							value={booking.paymentCompleted ? t("commonYes") : t("commonNo")}
 						/>
+						{booking.currentPeriodEnd ? (
+							<DetailRow
+								label={t("bookingPeriodEnds")}
+								value={formatDateTime(booking.currentPeriodEnd)}
+							/>
+						) : null}
+						{isRecurring ? (
+							<DetailRow
+								label={t("bookingPayNextCycle")}
+								value={booking.nextCycleDue ? t("commonYes") : t("commonNo")}
+							/>
+						) : null}
+						{isRecurring && daysLeft != null ? (
+							<DetailRow
+								label={
+									daysLeft < 0
+										? t("bookingCycleEnded")
+										: t("bookingDaysLeft", { days: String(daysLeft) })
+								}
+								value=" "
+							/>
+						) : null}
 						{booking.description ? (
 							<DetailRow label={t("bookingNotes")} value={booking.description} />
 						) : null}

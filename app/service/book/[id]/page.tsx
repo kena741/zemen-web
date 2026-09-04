@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { ServiceLoading } from "@/components/service/service-loading";
 import { useLocale } from "@/lib/i18n";
+import { dueNowAmount, remainingAmount } from "@/lib/recurring";
 import { formatAmount } from "@/services/bookings/types";
 import { createCustomerBooking, payBookingWithWallet } from "@/services/customer/bookingsApi";
 import { savePaymentPending } from "@/lib/payment-pending";
@@ -71,6 +72,14 @@ function BookServiceForm() {
 	const walletBalance = Number(user?.customer?.walletAmount ?? 0) || 0;
 
 	useEffect(() => {
+		if (!user) {
+			router.replace(
+				`/login?next=${encodeURIComponent(`/service/book/${params.id}`)}`,
+			);
+		}
+	}, [user, router, params.id]);
+
+	useEffect(() => {
 		if (bidPrice) {
 			setCustomPrice(bidPrice);
 			setUseCustomPrice(true);
@@ -101,6 +110,20 @@ function BookServiceForm() {
 		? couponDiscount(appliedCoupon, subtotal)
 		: 0;
 	const total = Math.max(0, subtotal - discount);
+	const dueNow = dueNowAmount({
+		total,
+		pricingType: service?.pricingType,
+		prePayment: service?.prePayment,
+		prePaymentPercent: service?.prePaymentPercent,
+	});
+	const remaining = remainingAmount(total, dueNow);
+	const prePayPercent =
+		service?.prePayment &&
+		service.prePaymentPercent != null &&
+		service.prePaymentPercent > 0 &&
+		service.prePaymentPercent < 100
+			? service.prePaymentPercent
+			: null;
 
 	const paymentLabels = {
 		cash: t("paymentCash"),
@@ -220,7 +243,7 @@ function BookServiceForm() {
 				}
 			: null;
 
-		if (paymentMethod === "wallet" && total > walletBalance) {
+		if (paymentMethod === "wallet" && dueNow > walletBalance) {
 			setBusy(false);
 			setError(t("bookServiceInsufficientWallet"));
 			return;
@@ -256,7 +279,7 @@ function BookServiceForm() {
 			const paid = await payBookingWithWallet({
 				bookingId: res.bookingId,
 				customerId: user.id,
-				amount: total,
+				amount: dueNow,
 			});
 			setBusy(false);
 			if (!paid.ok) {
@@ -273,7 +296,7 @@ function BookServiceForm() {
 				purpose: "booking",
 				userId: user.id,
 				accountType: "customer",
-				amount: String(total),
+				amount: String(dueNow),
 				bookingId: res.bookingId,
 			});
 			setBusy(false);
@@ -281,13 +304,13 @@ function BookServiceForm() {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify({
-					amount: total,
+					amount: dueNow,
 					email: user.email,
 					first_name: firstName,
 					last_name: lastName,
 					phone_number: customer.phone,
 					purpose: "booking",
-					return_path: `/pay/done?purpose=booking&amount=${total}`,
+					return_path: `/pay/done?purpose=booking&amount=${dueNow}`,
 					booking_id: res.bookingId,
 				}),
 			});
@@ -308,7 +331,7 @@ function BookServiceForm() {
 		router.replace(`/service/bookings/${res.bookingId}`);
 	}
 
-	if (loading) return <ServiceLoading />;
+	if (loading || !user) return <ServiceLoading />;
 
 	if (!service) {
 		return (
@@ -537,6 +560,31 @@ function BookServiceForm() {
 							{formatAmount(total)}
 						</span>
 					</div>
+					{dueNow < total ? (
+						<>
+							<div className="mt-2 flex items-center justify-between text-sm">
+								<span className="text-muted-foreground">
+									{t("bookingDueNow")}
+									{prePayPercent != null
+										? ` · ${t("bookingPayPercentNow", {
+												percent: String(prePayPercent),
+											})}`
+										: ""}
+								</span>
+								<span className="tabular-nums font-medium">
+									{formatAmount(dueNow)}
+								</span>
+							</div>
+							<div className="mt-1 flex items-center justify-between text-sm">
+								<span className="text-muted-foreground">
+									{t("bookingRemaining")}
+								</span>
+								<span className="tabular-nums">
+									{formatAmount(remaining)}
+								</span>
+							</div>
+						</>
+					) : null}
 					<p className="mt-1 text-xs text-muted-foreground">
 						{isCustomOffer
 							? t("bookServiceCustomOfferNote")

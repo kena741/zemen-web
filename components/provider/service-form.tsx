@@ -10,6 +10,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
+	normalizeBillingInterval,
+	type RecurringPaymentSettings,
+	RECURRING_PAYMENT_SETTINGS_DEFAULT,
+} from "@/lib/recurring";
+import { fetchRecurringPaymentSettings } from "@/services/config/recurringSettingsApi";
+import {
 	fetchCategories,
 	fetchSubCategories,
 	upsertService,
@@ -28,6 +34,13 @@ type ServiceFormProps = {
 	initial?: ProviderService | null;
 	onSuccess: (serviceId: string) => void;
 };
+
+const INTERVAL_OPTIONS = [
+	{ value: "WEEK", label: "Weekly" },
+	{ value: "MONTH", label: "Monthly" },
+	{ value: "QUARTER", label: "Quarterly" },
+	{ value: "YEAR", label: "Yearly" },
+] as const;
 
 export function ServiceForm({
 	mode,
@@ -73,6 +86,12 @@ export function ServiceForm({
 	const [loadingMeta, setLoadingMeta] = useState(true);
 	const [busy, setBusy] = useState(false);
 	const [error, setError] = useState<string | null>(null);
+	const [recurringSettings, setRecurringSettings] =
+		useState<RecurringPaymentSettings>(RECURRING_PAYMENT_SETTINGS_DEFAULT);
+
+	useEffect(() => {
+		void fetchRecurringPaymentSettings().then(setRecurringSettings);
+	}, []);
 
 	useEffect(() => {
 		let cancelled = false;
@@ -129,6 +148,20 @@ export function ServiceForm({
 		() => subCategories.find((s) => s.id === subCategoryId) ?? null,
 		[subCategories, subCategoryId],
 	);
+	const intervalOptions = useMemo(() => {
+		const allowed = new Set(
+			recurringSettings.availableCycles.map((c) => normalizeBillingInterval(c)),
+		);
+		const filtered = INTERVAL_OPTIONS.filter((o) => allowed.has(o.value));
+		return filtered.length > 0 ? filtered : [...INTERVAL_OPTIONS];
+	}, [recurringSettings.availableCycles]);
+
+	useEffect(() => {
+		if (pricingType !== "RECURRING") return;
+		if (!intervalOptions.some((o) => o.value === billingInterval)) {
+			setBillingInterval(intervalOptions[0]?.value ?? "MONTH");
+		}
+	}, [pricingType, intervalOptions, billingInterval]);
 
 	function onPickFiles(files: FileList | null) {
 		if (!files?.length) return;
@@ -300,20 +333,36 @@ export function ServiceForm({
 					</select>
 				</div>
 				{pricingType === "RECURRING" ? (
-					<div className="space-y-1.5">
-						<Label htmlFor="billing-interval">Billing interval</Label>
-						<select
-							id="billing-interval"
-							value={billingInterval}
-							onChange={(e) => setBillingInterval(e.target.value)}
-							className="h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm"
-						>
-							<option value="WEEK">Weekly</option>
-							<option value="MONTH">Monthly</option>
-							<option value="QUARTER">Quarterly</option>
-							<option value="YEAR">Yearly</option>
-						</select>
-					</div>
+					<>
+						<div className="space-y-1.5">
+							<Label htmlFor="billing-interval">Billing interval</Label>
+							<select
+								id="billing-interval"
+								value={billingInterval}
+								onChange={(e) => setBillingInterval(e.target.value)}
+								className="h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm"
+							>
+								{intervalOptions.map((o) => (
+									<option key={o.value} value={o.value}>
+										{o.label}
+									</option>
+								))}
+							</select>
+						</div>
+						<div className="space-y-1.5 sm:col-span-2">
+							<Label htmlFor="billing-interval-count">
+								Every N intervals
+							</Label>
+							<Input
+								id="billing-interval-count"
+								type="number"
+								min={1}
+								max={24}
+								value={billingIntervalCount}
+								onChange={(e) => setBillingIntervalCount(e.target.value)}
+							/>
+						</div>
+					</>
 				) : null}
 			</div>
 

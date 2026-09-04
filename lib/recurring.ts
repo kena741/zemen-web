@@ -3,6 +3,53 @@ export const RECURRING_MONTH = "MONTH";
 export const RECURRING_QUARTER = "QUARTER";
 export const RECURRING_YEAR = "YEAR";
 
+export const RECURRING_CYCLES = [
+	RECURRING_WEEK,
+	RECURRING_MONTH,
+	RECURRING_QUARTER,
+	RECURRING_YEAR,
+] as const;
+
+export interface RecurringPaymentSettings {
+	enabled: boolean;
+	availableCycles: string[];
+	paymentWindowDays: number;
+}
+
+export const RECURRING_PAYMENT_SETTINGS_DEFAULT: RecurringPaymentSettings = {
+	enabled: true,
+	availableCycles: [...RECURRING_CYCLES],
+	paymentWindowDays: 3,
+};
+
+export function parseRecurringPaymentSettings(
+	raw: unknown,
+): RecurringPaymentSettings {
+	if (!raw || typeof raw !== "object") return RECURRING_PAYMENT_SETTINGS_DEFAULT;
+	const map = raw as Record<string, unknown>;
+	const enabled =
+		map.enabled !== false && String(map.enabled).toLowerCase() !== "false";
+	const cycles: string[] = [];
+	const cyclesRaw = map.available_cycles ?? map.availableCycles;
+	if (Array.isArray(cyclesRaw)) {
+		for (const item of cyclesRaw) {
+			const cycle = normalizeBillingInterval(String(item));
+			if (!cycles.includes(cycle)) cycles.push(cycle);
+		}
+	}
+	if (cycles.length === 0) cycles.push(...RECURRING_CYCLES);
+	const window =
+		Number.parseInt(
+			String(map.payment_window_days ?? map.paymentWindowDays ?? "3"),
+			10,
+		) || 3;
+	return {
+		enabled,
+		availableCycles: cycles,
+		paymentWindowDays: window > 0 ? window : 3,
+	};
+}
+
 export function normalizeBillingInterval(raw: string | null | undefined): string {
 	switch ((raw ?? "").trim().toUpperCase()) {
 		case "WEEK":
@@ -34,6 +81,21 @@ export function billingIntervalLabel(raw: string | null | undefined): string {
 	}
 }
 
+export function periodNounKey(
+	raw: string | null | undefined,
+): "cyclePeriodWeek" | "cyclePeriodMonth" | "cyclePeriodQuarter" | "cyclePeriodYear" {
+	switch (normalizeBillingInterval(raw)) {
+		case RECURRING_WEEK:
+			return "cyclePeriodWeek";
+		case RECURRING_QUARTER:
+			return "cyclePeriodQuarter";
+		case RECURRING_YEAR:
+			return "cyclePeriodYear";
+		default:
+			return "cyclePeriodMonth";
+	}
+}
+
 export function addBillingInterval(
 	from: Date,
 	interval: string | null | undefined,
@@ -57,6 +119,72 @@ export function addBillingInterval(
 	}
 }
 
+export function calendarDaysUntil(end: Date | string | null | undefined): number | null {
+	if (!end) return null;
+	const endDate = typeof end === "string" ? new Date(end) : end;
+	if (Number.isNaN(endDate.getTime())) return null;
+	const now = new Date();
+	const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+	const endDay = new Date(
+		endDate.getFullYear(),
+		endDate.getMonth(),
+		endDate.getDate(),
+	);
+	return Math.round((endDay.getTime() - today.getTime()) / 86_400_000);
+}
+
 export function isRecurringPricingType(raw: string | null | undefined): boolean {
 	return (raw ?? "").trim().toUpperCase() === "RECURRING";
+}
+
+export function dueNowAmount(params: {
+	total: number;
+	pricingType?: string | null;
+	prePayment?: boolean;
+	prePaymentPercent?: number | null;
+}): number {
+	const total = Math.max(0, params.total);
+	if (isRecurringPricingType(params.pricingType)) return total;
+	if (!params.prePayment) return total;
+	const pct = params.prePaymentPercent;
+	if (pct == null || !Number.isFinite(pct) || pct >= 100) return total;
+	if (pct <= 0) return 0;
+	return Math.round(((total * pct) / 100) * 100) / 100;
+}
+
+export function remainingAmount(total: number, dueNow: number): number {
+	return Math.max(0, Math.round((total - dueNow) * 100) / 100);
+}
+
+export interface NextCycleDueInput {
+	isRecurring: boolean;
+	paymentCompleted: boolean;
+	status?: string | null;
+	nextCycleDue?: boolean;
+	currentPeriodEnd?: string | null;
+	paymentWindowDays?: number;
+}
+
+export function isNextCyclePaymentDue(input: NextCycleDueInput): boolean {
+	if (!input.isRecurring || !input.paymentCompleted) return false;
+	const status = (input.status ?? "").trim().toLowerCase();
+	if (
+		status === "rejected" ||
+		status === "completed" ||
+		status === "admin_paid" ||
+		status === "cancelled" ||
+		status === "canceled"
+	) {
+		return false;
+	}
+	if (input.nextCycleDue) return true;
+	if (!input.currentPeriodEnd) return false;
+	const end = new Date(input.currentPeriodEnd);
+	if (Number.isNaN(end.getTime())) return false;
+	const windowDays = Math.min(
+		365,
+		Math.max(0, input.paymentWindowDays ?? 3),
+	);
+	const reminderAt = new Date(end.getTime() - windowDays * 86_400_000);
+	return Date.now() >= reminderAt.getTime();
 }

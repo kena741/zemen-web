@@ -15,9 +15,11 @@ import {
 	WalletIcon,
 } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { UserAvatar } from "@/components/ui/user-avatar";
+import { clearGuestBrowse } from "@/lib/guest";
 import { useLocale } from "@/lib/i18n";
+import { cn } from "@/lib/utils";
 import { formatAmount } from "@/services/bookings/types";
 import { useAuth } from "@/store/useAuth";
 
@@ -50,6 +52,30 @@ export default function CustomerProfilePage() {
 	const { user, logout } = useAuth();
 	const customer = user?.customer;
 	const wallet = customer?.walletAmount ?? "0";
+
+	function onLogout() {
+		clearGuestBrowse();
+		logout();
+	}
+
+	if (!user) {
+		return (
+			<div className="px-4 pt-4 md:px-6 md:pt-8">
+				<h1 className="text-xl font-semibold tracking-tight md:text-[1.65rem]">
+					{t("guestProfileTitle")}
+				</h1>
+				<p className="mt-3 text-sm text-muted-foreground">
+					{t("guestProfileBody")}
+				</p>
+				<Link
+					href="/login"
+					className={cn(buttonVariants(), "mt-8 w-full")}
+				>
+					{t("guestSignInCta")}
+				</Link>
+			</div>
+		);
+	}
 
 	return (
 		<div className="px-4 pt-4 md:px-6 md:pt-8">
@@ -169,7 +195,7 @@ export default function CustomerProfilePage() {
 			<Button
 				variant="outline"
 				className="mt-8 w-full gap-2 text-destructive"
-				onClick={logout}
+				onClick={onLogout}
 			>
 				<LogOutIcon className="size-4" />
 				{t("signOut")}

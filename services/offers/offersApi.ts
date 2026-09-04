@@ -145,6 +145,47 @@ export async function fetchProviderOffers(
 	return { offers, error: null };
 }
 
+export async function fetchOfferById(
+	offerId: string,
+): Promise<{ offer: ServiceOffer | null; error: string | null }> {
+	if (!offerId) return { offer: null, error: "Missing offer id" };
+
+	const { data, error } = await getSupabase()
+		.from("service_offer")
+		.select("*")
+		.eq("id", offerId)
+		.maybeSingle();
+
+	if (error) {
+		console.error("fetchOfferById", error);
+		return { offer: null, error: error.message };
+	}
+	if (!data) return { offer: null, error: null };
+
+	const offer = mapOffer(data as Record<string, unknown>);
+	if (offer.serviceId) {
+		const { data: service } = await getSupabase()
+			.from("service")
+			.select("id, serviceName, serviceImage")
+			.eq("id", offer.serviceId)
+			.maybeSingle();
+		if (service) {
+			const s = service as Record<string, unknown>;
+			if (!offer.serviceName && s.serviceName != null) {
+				offer.serviceName = String(s.serviceName);
+			}
+			if (
+				!offer.serviceImage &&
+				Array.isArray(s.serviceImage) &&
+				s.serviceImage[0]
+			) {
+				offer.serviceImage = String(s.serviceImage[0]);
+			}
+		}
+	}
+	return { offer, error: null };
+}
+
 export async function respondToOffer(params: {
 	offerId: string;
 	accept: boolean;

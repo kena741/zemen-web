@@ -2,8 +2,8 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
 import { EyeIcon, EyeOffIcon, Loader2Icon } from "lucide-react";
 
 import appIcon from "@/assets/images/app_icon.png";
@@ -23,12 +23,16 @@ import {
 	homePathForMode,
 	type AppMode,
 } from "@/lib/brand";
+import { clearGuestBrowse, enableGuestBrowse } from "@/lib/guest";
 import { useLocale } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/store/useAuth";
 
-export default function LoginPage() {
+const REMEMBER_KEY = "zemen_remember_login";
+
+function LoginForm() {
 	const router = useRouter();
+	const searchParams = useSearchParams();
 	const { t } = useLocale();
 	const {
 		login,
@@ -41,13 +45,39 @@ export default function LoginPage() {
 	const [emailOrPhone, setEmailOrPhone] = useState("");
 	const [password, setPassword] = useState("");
 	const [showPassword, setShowPassword] = useState(false);
+	const [rememberMe, setRememberMe] = useState(false);
 	const [error, setError] = useState("");
 
 	const uiError = error || authError || "";
+	const nextPath = searchParams.get("next");
 
 	useEffect(() => {
-		if (user) router.replace(homePathForMode(user.mode));
-	}, [user, router]);
+		try {
+			const raw = window.localStorage.getItem(REMEMBER_KEY);
+			if (!raw) return;
+			const parsed = JSON.parse(raw) as {
+				emailOrPhone?: string;
+				password?: string;
+			};
+			if (parsed.emailOrPhone) setEmailOrPhone(parsed.emailOrPhone);
+			if (parsed.password) {
+				setPassword(parsed.password);
+				setRememberMe(true);
+			}
+		} catch {
+			/* ignore */
+		}
+	}, []);
+
+	useEffect(() => {
+		if (!user) return;
+		clearGuestBrowse();
+		const dest =
+			nextPath && nextPath.startsWith("/")
+				? nextPath
+				: homePathForMode(user.mode);
+		router.replace(dest);
+	}, [user, router, nextPath]);
 
 	function modeLabel(option: AppMode) {
 		return option === "provider" ? t("provider") : t("customer");
@@ -58,15 +88,37 @@ export default function LoginPage() {
 		setError("");
 
 		const success = await login(emailOrPhone, password, mode);
-		if (success) {
-			router.push(homePathForMode(mode));
-			return;
+		if (!success) return;
+
+		try {
+			if (rememberMe) {
+				window.localStorage.setItem(
+					REMEMBER_KEY,
+					JSON.stringify({ emailOrPhone, password }),
+				);
+			} else {
+				window.localStorage.removeItem(REMEMBER_KEY);
+			}
+		} catch {
+			/* ignore */
 		}
+		clearGuestBrowse();
+		const dest =
+			nextPath && nextPath.startsWith("/") && mode === "service"
+				? nextPath
+				: homePathForMode(mode);
+		router.push(dest);
 	}
 
 	function selectMode(next: AppMode) {
 		setMode(next);
 		setError("");
+	}
+
+	function continueAsGuest() {
+		enableGuestBrowse();
+		setMode("service");
+		router.push("/service");
 	}
 
 	return (
@@ -127,11 +179,7 @@ export default function LoginPage() {
 						</p>
 
 						{uiError ? (
-							<Alert
-								variant="destructive"
-								className="mt-6"
-								aria-live="polite"
-							>
+							<Alert variant="destructive" className="mt-6" aria-live="polite">
 								<AlertTitle>{t("signInFailed")}</AlertTitle>
 								<AlertDescription>
 									<div className="flex flex-col gap-2">
@@ -147,9 +195,7 @@ export default function LoginPage() {
 										) : null}
 										{uiError.toLowerCase().includes("confirm") ||
 										uiError.toLowerCase().includes("verify your email") ? (
-											<p className="text-sm">
-												{t("signInConfirmEmailHint")}
-											</p>
+											<p className="text-sm">{t("signInConfirmEmailHint")}</p>
 										) : null}
 									</div>
 								</AlertDescription>
@@ -225,6 +271,16 @@ export default function LoginPage() {
 								</Field>
 							</FieldGroup>
 
+							<label className="flex items-center gap-2 text-[13px] text-muted-foreground">
+								<input
+									type="checkbox"
+									checked={rememberMe}
+									onChange={(e) => setRememberMe(e.target.checked)}
+									className="size-4 rounded border-border"
+								/>
+								{t("rememberMe")}
+							</label>
+
 							<Button
 								type="submit"
 								className="h-10 w-full rounded-md text-[15px] font-medium"
@@ -242,15 +298,30 @@ export default function LoginPage() {
 									: t("signInAs", { mode: modeLabel(mode) })}
 							</Button>
 							<p className="text-center text-sm text-muted-foreground">
-								<Link href="/forgot-password" className="text-primary hover:underline">
+								<Link
+									href="/forgot-password"
+									className="text-primary hover:underline"
+								>
 									{t("forgotPassword")}
 								</Link>
 							</p>
+							{mode === "service" ? (
+								<button
+									type="button"
+									onClick={continueAsGuest}
+									className="text-center text-sm font-medium text-primary hover:underline"
+								>
+									{t("loginAsGuest")}
+								</button>
+							) : null}
 						</form>
 					</div>
 
 					<div className="border-t border-border bg-muted/60 px-6 py-4 text-center text-[13px] text-muted-foreground sm:px-8">
-						<Link href="/signup" className="font-medium text-primary hover:underline">
+						<Link
+							href="/signup"
+							className="font-medium text-primary hover:underline"
+						>
 							{t("createAnAccount")}
 						</Link>
 					</div>
@@ -259,8 +330,18 @@ export default function LoginPage() {
 
 			<footer className="relative z-10 flex flex-col items-center gap-3 px-6 py-4 text-[12px] text-muted-foreground sm:px-8">
 				<TelegramLink />
-				<p>© {new Date().getFullYear()} {BRAND_NAME}</p>
+				<p>
+					© {new Date().getFullYear()} {BRAND_NAME}
+				</p>
 			</footer>
 		</main>
+	);
+}
+
+export default function LoginPage() {
+	return (
+		<Suspense fallback={<main className="min-h-svh bg-[#f6f6f6]" />}>
+			<LoginForm />
+		</Suspense>
 	);
 }

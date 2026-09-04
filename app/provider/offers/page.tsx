@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { ImageIcon } from "lucide-react";
 
@@ -108,7 +109,10 @@ export default function ProviderOffersPage() {
 								key={offer.id}
 								className="overflow-hidden rounded-xl bg-white"
 							>
-								<div className="flex gap-3 p-3">
+								<Link
+									href={`/provider/offers/${offer.id}`}
+									className="flex gap-3 p-3 transition-colors hover:bg-muted/40"
+								>
 									<div className="size-16 shrink-0 overflow-hidden rounded-lg bg-muted">
 										{offer.serviceImage ? (
 											// eslint-disable-next-line @next/next/no-img-element
@@ -152,7 +156,7 @@ export default function ProviderOffersPage() {
 											{formatDateTime(offer.createdAt)}
 										</p>
 									</div>
-								</div>
+								</Link>
 								{offer.status === "pending" ? (
 									<div className="flex gap-2 border-t border-border/60 px-3 py-2.5">
 										<Button

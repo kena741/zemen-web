@@ -116,18 +116,14 @@ async function loginCustomerViaEdge(
 	password: string,
 ): Promise<{ session: { access_token: string; refresh_token: string } | null; error: string | null }> {
 	const base = getEdgeFunctionsBaseUrl();
-	const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim();
-	if (!base || !anonKey) {
+	if (!base) {
 		return { session: null, error: "Login service unavailable" };
 	}
 
 	try {
 		const res = await fetch(`${base}/login-customer`, {
 			method: "POST",
-			headers: {
-				"Content-Type": "application/json",
-				Authorization: `Bearer ${anonKey}`,
-			},
+			headers: { "Content-Type": "application/json" },
 			body: JSON.stringify({ email, password }),
 		});
 		const data = (await res.json()) as {

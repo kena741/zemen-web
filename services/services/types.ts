@@ -18,6 +18,7 @@ export interface ProviderService {
 	featureRequestedStatus: string | null;
 	featureRequestedAt: string | null;
 	prePayment: boolean;
+	prePaymentPercent: number | null;
 	address: string | null;
 	latitude: number | null;
 	longitude: number | null;
@@ -142,6 +143,10 @@ export function mapServiceRow(row: Record<string, unknown>): ProviderService {
 			row.feature_requested_at ?? row.featureRequestedAt,
 		),
 		prePayment: asBool(row.prePayment),
+		prePaymentPercent: (() => {
+			const n = Number(row.prePaymentPercent ?? row.pre_payment_percent);
+			return Number.isFinite(n) ? n : null;
+		})(),
 		address: asString(row.address),
 		latitude: loc.latitude,
 		longitude: loc.longitude,

@@ -158,6 +158,9 @@ export async function payBookingWithWallet(params: {
 	bookingId: string;
 	customerId: string;
 	amount: number;
+	nextCycle?: boolean;
+	billingInterval?: string | null;
+	billingIntervalCount?: number | null;
 }): Promise<{ ok: boolean; newBalance: number | null; error: string | null }> {
 	const amount = Number(params.amount);
 	if (Number.isNaN(amount) || amount < 0) {
@@ -226,16 +229,34 @@ export async function payBookingWithWallet(params: {
 		};
 	}
 
-	const { error: bookErr } = await supabase
-		.from("booked_service")
-		.update({
-			paymentCompleted: true,
-			paymentType: "wallet",
-		})
-		.eq("id", params.bookingId);
+	if (params.nextCycle) {
+		const { advanceRecurringBookingPeriodClient } = await import(
+			"@/services/customer/recurringBookingsApi"
+		);
+		const advanced = await advanceRecurringBookingPeriodClient({
+			bookingId: params.bookingId,
+			billingInterval: params.billingInterval,
+			billingIntervalCount: params.billingIntervalCount,
+		});
+		if (!advanced.ok) {
+			return { ok: false, newBalance, error: advanced.error };
+		}
+		await supabase
+			.from("booked_service")
+			.update({ paymentType: "wallet" })
+			.eq("id", params.bookingId);
+	} else {
+		const { error: bookErr } = await supabase
+			.from("booked_service")
+			.update({
+				paymentCompleted: true,
+				paymentType: "wallet",
+			})
+			.eq("id", params.bookingId);
 
-	if (bookErr) {
-		return { ok: false, newBalance: newBalance, error: bookErr.message };
+		if (bookErr) {
+			return { ok: false, newBalance: newBalance, error: bookErr.message };
+		}
 	}
 
 	return { ok: true, newBalance, error: null };

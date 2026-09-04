@@ -52,18 +52,14 @@ export async function signUpCustomer(
 	}
 
 	const edgeBase = getEdgeFunctionsBaseUrl();
-	const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim();
-	if (!edgeBase || !anonKey) {
+	if (!edgeBase) {
 		return { userId: null, error: "Signup is not configured on this deployment" };
 	}
 
 	try {
 		const res = await fetch(`${edgeBase}/signup-customer`, {
 			method: "POST",
-			headers: {
-				"Content-Type": "application/json",
-				Authorization: `Bearer ${anonKey}`,
-			},
+			headers: { "Content-Type": "application/json" },
 			body: JSON.stringify({
 				email,
 				password: input.password,

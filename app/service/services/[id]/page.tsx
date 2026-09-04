@@ -5,6 +5,8 @@ import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
 	ArrowLeftIcon,
+	ChevronLeftIcon,
+	ChevronRightIcon,
 	ClockIcon,
 	HeartIcon,
 	ImageIcon,
@@ -16,6 +18,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { ServiceLoading } from "@/components/service/service-loading";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { RecurringBadge } from "@/components/recurring/recurring-badge";
+import { loginPathForGuest } from "@/lib/guest";
 import { useLocale } from "@/lib/i18n";
 import { isRecurringPricingType } from "@/lib/recurring";
 import { cn } from "@/lib/utils";
@@ -43,6 +46,21 @@ function averageRating(service: ProviderService): number | null {
 	return Math.round((sum / count) * 10) / 10;
 }
 
+function haversineKm(
+	lat1: number,
+	lon1: number,
+	lat2: number,
+	lon2: number,
+): number {
+	const toRad = (d: number) => (d * Math.PI) / 180;
+	const dLat = toRad(lat2 - lat1);
+	const dLon = toRad(lon2 - lon1);
+	const a =
+		Math.sin(dLat / 2) ** 2 +
+		Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+	return 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
 export default function ServiceDetailPage() {
 	const { t } = useLocale();
 	const params = useParams<{ id: string }>();
@@ -59,18 +77,53 @@ export default function ServiceDetailPage() {
 	const [imgFailed, setImgFailed] = useState(false);
 	const [favBusy, setFavBusy] = useState(false);
 	const [reviews, setReviews] = useState<ServiceReview[]>([]);
+	const [distanceKm, setDistanceKm] = useState<number | null>(null);
 
 	const liked = Boolean(userId && service?.likedUser.includes(userId));
 	const rating = service ? averageRating(service) : null;
 	const image = service?.serviceImage[imgIndex] ?? service?.serviceImage[0];
+	const detailPath = `/service/services/${params.id}`;
 
 	useEffect(() => {
 		if (!params.id) return;
 		void fetchServiceReviews(params.id).then((res) => setReviews(res.reviews));
 	}, [params.id]);
 
+	useEffect(() => {
+		if (
+			service?.latitude == null ||
+			service?.longitude == null ||
+			typeof navigator === "undefined" ||
+			!navigator.geolocation
+		) {
+			setDistanceKm(null);
+			return;
+		}
+		navigator.geolocation.getCurrentPosition(
+			(pos) => {
+				setDistanceKm(
+					haversineKm(
+						pos.coords.latitude,
+						pos.coords.longitude,
+						service.latitude!,
+						service.longitude!,
+					),
+				);
+			},
+			() => setDistanceKm(null),
+			{ maximumAge: 60_000, timeout: 8_000 },
+		);
+	}, [service?.latitude, service?.longitude]);
+
+	function requireAuth(next: string) {
+		if (userId) return false;
+		router.push(loginPathForGuest(next));
+		return true;
+	}
+
 	async function onToggleFavorite() {
-		if (!service || !userId || favBusy) return;
+		if (!service || favBusy) return;
+		if (requireAuth(detailPath)) return;
 		setFavBusy(true);
 		const res = await toggleServiceFavorite({
 			serviceId: service.id,
@@ -87,6 +140,22 @@ export default function ServiceDetailPage() {
 			);
 			dispatch(invalidateFavorites());
 		}
+	}
+
+	function onBook() {
+		if (!service) return;
+		const bookPath = `/service/book/${service.id}`;
+		if (requireAuth(bookPath)) return;
+		router.push(bookPath);
+	}
+
+	function stepImage(delta: number) {
+		if (!service || service.serviceImage.length < 2) return;
+		const next =
+			(imgIndex + delta + service.serviceImage.length) %
+			service.serviceImage.length;
+		setImgIndex(next);
+		setImgFailed(false);
 	}
 
 	if (loading) {
@@ -137,7 +206,7 @@ export default function ServiceDetailPage() {
 				<button
 					type="button"
 					onClick={onToggleFavorite}
-					disabled={favBusy || !userId}
+					disabled={favBusy}
 					className="absolute top-3 right-3 flex size-10 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur-sm md:top-4 md:right-4"
 					aria-label={t("serviceFavorite")}
 				>
@@ -146,21 +215,37 @@ export default function ServiceDetailPage() {
 					/>
 				</button>
 				{service.serviceImage.length > 1 ? (
-					<div className="absolute right-0 bottom-3 left-0 flex justify-center gap-1.5">
-						{service.serviceImage.map((_, i) => (
-							<button
-								key={i}
-								type="button"
-								onClick={() => {
-									setImgIndex(i);
-									setImgFailed(false);
-								}}
-								className={`size-2 rounded-full ${
-									i === imgIndex ? "bg-white" : "bg-white/50"
-								}`}
-							/>
-						))}
-					</div>
+					<>
+						<button
+							type="button"
+							onClick={() => stepImage(-1)}
+							className="absolute top-1/2 left-2 flex size-9 -translate-y-1/2 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur-sm"
+						>
+							<ChevronLeftIcon className="size-5" />
+						</button>
+						<button
+							type="button"
+							onClick={() => stepImage(1)}
+							className="absolute top-1/2 right-2 flex size-9 -translate-y-1/2 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur-sm"
+						>
+							<ChevronRightIcon className="size-5" />
+						</button>
+						<div className="absolute right-0 bottom-3 left-0 flex justify-center gap-1.5">
+							{service.serviceImage.map((_, i) => (
+								<button
+									key={i}
+									type="button"
+									onClick={() => {
+										setImgIndex(i);
+										setImgFailed(false);
+									}}
+									className={`size-2 rounded-full ${
+										i === imgIndex ? "bg-white" : "bg-white/50"
+									}`}
+								/>
+							))}
+						</div>
+					</>
 				) : null}
 			</div>
 
@@ -209,6 +294,14 @@ export default function ServiceDetailPage() {
 						<span className="inline-flex max-w-full items-center gap-1">
 							<MapPinIcon className="size-4 shrink-0" />
 							<span className="truncate">{service.address}</span>
+						</span>
+					) : null}
+					{distanceKm != null ? (
+						<span className="inline-flex items-center gap-1">
+							<MapPinIcon className="size-4 shrink-0" />
+							{t("serviceDistanceAway", {
+								km: distanceKm < 10 ? distanceKm.toFixed(1) : String(Math.round(distanceKm)),
+							})}
 						</span>
 					) : null}
 				</div>
@@ -291,7 +384,7 @@ export default function ServiceDetailPage() {
 					</Link>
 					<Button
 						className="flex-1"
-						onClick={() => router.push(`/service/book/${service.id}`)}
+						onClick={onBook}
 					>
 						{t("serviceBook")}
 					</Button>
