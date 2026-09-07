@@ -450,9 +450,13 @@ export default function BookingDetailPage() {
 										<Input
 											id="otp"
 											value={otpInput}
-											onChange={(e) => setOtpInput(e.target.value)}
+											onChange={(e) =>
+												setOtpInput(e.target.value.replace(/\D/g, "").slice(0, 6))
+											}
 											placeholder={t("providerOtpPlaceholder")}
 											inputMode="numeric"
+											maxLength={6}
+											autoComplete="one-time-code"
 										/>
 										<div className="flex gap-2">
 											<Button disabled={busy} onClick={confirmOtp}>

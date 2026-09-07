@@ -111,7 +111,7 @@ export async function createCustomerBooking(
 	input: CreateBookingInput,
 ): Promise<{ bookingId: string | null; error: string | null }> {
 	const id = crypto.randomUUID();
-	const otp = String(Math.floor(1000 + Math.random() * 9000));
+	const otp = String(Math.floor(100000 + Math.random() * 900000));
 	const subTotal = input.price * input.quantity;
 	const discount = Number(input.discount ?? 0) || 0;
 	const total =
