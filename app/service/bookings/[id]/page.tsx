@@ -259,16 +259,7 @@ export default function CustomerBookingDetailPage() {
 
 	return (
 		<div className="px-4 pt-4 md:px-6 md:pt-8">
-			<div className="flex items-center justify-between gap-2">
-				<ProfileBackLink href="/service/bookings" label={t("bookingsTitle")} />
-				<button
-					type="button"
-					onClick={refresh}
-					className="mb-3 text-xs font-medium text-primary"
-				>
-					{t("commonRefresh")}
-				</button>
-			</div>
+			<ProfileBackLink href="/service/bookings" label={t("bookingsTitle")} />
 			<div className="flex flex-wrap items-center gap-2">
 				<h1 className="admin-page-title">
 					{booking.service?.serviceName || t("bookingTitle")}
@@ -471,7 +462,7 @@ export default function CustomerBookingDetailPage() {
 								onChange={(e) => setComment(e.target.value)}
 							/>
 							<div className="flex gap-2">
-								<Button disabled={busy} onClick={() => void onReview()}>
+					<Button disabled={busy} onClick={() => void onReview()}>
 									{t("bookingSubmitReview")}
 								</Button>
 								<Button variant="ghost" onClick={() => setShowReview(false)}>

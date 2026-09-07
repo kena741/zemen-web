@@ -70,12 +70,27 @@ export async function setServiceActive(params: {
 	serviceId: string;
 	active: boolean;
 }): Promise<{ ok: boolean; error: string | null }> {
-	const { data, error } = await getSupabase()
+	const payload = params.active
+		? { status: true, archived: false }
+		: { status: false, archived: false };
+
+	let { data, error } = await getSupabase()
 		.from("service")
-		.update({ status: params.active })
+		.update(payload)
 		.eq("id", params.serviceId)
 		.select("id")
 		.maybeSingle();
+
+	if (error) {
+		const fallback = await getSupabase()
+			.from("service")
+			.update({ status: params.active })
+			.eq("id", params.serviceId)
+			.select("id")
+			.maybeSingle();
+		data = fallback.data;
+		error = fallback.error;
+	}
 
 	if (error) {
 		console.error("setServiceActive", error);
@@ -301,14 +316,35 @@ export async function upsertService(params: {
 export async function deleteService(
 	serviceId: string,
 ): Promise<{ ok: boolean; error: string | null }> {
-	const { error } = await getSupabase()
+	const { data, error } = await getSupabase()
 		.from("service")
-		.delete()
-		.eq("id", serviceId);
+		.update({ status: false, archived: true })
+		.eq("id", serviceId)
+		.select("id")
+		.maybeSingle();
 
 	if (error) {
-		console.error("deleteService", error);
-		return { ok: false, error: error.message };
+		const fallback = await getSupabase()
+			.from("service")
+			.update({ status: false })
+			.eq("id", serviceId)
+			.select("id")
+			.maybeSingle();
+		if (fallback.error || !fallback.data) {
+			console.error("deleteService", error);
+			return {
+				ok: false,
+				error: fallback.error?.message ?? error.message,
+			};
+		}
+		// ponytail: no archived column yet — match mobile soft-delete via status=false
+		return { ok: true, error: null };
+	}
+	if (!data) {
+		return {
+			ok: false,
+			error: "Archive failed. You may not have permission to change this service.",
+		};
 	}
 	return { ok: true, error: null };
 }

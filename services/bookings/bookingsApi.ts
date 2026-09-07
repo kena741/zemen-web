@@ -267,6 +267,7 @@ export async function uploadProofImages(params: {
 export async function fetchDashboardSnapshot(providerId: string): Promise<{
 	pending: number;
 	upcoming: Booking[];
+	totalBookings: number;
 	activeServices: number;
 	completedThisMonth: number;
 	revenueThisMonth: number;
@@ -275,6 +276,7 @@ export async function fetchDashboardSnapshot(providerId: string): Promise<{
 	const empty = {
 		pending: 0,
 		upcoming: [] as Booking[],
+		totalBookings: 0,
 		activeServices: 0,
 		completedThisMonth: 0,
 		revenueThisMonth: 0,
@@ -291,7 +293,7 @@ export async function fetchDashboardSnapshot(providerId: string): Promise<{
 		1,
 	).toISOString();
 
-	const [bookingsRes, servicesRes, completedRes] = await Promise.all([
+	const [bookingsRes, countRes, servicesRes, completedRes] = await Promise.all([
 		getSupabase()
 			.from("booked_service")
 			.select("*")
@@ -299,8 +301,12 @@ export async function fetchDashboardSnapshot(providerId: string): Promise<{
 			.order("bookingDate", { ascending: true })
 			.limit(200),
 		getSupabase()
+			.from("booked_service")
+			.select("id", { count: "exact", head: true })
+			.eq("provider_id", providerId),
+		getSupabase()
 			.from("service")
-			.select("id, status")
+			.select("id, status, archived")
 			.eq("provider_id", providerId),
 		getSupabase()
 			.from("booked_service")
@@ -310,6 +316,29 @@ export async function fetchDashboardSnapshot(providerId: string): Promise<{
 			.gte("createdAt", monthStart)
 			.lt("createdAt", nextMonth),
 	]);
+
+	let servicesRows: Array<{
+		id?: string;
+		status?: boolean;
+		archived?: boolean;
+	}> = (servicesRes.data ?? []) as Array<{
+		id?: string;
+		status?: boolean;
+		archived?: boolean;
+	}>;
+	let servicesError = servicesRes.error?.message ?? null;
+	if (servicesRes.error) {
+		const fallback = await getSupabase()
+			.from("service")
+			.select("id, status")
+			.eq("provider_id", providerId);
+		servicesRows = (fallback.data ?? []) as Array<{
+			id?: string;
+			status?: boolean;
+			archived?: boolean;
+		}>;
+		servicesError = fallback.error?.message ?? null;
+	}
 
 	if (bookingsRes.error) {
 		console.error("dashboard bookings", bookingsRes.error);
@@ -337,9 +366,17 @@ export async function fetchDashboardSnapshot(providerId: string): Promise<{
 	const servicesMap = await fetchServicesByIds(missingIds);
 	const upcomingHydrated = attachServices(upcoming, servicesMap);
 
-	const activeServices = (servicesRes.data ?? []).filter(
-		(s) => (s as { status?: boolean }).status !== false,
-	).length;
+	const totalBookings = countRes.count ?? bookings.length;
+
+	const activeServices = servicesRows.filter((s) => {
+		const row = s as {
+			status?: boolean;
+			archived?: boolean;
+			archive?: boolean;
+		};
+		const archived = row.archived === true || row.archive === true;
+		return row.status !== false && !archived;
+	}).length;
 
 	const completedRows = completedRes.data ?? [];
 	let revenueThisMonth = 0;
@@ -351,10 +388,11 @@ export async function fetchDashboardSnapshot(providerId: string): Promise<{
 	return {
 		pending,
 		upcoming: upcomingHydrated,
+		totalBookings,
 		activeServices,
 		completedThisMonth: completedRows.length,
 		revenueThisMonth,
-		error: servicesRes.error?.message ?? completedRes.error?.message ?? null,
+		error: servicesError ?? completedRes.error?.message ?? countRes.error?.message ?? null,
 	};
 }
 

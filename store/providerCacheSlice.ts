@@ -65,6 +65,7 @@ function shouldFetch(entry: CacheEntry<unknown> | undefined, force?: boolean) {
 export type DashboardData = {
 	pending: number;
 	upcoming: Booking[];
+	totalBookings: number;
 	activeServices: number;
 	completedThisMonth: number;
 	revenueThisMonth: number;
@@ -97,6 +98,7 @@ type ProviderCacheState = {
 const emptyDashboard: DashboardData = {
 	pending: 0,
 	upcoming: [],
+	totalBookings: 0,
 	activeServices: 0,
 	completedThisMonth: 0,
 	revenueThisMonth: 0,
@@ -133,6 +135,7 @@ export const loadProviderDashboard = createAsyncThunk(
 		return {
 			pending: snap.pending,
 			upcoming: snap.upcoming,
+			totalBookings: snap.totalBookings,
 			activeServices: snap.activeServices,
 			completedThisMonth: snap.completedThisMonth,
 			revenueThisMonth:

@@ -339,6 +339,26 @@ export const am: Record<MessageKey, string> = {
 	statusCompleted: "ተጠናቋል",
 	statusRejected: "ተቀባይነት አላገኘም",
 	statusCancelled: "ተሰርዟል",
+	statusApproved: "ጸድቋል",
+
+	commonEnable: "አንቃ",
+	contactUs: "ያግኙን",
+	deleteAccount: "መለያ ሰርዝ",
+	deleteAccountConfirm:
+		"መለያዎን ሰርዝ? ይወጣሉ። ለቋሚ ስረዛ ድጋፍን ያግኙ።",
+	deleteAccountContactSupport:
+		"መለያዎን በቋሚነት ለመሰረዝ {email} ይላኩ። አሁን ወጥተዋል።",
+	notificationsPermission: "የግፊት ማሳወቂያዎች",
+	notificationsEnable: "ማሳወቂያዎችን ለመፍቀድ አንቃን ይጫኑ",
+	notificationsEnabled: "ማሳወቂያዎች ነቅተዋል",
+	notificationsBlocked: "በአሳሽ ቅንብሮች ታግደዋል",
+	notificationsUnsupported: "በዚህ አሳሽ አይደገፍም",
+	providerServiceArchived: "ተከማችቷል",
+	providerServiceArchive: "አከማች",
+	providerServiceRestore: "መልስ",
+	providerArchiveServiceConfirm:
+		"“{name}” አከማች? ከተከማቹ ውስጥ በኋላ መመለስ ይችላሉ።",
+	bookServicePickSavedAddress: "የተቀመጠ አድራሻ ይምረጡ…",
 
 	couponApplied: "{code} ተተግብሯል (−{amount})",
 	couponMinAmount: "የዚህ ኩፖን ዝቅተኛ መጠን {amount} ነው።",

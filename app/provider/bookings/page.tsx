@@ -19,7 +19,7 @@ export default function ProviderBookingsPage() {
 	const { t } = useLocale();
 	const { user } = useAuth();
 	const providerId = user?.provider?.id ?? "";
-	const { data: bookings, loading, error, refresh, refreshing } =
+	const { data: bookings, loading, error } =
 		useCachedProviderBookings(providerId);
 	const [filter, setFilter] = useState<string>("all");
 	const [query, setQuery] = useState("");
@@ -82,35 +82,14 @@ export default function ProviderBookingsPage() {
 			<ProviderMobileTabBar title={t("bookingTitle")} />
 
 			<div className="hidden lg:block">
-				<div className="flex items-start justify-between gap-3">
-					<div>
-						<p className="admin-eyebrow">{t("provider")}</p>
-						<h1 className="admin-page-title mt-1">{t("bookingsTitle")}</h1>
-						<p className="mt-2 text-sm text-muted-foreground">
-							{loading ? t("commonLoading") : bookingCountLabel}
-						</p>
-					</div>
-					<button
-						type="button"
-						onClick={refresh}
-						className="text-xs font-medium text-primary"
-					>
-						{refreshing ? t("commonRefreshing") : t("commonRefresh")}
-					</button>
-				</div>
+				<p className="admin-eyebrow">{t("provider")}</p>
+				<h1 className="admin-page-title mt-1">{t("bookingsTitle")}</h1>
+				<p className="mt-2 text-sm text-muted-foreground">
+					{loading ? t("commonLoading") : bookingCountLabel}
+				</p>
 			</div>
 
 			<div className="px-4 pt-2 lg:px-0 lg:pt-5">
-				<div className="mb-2 flex justify-end lg:hidden">
-					<button
-						type="button"
-						onClick={refresh}
-						className="text-xs font-medium text-primary"
-					>
-						{refreshing ? t("commonRefreshing") : t("commonRefresh")}
-					</button>
-				</div>
-
 				<div className="relative">
 					<SearchIcon className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
 					<Input

@@ -62,15 +62,11 @@ export default function ProviderDashboardPage() {
 	const { user } = useAuth();
 	const providerId = user?.provider?.id ?? "";
 	const year = new Date().getFullYear();
-	const { data, loading, error, refresh, refreshing } =
+	const { data, loading, error } =
 		useCachedProviderDashboard(providerId, year);
 
 	const wallet = user?.provider?.walletAmount ?? "0";
-	const totalBookings = loading
-		? "—"
-		: String(
-				data.pending + data.completedThisMonth + data.upcoming.length,
-			);
+	const totalBookings = loading ? "—" : String(data.totalBookings);
 
 	return (
 		<div className="mx-auto w-full max-w-4xl">
@@ -80,35 +76,14 @@ export default function ProviderDashboardPage() {
 			/>
 
 			<div className="hidden px-0 pt-0 lg:block">
-				<div className="flex items-start justify-between gap-3">
-					<div>
-						<p className="admin-eyebrow">{t("provider")}</p>
-						<h1 className="admin-page-title mt-1">{t("navDashboard")}</h1>
-						<p className="mt-2 max-w-xl text-sm text-muted-foreground">
-							{t("providerDashboardSubtitle")}
-						</p>
-					</div>
-					<button
-						type="button"
-						onClick={refresh}
-						className="text-xs font-medium text-primary"
-					>
-						{refreshing ? t("commonRefreshing") : t("commonRefresh")}
-					</button>
-				</div>
+				<p className="admin-eyebrow">{t("provider")}</p>
+				<h1 className="admin-page-title mt-1">{t("navDashboard")}</h1>
+				<p className="mt-2 max-w-xl text-sm text-muted-foreground">
+					{t("providerDashboardSubtitle")}
+				</p>
 			</div>
 
 			<div className="px-4 pt-4 lg:px-0 lg:pt-6">
-				<div className="mb-3 flex justify-end lg:hidden">
-					<button
-						type="button"
-						onClick={refresh}
-						className="text-xs font-medium text-primary"
-					>
-						{refreshing ? t("commonRefreshing") : t("commonRefresh")}
-					</button>
-				</div>
-
 				{error ? (
 					<p className="mb-3 text-sm text-destructive">{error}</p>
 				) : null}

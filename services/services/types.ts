@@ -9,6 +9,7 @@ export interface ProviderService {
 	type: string | null;
 	serviceLocationMode: string | null;
 	status: boolean;
+	archived: boolean;
 	approved: boolean | null;
 	price: string | null;
 	discount: string | null;
@@ -130,6 +131,7 @@ export function mapServiceRow(row: Record<string, unknown>): ProviderService {
 		type: asString(row.type),
 		serviceLocationMode: asString(row.serviceLocationMode),
 		status: asBool(row.status, true),
+		archived: asBool(row.archived ?? row.archive, false),
 		approved: row.approved == null ? null : Boolean(row.approved),
 		price: asString(row.price),
 		discount: asString(row.discount),

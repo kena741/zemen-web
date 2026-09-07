@@ -37,7 +37,7 @@ export default function ProviderOffersPage() {
 	const dispatch = useAppDispatch();
 	const providerId = user?.provider?.id ?? "";
 	const authUserId = user?.id ?? "";
-	const { data: offers, loading, error, refresh, refreshing } =
+	const { data: offers, loading, error, refresh } =
 		useCachedProviderOffers(providerId, authUserId);
 	const [actingId, setActingId] = useState<string | null>(null);
 	const [actionError, setActionError] = useState<string | null>(null);
@@ -61,35 +61,14 @@ export default function ProviderOffersPage() {
 			<ProviderMobileTabBar title={t("offersTitle")} />
 
 			<div className="hidden lg:block">
-				<div className="flex items-start justify-between gap-3">
-					<div>
-						<p className="admin-eyebrow">{t("provider")}</p>
-						<h1 className="admin-page-title mt-1">{t("offersTitle")}</h1>
-						<p className="mt-2 text-sm text-muted-foreground">
-							{t("providerOffersSubtitle")}
-						</p>
-					</div>
-					<button
-						type="button"
-						onClick={refresh}
-						className="text-xs font-medium text-primary"
-					>
-						{refreshing ? t("commonRefreshing") : t("commonRefresh")}
-					</button>
-				</div>
+				<p className="admin-eyebrow">{t("provider")}</p>
+				<h1 className="admin-page-title mt-1">{t("offersTitle")}</h1>
+				<p className="mt-2 text-sm text-muted-foreground">
+					{t("providerOffersSubtitle")}
+				</p>
 			</div>
 
 			<div className="px-3 pt-3 lg:px-0 lg:pt-5">
-				<div className="mb-2 flex justify-end lg:hidden">
-					<button
-						type="button"
-						onClick={refresh}
-						className="text-xs font-medium text-primary"
-					>
-						{refreshing ? t("commonRefreshing") : t("commonRefresh")}
-					</button>
-				</div>
-
 				{actionError || error ? (
 					<p className="mb-3 text-sm text-destructive">
 						{actionError || error}

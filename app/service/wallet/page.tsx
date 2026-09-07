@@ -14,7 +14,7 @@ export default function CustomerWalletPage() {
 	const { user } = useAuth();
 	const authUserId = user?.id ?? "";
 	const customerId = user?.customer?.id ?? user?.id ?? "";
-	const { data, loading, error, refresh, refreshing } = useCachedWallet({
+	const { data, loading, error } = useCachedWallet({
 		authUserId,
 		customerId,
 		balanceHint: user?.customer?.walletAmount,
@@ -22,16 +22,7 @@ export default function CustomerWalletPage() {
 
 	return (
 		<div className="px-4 pt-4 md:px-6 md:pt-8">
-			<div className="flex items-center justify-between gap-2">
-				<ProfileBackLink href="/service/profile" label={t("profileTitle")} />
-				<button
-					type="button"
-					onClick={refresh}
-					className="mb-3 text-xs font-medium text-primary"
-				>
-					{refreshing ? t("commonRefreshing") : t("commonRefresh")}
-				</button>
-			</div>
+			<ProfileBackLink href="/service/profile" label={t("profileTitle")} />
 			<h1 className="admin-page-title">{t("walletTitle")}</h1>
 			<p className="mt-1 text-sm text-muted-foreground">
 				{t("walletSubtitle")}

@@ -150,7 +150,7 @@ export default function ProviderJobDetailPage() {
 						placeholder={t("providerBidPlaceholder")}
 					/>
 					<div className="flex gap-2">
-						<Button type="submit" disabled={busy}>
+					<Button type="submit" disabled={busy}>
 							{t("providerPlaceBid")}
 						</Button>
 						<Button

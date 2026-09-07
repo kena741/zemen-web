@@ -17,7 +17,7 @@ function ServicesListInner() {
 	const categoryId = searchParams.get("category") ?? undefined;
 	const featuredOnly = searchParams.get("featured") === "1";
 	const [query, setQuery] = useState("");
-	const { data: services, loading, error, refresh, refreshing } =
+	const { data: services, loading, error } =
 		useCachedServiceList({ categoryId, featuredOnly });
 
 	const filtered = query.trim()
@@ -43,16 +43,7 @@ function ServicesListInner() {
 
 	return (
 		<div className="px-4 pt-4 md:px-6 md:pt-8">
-			<div className="flex items-center justify-between gap-2">
-				<ProfileBackLink href="/service" label={t("navHome")} />
-				<button
-					type="button"
-					onClick={refresh}
-					className="mb-3 text-xs font-medium text-primary"
-				>
-					{refreshing ? t("commonRefreshing") : t("commonRefresh")}
-				</button>
-			</div>
+			<ProfileBackLink href="/service" label={t("navHome")} />
 			<h1 className="admin-page-title">{title}</h1>
 			<p className="mt-1 text-sm text-muted-foreground">
 				{loading ? t("commonLoading") : countLabel}

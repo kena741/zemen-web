@@ -60,12 +60,13 @@ export default function ServiceDetailPage() {
 
 	async function toggleActive() {
 		if (!service) return;
+		const nextActive = service.archived ? true : !service.status;
 		setBusy(true);
 		setError(null);
 		setInfo(null);
 		const res = await setServiceActive({
 			serviceId: service.id,
-			active: !service.status,
+			active: nextActive,
 		});
 		setBusy(false);
 		if (!res.ok) {
@@ -75,7 +76,7 @@ export default function ServiceDetailPage() {
 		dispatch(
 			patchProviderService({
 				id: service.id,
-				patch: { status: !service.status },
+				patch: { status: nextActive, archived: false },
 			}),
 		);
 		dispatch(invalidateProviderServices());
@@ -108,7 +109,7 @@ export default function ServiceDetailPage() {
 		if (!service) return;
 		if (
 			!window.confirm(
-				t("providerDeleteServiceConfirm", {
+				t("providerArchiveServiceConfirm", {
 					name: service.serviceName ?? t("serviceTitle"),
 				}),
 			)
@@ -185,7 +186,11 @@ export default function ServiceDetailPage() {
 								{service.serviceName ?? t("providerServiceUntitled")}
 							</h1>
 							<p className="mt-1 text-sm text-muted-foreground">
-								{service.status ? t("providerServiceActive") : t("providerServiceInactive")}
+								{service.archived
+									? t("providerServiceArchived")
+									: service.status
+										? t("providerServiceActive")
+										: t("providerServiceInactive")}
 								{service.feature ? ` · ${t("providerServiceFeaturedLabel")}` : null}
 								{featuredPending ? ` · ${t("providerFeaturePending")}` : null}
 								{service.approved === false ? ` · ${t("providerPendingApproval")}` : null}
@@ -256,13 +261,24 @@ export default function ServiceDetailPage() {
 					</dl>
 
 					<div className="mt-6 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-						<Button
-							variant={service.status ? "outline" : "default"}
-							disabled={busy}
-							onClick={() => void toggleActive()}
-						>
-							{service.status ? t("providerServiceDeactivate") : t("providerServiceActivate")}
-						</Button>
+						{service.archived ? (
+							<Button
+								disabled={busy}
+								onClick={() => void toggleActive()}
+							>
+								{t("providerServiceRestore")}
+							</Button>
+						) : (
+							<Button
+								variant={service.status ? "outline" : "default"}
+								disabled={busy}
+								onClick={() => void toggleActive()}
+							>
+								{service.status
+									? t("providerServiceDeactivate")
+									: t("providerServiceActivate")}
+							</Button>
+						)}
 
 						{canRequestFeatured ? (
 							<Button
@@ -282,25 +298,32 @@ export default function ServiceDetailPage() {
 							</span>
 						) : null}
 
-						{featuredFee ? (
-							<ChapaCheckout
-								className="w-full"
-								email={user?.email}
-								firstName={user?.provider?.firstName ?? user?.name}
-								lastName={user?.provider?.lastName ?? ""}
-								phone={user?.provider?.phoneNumber}
-								purpose="featured"
-								accountType="provider"
-								userId={user?.id ?? ""}
-								providerId={user?.provider?.id}
-								serviceId={service.id}
-								amount={String(featuredFee)}
-								returnPath="/pay/done?purpose=featured"
-								showAmountInput={false}
-								label={t("providerFeaturedListing", {
-									amount: formatAmount(featuredFee),
-								})}
-							/>
+						{featuredFee != null && featuredFee > 0 ? (
+							<div className="w-full space-y-2 sm:w-auto">
+								<p className="text-sm text-muted-foreground">
+									{t("providerFeaturedPayHint", {
+										amount: formatAmount(featuredFee),
+									})}
+								</p>
+								<ChapaCheckout
+									className="w-full"
+									email={user?.email}
+									firstName={user?.provider?.firstName ?? user?.name}
+									lastName={user?.provider?.lastName ?? ""}
+									phone={user?.provider?.phoneNumber}
+									purpose="featured"
+									accountType="provider"
+									userId={user?.id ?? ""}
+									providerId={user?.provider?.id}
+									serviceId={service.id}
+									amount={String(featuredFee)}
+									returnPath="/pay/done?purpose=featured"
+									showAmountInput={false}
+									label={t("providerFeaturedListing", {
+										amount: formatAmount(featuredFee),
+									})}
+								/>
+							</div>
 						) : null}
 
 						{service.feature ? (
@@ -310,15 +333,17 @@ export default function ServiceDetailPage() {
 							</span>
 						) : null}
 
-						<Button
-							variant="destructive"
-							disabled={busy}
-							className="gap-1.5 sm:ml-auto"
-							onClick={() => void handleDelete()}
-						>
-							<Trash2Icon className="size-3.5" />
-							{t("commonDelete")}
-						</Button>
+						{!service.archived ? (
+							<Button
+								variant="destructive"
+								disabled={busy}
+								className="gap-1.5 sm:ml-auto"
+								onClick={() => void handleDelete()}
+							>
+								<Trash2Icon className="size-3.5" />
+								{t("providerServiceArchive")}
+							</Button>
+						) : null}
 					</div>
 				</>
 			)}

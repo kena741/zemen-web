@@ -10,22 +10,28 @@ import {
 	HistoryIcon,
 	KeyRoundIcon,
 	LogOutIcon,
+	MailIcon,
 	MessagesSquareIcon,
 	PencilIcon,
 	PercentIcon,
 	TagIcon,
+	Trash2Icon,
 	UsersIcon,
 	WalletIcon,
 	WrenchIcon,
 } from "lucide-react";
 
+import { LocaleThemeToggle } from "@/components/app/locale-theme-toggle";
 import { TelegramLink } from "@/components/app/telegram-link";
+import { NotificationPermissionControl } from "@/components/push/notification-permission-control";
 import { ProviderMobileTabBar } from "@/components/provider/mobile-chrome";
 import { Button } from "@/components/ui/button";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { useLocale } from "@/lib/i18n";
 import { formatAmount } from "@/services/bookings/types";
 import { useAuth } from "@/store/useAuth";
+
+const SUPPORT_EMAIL = "support@zemenservice.com";
 
 function MenuGroup({
 	title,
@@ -75,13 +81,26 @@ export default function ProviderProfilePage() {
 	const { user, logout } = useAuth();
 	const provider = user?.provider;
 
+	function onDeleteAccount() {
+		if (!window.confirm(t("deleteAccountConfirm"))) return;
+		window.alert(t("deleteAccountContactSupport", { email: SUPPORT_EMAIL }));
+		logout();
+	}
+
 	return (
 		<div className="mx-auto max-w-3xl">
 			<ProviderMobileTabBar title={t("providerProfileMy")} />
 
-			<div className="hidden lg:block">
-				<p className="admin-eyebrow">{t("provider")}</p>
-				<h1 className="admin-page-title mt-1">{t("profileTitle")}</h1>
+			<div className="hidden items-start justify-between gap-3 lg:flex">
+				<div>
+					<p className="admin-eyebrow">{t("provider")}</p>
+					<h1 className="admin-page-title mt-1">{t("profileTitle")}</h1>
+				</div>
+				<LocaleThemeToggle />
+			</div>
+
+			<div className="flex justify-end px-4 pt-3 lg:hidden">
+				<LocaleThemeToggle />
 			</div>
 
 			<div className="px-4 pb-8 lg:px-0 lg:pt-6">
@@ -176,6 +195,8 @@ export default function ProviderProfilePage() {
 						icon={BellIcon}
 						label={t("notificationsTitle")}
 					/>
+					<Divider />
+					<NotificationPermissionControl />
 				</MenuGroup>
 
 				<MenuGroup title={t("profileAppSettings")}>
@@ -184,6 +205,18 @@ export default function ProviderProfilePage() {
 						icon={KeyRoundIcon}
 						label={t("profileChangePassword")}
 					/>
+					<Divider />
+					<a
+						href={`mailto:${SUPPORT_EMAIL}`}
+						className="flex items-center gap-3 px-4 py-3.5 transition-colors hover:bg-muted/40"
+					>
+						<MailIcon
+							className="size-[22px] shrink-0 text-foreground"
+							strokeWidth={1.75}
+						/>
+						<span className="min-w-0 flex-1 text-sm">{t("contactUs")}</span>
+						<ChevronRightIcon className="size-4 shrink-0 text-muted-foreground" />
+					</a>
 					<Divider />
 					<MenuItem
 						href="/provider/verify-id"
@@ -199,7 +232,11 @@ export default function ProviderProfilePage() {
 						label={t("profileAccountActivation")}
 					/>
 					<Divider />
-					<MenuItem href="/provider/tier" icon={PercentIcon} label={t("profileServiceTier")} />
+					<MenuItem
+						href="/provider/tier"
+						icon={PercentIcon}
+						label={t("profileServiceTier")}
+					/>
 				</MenuGroup>
 
 				<div className="mt-6 space-y-2">
@@ -224,6 +261,14 @@ export default function ProviderProfilePage() {
 				>
 					<LogOutIcon className="size-4" />
 					{t("signOut")}
+				</Button>
+				<Button
+					variant="ghost"
+					className="mt-2 w-full gap-2 text-destructive"
+					onClick={onDeleteAccount}
+				>
+					<Trash2Icon className="size-4" />
+					{t("deleteAccount")}
 				</Button>
 			</div>
 		</div>

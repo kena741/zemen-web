@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { TelegramLink } from "@/components/app/telegram-link";
 import {
 	BellIcon,
 	ChevronRightIcon,
@@ -9,12 +8,17 @@ import {
 	HistoryIcon,
 	KeyRoundIcon,
 	LogOutIcon,
+	MailIcon,
 	MapPinIcon,
 	MessagesSquareIcon,
 	TagIcon,
+	Trash2Icon,
 	WalletIcon,
 } from "lucide-react";
 
+import { LocaleThemeToggle } from "@/components/app/locale-theme-toggle";
+import { TelegramLink } from "@/components/app/telegram-link";
+import { NotificationPermissionControl } from "@/components/push/notification-permission-control";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { clearGuestBrowse } from "@/lib/guest";
@@ -22,6 +26,8 @@ import { useLocale } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { formatAmount } from "@/services/bookings/types";
 import { useAuth } from "@/store/useAuth";
+
+const SUPPORT_EMAIL = "support@zemenservice.com";
 
 function MenuLink({
 	href,
@@ -58,6 +64,13 @@ export default function CustomerProfilePage() {
 		logout();
 	}
 
+	function onDeleteAccount() {
+		if (!window.confirm(t("deleteAccountConfirm"))) return;
+		window.alert(t("deleteAccountContactSupport", { email: SUPPORT_EMAIL }));
+		clearGuestBrowse();
+		logout();
+	}
+
 	if (!user) {
 		return (
 			<div className="px-4 pt-4 md:px-6 md:pt-8">
@@ -79,9 +92,12 @@ export default function CustomerProfilePage() {
 
 	return (
 		<div className="px-4 pt-4 md:px-6 md:pt-8">
-			<h1 className="text-xl font-semibold tracking-tight md:text-[1.65rem]">
-				{t("profileMyProfile")}
-			</h1>
+			<div className="flex items-start justify-between gap-3">
+				<h1 className="text-xl font-semibold tracking-tight md:text-[1.65rem]">
+					{t("profileMyProfile")}
+				</h1>
+				<LocaleThemeToggle />
+			</div>
 
 			<div className="mt-8 flex flex-col items-center text-center">
 				<UserAvatar
@@ -163,6 +179,8 @@ export default function CustomerProfilePage() {
 						icon={BellIcon}
 						label={t("notificationsTitle")}
 					/>
+					<div className="mx-4 border-t border-border/60" />
+					<NotificationPermissionControl />
 				</div>
 			</section>
 
@@ -174,6 +192,15 @@ export default function CustomerProfilePage() {
 						icon={KeyRoundIcon}
 						label={t("profileChangePassword")}
 					/>
+					<div className="mx-4 border-t border-border/60" />
+					<a
+						href={`mailto:${SUPPORT_EMAIL}`}
+						className="flex items-center gap-3 px-4 py-3.5 transition-colors hover:bg-muted/40"
+					>
+						<MailIcon className="size-[22px] shrink-0 text-foreground" />
+						<span className="min-w-0 flex-1 text-sm">{t("contactUs")}</span>
+						<ChevronRightIcon className="size-4 shrink-0 text-muted-foreground" />
+					</a>
 				</div>
 			</section>
 
@@ -199,6 +226,14 @@ export default function CustomerProfilePage() {
 			>
 				<LogOutIcon className="size-4" />
 				{t("signOut")}
+			</Button>
+			<Button
+				variant="ghost"
+				className="mt-2 w-full gap-2 text-destructive"
+				onClick={onDeleteAccount}
+			>
+				<Trash2Icon className="size-4" />
+				{t("deleteAccount")}
 			</Button>
 		</div>
 	);

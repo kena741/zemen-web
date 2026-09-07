@@ -386,7 +386,7 @@ export default function BookingDetailPage() {
 											placeholder={t("providerRejectPlaceholder")}
 										/>
 										<div className="flex gap-2">
-											<Button
+					<Button
 												variant="destructive"
 												disabled={busy}
 												onClick={() =>
@@ -459,7 +459,7 @@ export default function BookingDetailPage() {
 											autoComplete="one-time-code"
 										/>
 										<div className="flex gap-2">
-											<Button disabled={busy} onClick={confirmOtp}>
+					<Button disabled={busy} onClick={confirmOtp}>
 												{t("providerConfirmStart")}
 											</Button>
 											<Button
@@ -496,7 +496,7 @@ export default function BookingDetailPage() {
 													placeholder={t("providerHoldPlaceholder")}
 												/>
 												<div className="flex gap-2">
-													<Button
+					<Button
 														disabled={busy}
 														onClick={() =>
 															void setStatus(
@@ -563,7 +563,7 @@ export default function BookingDetailPage() {
 											placeholder={t("providerMinAmount")}
 										/>
 										<div className="flex gap-2">
-											<Button disabled={busy} onClick={() => void saveExtra()}>
+					<Button disabled={busy} onClick={() => void saveExtra()}>
 												{t("providerSaveCharge")}
 											</Button>
 											<Button
@@ -609,7 +609,7 @@ export default function BookingDetailPage() {
 											onChange={(e) => setProofFiles(e.target.files)}
 										/>
 										<div className="flex gap-2">
-											<Button disabled={busy} onClick={() => void saveProof()}>
+					<Button disabled={busy} onClick={() => void saveProof()}>
 												{t("providerSaveProof")}
 											</Button>
 											<Button

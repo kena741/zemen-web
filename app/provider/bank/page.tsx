@@ -25,7 +25,7 @@ export default function BankDetailsPage() {
 	const dispatch = useAppDispatch();
 	const authUserId = user?.id ?? "";
 	const providerId = user?.provider?.id ?? "";
-	const { data: banks, loading, error: loadError, refresh, refreshing } =
+	const { data: banks, loading, error: loadError, refresh } =
 		useCachedProviderBank({ authUserId, providerId });
 	const [error, setError] = useState<string | null>(null);
 	const [busy, setBusy] = useState(false);
@@ -86,16 +86,7 @@ export default function BankDetailsPage() {
 
 	return (
 		<div className="mx-auto max-w-3xl">
-			<div className="flex items-center justify-between gap-2">
-				<ProfileBackLink href="/provider/profile" label={t("profileTitle")} />
-				<button
-					type="button"
-					onClick={refresh}
-					className="mb-3 text-xs font-medium text-primary"
-				>
-					{refreshing ? t("commonRefreshing") : t("commonRefresh")}
-				</button>
-			</div>
+			<ProfileBackLink href="/provider/profile" label={t("profileTitle")} />
 			<div className="flex flex-wrap items-end justify-between gap-3">
 				<div>
 					<p className="admin-eyebrow">{t("commonPayouts")}</p>

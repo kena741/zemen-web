@@ -23,7 +23,7 @@ export default function AddressesPage() {
 	const { user } = useAuth();
 	const dispatch = useAppDispatch();
 	const customerId = user?.customer?.id ?? user?.id ?? "";
-	const { data: addresses, loading, error, refresh, refreshing } =
+	const { data: addresses, loading, error, refresh } =
 		useCachedAddresses({
 			customerId,
 			authUserId: user?.id,
@@ -70,16 +70,7 @@ export default function AddressesPage() {
 
 	return (
 		<div className="px-4 pt-4 md:px-6 md:pt-8">
-			<div className="flex items-center justify-between gap-2">
-				<ProfileBackLink href="/service/profile" label={t("profileTitle")} />
-				<button
-					type="button"
-					onClick={refresh}
-					className="mb-3 text-xs font-medium text-primary"
-				>
-					{refreshing ? t("commonRefreshing") : t("commonRefresh")}
-				</button>
-			</div>
+			<ProfileBackLink href="/service/profile" label={t("profileTitle")} />
 			<h1 className="admin-page-title">{t("addressesTitle")}</h1>
 			<p className="mt-1 text-sm text-muted-foreground">
 				{t("addressesSubtitle")}

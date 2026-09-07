@@ -7,6 +7,7 @@ import { Suspense, useEffect, useState } from "react";
 import { EyeIcon, EyeOffIcon, Loader2Icon } from "lucide-react";
 
 import appIcon from "@/assets/images/app_icon.png";
+import { LocaleThemeToggle } from "@/components/app/locale-theme-toggle";
 import { TelegramLink } from "@/components/app/telegram-link";
 import { LoginMeshBackground } from "@/components/login/login-mesh-bg";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -125,18 +126,21 @@ function LoginForm() {
 		<main className="relative flex min-h-svh flex-col overflow-hidden bg-[#f6f6f6] pb-[env(safe-area-inset-bottom)]">
 			<LoginMeshBackground />
 
-			<header className="relative z-10 flex items-center gap-2.5 px-6 py-5 sm:px-8">
-				<Image
-					src={appIcon}
-					alt=""
-					priority
-					width={28}
-					height={28}
-					className="size-7 rounded-md"
-				/>
-				<span className="text-[15px] font-semibold tracking-tight text-foreground">
-					{BRAND_NAME}
-				</span>
+			<header className="relative z-10 flex items-center justify-between gap-2.5 px-6 py-5 sm:px-8">
+				<div className="flex items-center gap-2.5">
+					<Image
+						src={appIcon}
+						alt=""
+						priority
+						width={28}
+						height={28}
+						className="size-7 rounded-md"
+					/>
+					<span className="text-[15px] font-semibold tracking-tight text-foreground">
+						{BRAND_NAME}
+					</span>
+				</div>
+				<LocaleThemeToggle />
 			</header>
 
 			<div className="relative z-10 flex flex-1 items-center justify-center px-4 py-6 sm:px-6 sm:py-8">

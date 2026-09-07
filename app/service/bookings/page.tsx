@@ -51,7 +51,7 @@ export default function CustomerBookingsPage() {
 	const { t } = useLocale();
 	const { user } = useAuth();
 	const customerId = user?.id ?? "";
-	const { data: bookings, loading, error, refresh, refreshing } =
+	const { data: bookings, loading, error } =
 		useCachedBookings(customerId);
 	const [filter, setFilter] = useState<(typeof FILTER_IDS)[number]>("all");
 
@@ -75,13 +75,7 @@ export default function CustomerBookingsPage() {
 					<p className="admin-eyebrow">{t("bookingsTitle")}</p>
 					<h1 className="admin-page-title mt-1">{t("bookingsMyBookings")}</h1>
 				</div>
-				<button
-					type="button"
-					onClick={refresh}
-					className="shrink-0 text-xs font-medium text-primary"
-				>
-					{refreshing ? t("commonRefreshing") : t("commonRefresh")}
-				</button>
+				
 			</div>
 
 			<div className="-mx-4 mt-4 flex gap-2 overflow-x-auto px-4 pb-1 scrollbar-none">

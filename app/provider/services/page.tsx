@@ -14,17 +14,24 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/store/useAuth";
 import { useCachedProviderServices } from "@/store/useProviderCache";
 
+type ServiceFilter = "active" | "inactive" | "archived";
+
 export default function ProviderServicesPage() {
 	const { t } = useLocale();
 	const { user } = useAuth();
 	const providerId = user?.provider?.id ?? "";
-	const { data: services, loading, error, refresh, refreshing } =
+	const { data: services, loading, error } =
 		useCachedProviderServices(providerId);
-	const [showInactive, setShowInactive] = useState(false);
+	const [filter, setFilter] = useState<ServiceFilter>("active");
 	const [query, setQuery] = useState("");
 
-	const visible = (showInactive ? services : services.filter((s) => s.status)).filter(
-		(s) => {
+	const visible = services
+		.filter((s) => {
+			if (filter === "active") return s.status && !s.archived;
+			if (filter === "inactive") return !s.status && !s.archived;
+			return s.archived;
+		})
+		.filter((s) => {
 			const q = query.trim().toLowerCase();
 			if (!q) return true;
 			return (
@@ -32,27 +39,23 @@ export default function ProviderServicesPage() {
 				s.categoryName?.toLowerCase().includes(q) ||
 				s.subCategoryName?.toLowerCase().includes(q)
 			);
-		},
-	);
+		});
 
 	const countLabel =
 		services.length === 1
 			? t("providerServicesCountOne")
 			: t("providerServicesCount", { count: services.length });
 
+	const filters: { id: ServiceFilter; label: string }[] = [
+		{ id: "active", label: t("providerServiceActive") },
+		{ id: "inactive", label: t("providerServiceInactive") },
+		{ id: "archived", label: t("providerServiceArchived") },
+	];
+
 	return (
 		<div className="mx-auto w-full max-w-5xl pb-20 lg:pb-0">
 			<div className="lg:hidden">
-				<div className="flex items-center justify-between gap-2">
-					<ProfileBackLink href="/provider/profile" label={t("profileTitle")} />
-					<button
-						type="button"
-						onClick={refresh}
-						className="mb-3 text-xs font-medium text-primary"
-					>
-						{refreshing ? t("commonRefreshing") : t("commonRefresh")}
-					</button>
-				</div>
+				<ProfileBackLink href="/provider/profile" label={t("profileTitle")} />
 				<h1 className="text-lg font-normal text-[#464646]">{t("providerServicesAll")}</h1>
 			</div>
 
@@ -65,20 +68,6 @@ export default function ProviderServicesPage() {
 					</p>
 				</div>
 				<div className="flex gap-2">
-					<button
-						type="button"
-						onClick={refresh}
-						className="text-xs font-medium text-primary"
-					>
-						{refreshing ? t("commonRefreshing") : t("commonRefresh")}
-					</button>
-					<Button
-						variant="outline"
-						size="sm"
-						onClick={() => setShowInactive((v) => !v)}
-					>
-						{showInactive ? t("providerHideInactive") : t("providerShowInactive")}
-					</Button>
 					<Link
 						href="/provider/services/new"
 						className={cn(
@@ -102,15 +91,18 @@ export default function ProviderServicesPage() {
 				/>
 			</div>
 
-			<div className="mt-3 flex gap-2 lg:hidden">
-				<Button
-					variant="outline"
-					size="sm"
-					className="flex-1"
-					onClick={() => setShowInactive((v) => !v)}
-				>
-					{showInactive ? t("providerHideInactive") : t("providerShowInactive")}
-				</Button>
+			<div className="mt-3 flex gap-2 overflow-x-auto scrollbar-none">
+				{filters.map((f) => (
+					<Button
+						key={f.id}
+						variant={filter === f.id ? "default" : "outline"}
+						size="sm"
+						className="shrink-0"
+						onClick={() => setFilter(f.id)}
+					>
+						{f.label}
+					</Button>
+				))}
 			</div>
 
 			{error ? (

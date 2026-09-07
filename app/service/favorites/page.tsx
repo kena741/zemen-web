@@ -11,7 +11,7 @@ export default function FavoritesPage() {
 	const { t } = useLocale();
 	const { user } = useAuth();
 	const userId = user?.id ?? "";
-	const { data: services, loading, error, refresh, refreshing } =
+	const { data: services, loading, error } =
 		useCachedFavorites(userId);
 
 	const countLabel =
@@ -21,16 +21,7 @@ export default function FavoritesPage() {
 
 	return (
 		<div className="px-4 pt-4 md:px-6 md:pt-8">
-			<div className="flex items-center justify-between gap-2">
-				<ProfileBackLink href="/service/profile" label={t("profileTitle")} />
-				<button
-					type="button"
-					onClick={refresh}
-					className="mb-3 text-xs font-medium text-primary"
-				>
-					{refreshing ? t("commonRefreshing") : t("commonRefresh")}
-				</button>
-			</div>
+			<ProfileBackLink href="/service/profile" label={t("profileTitle")} />
 			<h1 className="admin-page-title">{t("profileFavorites")}</h1>
 			<p className="mt-1 text-sm text-muted-foreground">
 				{loading ? t("commonLoading") : countLabel}

@@ -16,7 +16,7 @@ export default function RequestsPage() {
 	const router = useRouter();
 	const { user } = useAuth();
 	const customerKey = user?.id ?? "";
-	const { data: jobs, loading, error, refresh, refreshing } =
+	const { data: jobs, loading, error } =
 		useCachedRequests(customerKey);
 
 	return (
@@ -31,13 +31,6 @@ export default function RequestsPage() {
 					</p>
 				</div>
 				<div className="flex items-center gap-2">
-					<button
-						type="button"
-						onClick={refresh}
-						className="text-xs font-medium text-primary"
-					>
-						{refreshing ? "…" : t("commonRefresh")}
-					</button>
 					<Button
 						size="sm"
 						className="gap-1.5"

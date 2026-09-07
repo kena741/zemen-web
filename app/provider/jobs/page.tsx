@@ -50,16 +50,7 @@ export default function ProviderJobsPage() {
 
 	return (
 		<div className="mx-auto max-w-3xl">
-			<div className="flex items-center justify-between gap-2">
-				<ProfileBackLink href="/provider/profile" label={t("profileTitle")} />
-				<button
-					type="button"
-					onClick={() => void load()}
-					className="mb-3 text-xs font-medium text-primary"
-				>
-					{t("commonRefresh")}
-				</button>
-			</div>
+			<ProfileBackLink href="/provider/profile" label={t("profileTitle")} />
 			<p className="admin-eyebrow">{t("commonMarketplace")}</p>
 			<h1 className="admin-page-title mt-1">{t("providerJobRequests")}</h1>
 			<p className="mt-2 text-sm text-muted-foreground">

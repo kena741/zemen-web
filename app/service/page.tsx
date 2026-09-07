@@ -37,8 +37,6 @@ export default function ServiceHomePage() {
 		data,
 		loading,
 		error,
-		refresh,
-		refreshing,
 	} = useCachedHomeFeed();
 
 	const categories = data.categories;
@@ -121,14 +119,6 @@ export default function ServiceHomePage() {
 							)}
 						</div>
 						<div className="flex shrink-0 items-center gap-1">
-							<button
-								type="button"
-								onClick={refresh}
-								disabled={refreshing}
-								className="rounded-full px-2 py-2 text-[11px] font-medium text-primary-foreground/80 hover:bg-white/10 disabled:opacity-50"
-							>
-								{refreshing ? "…" : t("commonRefresh")}
-							</button>
 							<Link
 								href="/service/favorites"
 								className="rounded-full p-2 hover:bg-white/10"
@@ -180,13 +170,6 @@ export default function ServiceHomePage() {
 						</p>
 					</div>
 					<div className="flex items-center gap-2">
-						<button
-							type="button"
-							onClick={refresh}
-							className="rounded-lg border border-border bg-white px-3 py-2 text-sm"
-						>
-							{refreshing ? t("commonRefreshing") : t("commonRefresh")}
-						</button>
 						<Link
 							href="/service/favorites"
 							className="rounded-lg border border-border bg-white px-3 py-2 text-sm"

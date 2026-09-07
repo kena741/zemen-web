@@ -33,7 +33,6 @@ export default function WalletPage() {
 		loading,
 		error: loadError,
 		refresh,
-		refreshing,
 	} = useCachedProviderWallet({ authUserId, providerId });
 	const { data: banks } = useCachedProviderBank({ authUserId, providerId });
 	const [busy, setBusy] = useState(false);
@@ -42,8 +41,47 @@ export default function WalletPage() {
 	const [amount, setAmount] = useState("");
 	const [note, setNote] = useState("");
 	const [tab, setTab] = useState<"tx" | "withdraw">("tx");
+	const [withdrawFilter, setWithdrawFilter] = useState<
+		"all" | "pending" | "approved" | "rejected"
+	>("all");
 
 	const defaultBank = banks.find((b) => b.isDefault) ?? banks[0] ?? null;
+
+	const filteredWithdrawals = wallet.withdrawals.filter((w) => {
+		if (withdrawFilter === "all") return true;
+		const status = (w.paymentStatus ?? "pending").toLowerCase();
+		if (withdrawFilter === "approved")
+			return (
+				status === "approved" ||
+				status === "completed" ||
+				status === "success"
+			);
+		if (withdrawFilter === "rejected")
+			return (
+				status === "rejected" ||
+				status === "failed" ||
+				status === "declined"
+			);
+		return status === "pending";
+	});
+
+	function withdrawStatusLabel(status: string | null) {
+		const s = (status ?? "pending").toLowerCase();
+		if (s === "approved" || s === "completed" || s === "success")
+			return t("statusApproved");
+		if (s === "rejected" || s === "failed" || s === "declined")
+			return t("statusRejected");
+		return t("statusPending");
+	}
+
+	function withdrawStatusClass(status: string | null) {
+		const s = (status ?? "pending").toLowerCase();
+		if (s === "rejected" || s === "failed" || s === "declined")
+			return "bg-destructive/15 text-destructive";
+		if (s === "approved" || s === "completed" || s === "success")
+			return "bg-primary/10 text-primary";
+		return "bg-amber-100 text-amber-900";
+	}
 
 	async function submitWithdraw(e: React.FormEvent) {
 		e.preventDefault();
@@ -82,16 +120,7 @@ export default function WalletPage() {
 
 	return (
 		<div className="mx-auto max-w-3xl">
-			<div className="flex items-center justify-between gap-2">
-				<ProfileBackLink href="/provider/profile" label={t("profileTitle")} />
-				<button
-					type="button"
-					onClick={refresh}
-					className="mb-3 text-xs font-medium text-primary"
-				>
-					{refreshing ? t("commonRefreshing") : t("commonRefresh")}
-				</button>
-			</div>
+			<ProfileBackLink href="/provider/profile" label={t("profileTitle")} />
 			<p className="admin-eyebrow">{t("commonPayments")}</p>
 			<h1 className="admin-page-title mt-1">{t("walletTitle")}</h1>
 
@@ -201,6 +230,29 @@ export default function WalletPage() {
 				</Button>
 			</div>
 
+			{tab === "withdraw" ? (
+				<div className="mt-3 flex gap-1.5 overflow-x-auto scrollbar-none">
+					{(
+						[
+							["all", t("commonAll")],
+							["pending", t("statusPending")],
+							["approved", t("statusApproved")],
+							["rejected", t("statusRejected")],
+						] as const
+					).map(([id, label]) => (
+						<Button
+							key={id}
+							size="sm"
+							variant={withdrawFilter === id ? "default" : "outline"}
+							className="shrink-0"
+							onClick={() => setWithdrawFilter(id)}
+						>
+							{label}
+						</Button>
+					))}
+				</div>
+			) : null}
+
 			<div className="mt-3 rounded-xl border border-border bg-white px-4 shadow-xs">
 				{loading ? (
 					<AppLoading compact />
@@ -235,21 +287,26 @@ export default function WalletPage() {
 							</div>
 						))
 					)
-				) : wallet.withdrawals.length === 0 ? (
+				) : filteredWithdrawals.length === 0 ? (
 					<p className="py-10 text-center text-sm text-muted-foreground">
 						{t("providerWalletNoWithdrawals")}
 					</p>
 				) : (
-					wallet.withdrawals.map((w) => (
+					filteredWithdrawals.map((w) => (
 						<div
 							key={w.id}
 							className="flex items-start justify-between gap-3 border-b border-border py-3 last:border-b-0"
 						>
 							<div className="min-w-0">
-								<p className="text-sm font-medium capitalize">
-									{w.paymentStatus || t("statusPending")}
-								</p>
-								<p className="mt-0.5 text-xs text-muted-foreground">
+								<span
+									className={cn(
+										"inline-flex rounded-md px-2 py-0.5 text-xs font-medium capitalize",
+										withdrawStatusClass(w.paymentStatus),
+									)}
+								>
+									{withdrawStatusLabel(w.paymentStatus)}
+								</span>
+								<p className="mt-1 text-xs text-muted-foreground">
 									{w.bankName} · {formatDateTime(w.createdDate)}
 								</p>
 							</div>

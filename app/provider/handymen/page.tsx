@@ -18,7 +18,7 @@ export default function HandymenPage() {
 	const { t } = useLocale();
 	const { user } = useAuth();
 	const providerId = user?.provider?.id ?? "";
-	const { data: handymen, loading, error, refresh, refreshing } =
+	const { data: handymen, loading, error } =
 		useCachedProviderHandymen(providerId);
 	const [showInactive, setShowInactive] = useState(true);
 
@@ -33,16 +33,7 @@ export default function HandymenPage() {
 
 	return (
 		<div className="mx-auto max-w-3xl">
-			<div className="flex items-center justify-between gap-2">
-				<ProfileBackLink href="/provider/profile" label={t("profileTitle")} />
-				<button
-					type="button"
-					onClick={refresh}
-					className="mb-3 text-xs font-medium text-primary"
-				>
-					{refreshing ? t("commonRefreshing") : t("commonRefresh")}
-				</button>
-			</div>
+			<ProfileBackLink href="/provider/profile" label={t("profileTitle")} />
 			<div className="flex flex-wrap items-end justify-between gap-3">
 				<div>
 					<p className="admin-eyebrow">{t("commonTeam")}</p>

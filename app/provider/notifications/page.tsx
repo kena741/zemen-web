@@ -11,7 +11,7 @@ export default function NotificationsPage() {
 	const { t } = useLocale();
 	const { user } = useAuth();
 	const providerId = user?.provider?.id ?? "";
-	const { data: items, loading, error, refresh, refreshing } =
+	const { data: items, loading, error } =
 		useCachedProviderNotifications(providerId);
 
 	const countLabel =
@@ -21,16 +21,7 @@ export default function NotificationsPage() {
 
 	return (
 		<div className="mx-auto max-w-3xl">
-			<div className="flex items-center justify-between gap-2">
-				<ProfileBackLink href="/provider" label={t("navDashboard")} />
-				<button
-					type="button"
-					onClick={refresh}
-					className="mb-3 text-xs font-medium text-primary"
-				>
-					{refreshing ? t("commonRefreshing") : t("commonRefresh")}
-				</button>
-			</div>
+			<ProfileBackLink href="/provider" label={t("navDashboard")} />
 			<p className="admin-eyebrow">{t("commonAlerts")}</p>
 			<h1 className="admin-page-title mt-1">{t("notificationsTitle")}</h1>
 			<p className="mt-2 text-sm text-muted-foreground">

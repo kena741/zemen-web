@@ -52,16 +52,7 @@ export default function CustomerOffersPage() {
 
 	return (
 		<div className="px-4 pt-4 md:px-6 md:pt-8">
-			<div className="flex items-center justify-between gap-2">
-				<ProfileBackLink href="/service/profile" label={t("profileTitle")} />
-				<button
-					type="button"
-					onClick={() => void load()}
-					className="mb-3 text-xs font-medium text-primary"
-				>
-					{t("commonRefresh")}
-				</button>
-			</div>
+			<ProfileBackLink href="/service/profile" label={t("profileTitle")} />
 			<h1 className="admin-page-title">{t("offersTitle")}</h1>
 			<p className="mt-1 text-sm text-muted-foreground">
 				{t("offersSubtitle")}

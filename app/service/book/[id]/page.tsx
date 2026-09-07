@@ -25,6 +25,14 @@ import {
 	attachOfferToBooking,
 	createCustomerServiceOffer,
 } from "@/services/customer/offersApi";
+import {
+	fetchCustomerAddresses,
+	type CustomerAddress,
+} from "@/services/customer/addressesApi";
+import {
+	fetchPaymentMethodsConfig,
+	type PaymentMethodsConfig,
+} from "@/services/config/paymentConfigApi";
 import { useAppDispatch } from "@/store/hooks";
 import { invalidateBookings } from "@/store/customerCacheSlice";
 import { useAuth } from "@/store/useAuth";
@@ -69,6 +77,8 @@ function BookServiceForm() {
 	const [paymentMethod, setPaymentMethod] = useState<"cash" | "wallet" | "chapa">(
 		"cash",
 	);
+	const [savedAddresses, setSavedAddresses] = useState<CustomerAddress[]>([]);
+	const [payConfig, setPayConfig] = useState<PaymentMethodsConfig | null>(null);
 	const walletBalance = Number(user?.customer?.walletAmount ?? 0) || 0;
 
 	useEffect(() => {
@@ -89,6 +99,32 @@ function BookServiceForm() {
 	useEffect(() => {
 		void fetchPublicCoupons().then((res) => setCoupons(res.coupons));
 	}, []);
+
+	useEffect(() => {
+		void fetchPaymentMethodsConfig().then(setPayConfig);
+	}, []);
+
+	useEffect(() => {
+		const customerId = customer?.id ?? user?.id;
+		if (!customerId) return;
+		void fetchCustomerAddresses(customerId, user?.id).then((res) => {
+			setSavedAddresses(res.addresses);
+			const def = res.addresses.find((a) => a.isDefault) ?? res.addresses[0];
+			if (def?.address) {
+				setAddress((prev) => (prev.trim() ? prev : def.address));
+			}
+		});
+	}, [customer?.id, user?.id]);
+
+	useEffect(() => {
+		if (paymentMethod === "chapa" && payConfig && !payConfig.chapaEnabled) {
+			setPaymentMethod("cash");
+		}
+	}, [paymentMethod, payConfig]);
+
+	const paymentOptions = (
+		["cash", "wallet", "chapa"] as const
+	).filter((method) => method !== "chapa" || !payConfig || payConfig.chapaEnabled);
 
 	const allowsCustom = Boolean(service?.allowsCustomOffer) || Boolean(bidPrice);
 	const unitPrice = useMemo(() => {
@@ -442,6 +478,23 @@ function BookServiceForm() {
 
 				<Field>
 					<FieldLabel htmlFor="address">{t("bookServiceAddress")}</FieldLabel>
+					{savedAddresses.length > 0 ? (
+						<select
+							className="mb-2 flex h-10 w-full rounded-md border border-input bg-white px-3 text-sm"
+							value=""
+							onChange={(e) => {
+								const picked = savedAddresses.find((a) => a.id === e.target.value);
+								if (picked?.address) setAddress(picked.address);
+							}}
+						>
+							<option value="">{t("bookServicePickSavedAddress")}</option>
+							{savedAddresses.map((a) => (
+								<option key={a.id} value={a.id}>
+									{a.addressAs || a.name || a.address}
+								</option>
+							))}
+						</select>
+					) : null}
 					<Textarea
 						id="address"
 						required
@@ -520,7 +573,7 @@ function BookServiceForm() {
 					<div className="space-y-2 rounded-xl bg-white p-4 shadow-sm ring-1 ring-black/5">
 						<p className="text-sm font-medium">{t("bookServicePayment")}</p>
 						<div className="flex flex-wrap gap-2">
-							{(["cash", "wallet", "chapa"] as const).map((method) => (
+							{paymentOptions.map((method) => (
 								<button
 									key={method}
 									type="button"

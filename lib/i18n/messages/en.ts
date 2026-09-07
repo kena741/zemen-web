@@ -345,6 +345,26 @@ export const en = {
 	statusCompleted: "Completed",
 	statusRejected: "Rejected",
 	statusCancelled: "Cancelled",
+	statusApproved: "Approved",
+
+	commonEnable: "Enable",
+	contactUs: "Contact us",
+	deleteAccount: "Delete account",
+	deleteAccountConfirm:
+		"Delete your account? You will be signed out. Contact support to finish permanent deletion.",
+	deleteAccountContactSupport:
+		"To permanently delete your account, email {email}. You are now signed out.",
+	notificationsPermission: "Push notifications",
+	notificationsEnable: "Tap Enable to allow notifications",
+	notificationsEnabled: "Notifications are enabled",
+	notificationsBlocked: "Blocked in browser settings",
+	notificationsUnsupported: "Not supported in this browser",
+	providerServiceArchived: "Archived",
+	providerServiceArchive: "Archive",
+	providerServiceRestore: "Restore",
+	providerArchiveServiceConfirm:
+		"Archive “{name}”? You can restore it later from Archived.",
+	bookServicePickSavedAddress: "Use a saved address…",
 
 	couponApplied: "Applied {code} (−{amount})",
 	couponMinAmount: "Minimum amount for this coupon is {amount}.",
