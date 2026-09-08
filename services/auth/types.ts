@@ -17,6 +17,7 @@ export interface ProviderProfile {
 	walletAmount: string | null;
 	providerType: string | null;
 	address: string | null;
+	serviceTierMax: number;
 }
 
 export interface CustomerProfile {
@@ -72,6 +73,8 @@ export function mapProviderRow(row: Record<string, unknown>): ProviderProfile {
 					? String(row.providerType)
 					: null,
 		address: row.address != null ? String(row.address) : null,
+		serviceTierMax:
+			Number(row.service_tier_max ?? row.serviceTierMax ?? 0) || 0,
 	};
 }
 

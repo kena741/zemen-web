@@ -51,3 +51,32 @@ export function statusTone(
 			return "neutral";
 	}
 }
+
+/** Flutter `bookingListStatusColor` — text color for list/grid status labels. */
+export function bookingListStatusClass(
+	status: string | null | undefined,
+): string {
+	const key = (status ?? "")
+		.trim()
+		.toLowerCase()
+		.replace(/[\s_-]+/g, "");
+	switch (key) {
+		case "pending":
+		case "pendingapproval":
+		case "pendingextrapayment":
+		case "hold":
+			return "text-[#B45309]";
+		case "accepted":
+			return "text-[#15803D]";
+		case "rejected":
+		case "cancelled":
+			return "text-destructive";
+		case "ongoing":
+		case "inprogress":
+		case "ontheway":
+		case "completed":
+			return "text-primary";
+		default:
+			return "text-muted-foreground";
+	}
+}

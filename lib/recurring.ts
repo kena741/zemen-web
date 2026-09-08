@@ -137,6 +137,18 @@ export function isRecurringPricingType(raw: string | null | undefined): boolean 
 	return (raw ?? "").trim().toUpperCase() === "RECURRING";
 }
 
+/** Matches mobile ServiceModel.effectivePrePaymentPercent. */
+export function effectivePrePaymentPercent(params: {
+	pricingType?: string | null;
+	prePaymentPercent?: number | null;
+}): number {
+	if (isRecurringPricingType(params.pricingType)) return 100;
+	const pct = params.prePaymentPercent;
+	if (pct == null || !Number.isFinite(pct) || pct <= 0) return 100;
+	if (pct > 100) return 100;
+	return pct;
+}
+
 export function dueNowAmount(params: {
 	total: number;
 	pricingType?: string | null;
@@ -144,11 +156,9 @@ export function dueNowAmount(params: {
 	prePaymentPercent?: number | null;
 }): number {
 	const total = Math.max(0, params.total);
+	if (total <= 0) return 0;
 	if (isRecurringPricingType(params.pricingType)) return total;
-	if (!params.prePayment) return total;
-	const pct = params.prePaymentPercent;
-	if (pct == null || !Number.isFinite(pct) || pct >= 100) return total;
-	if (pct <= 0) return 0;
+	const pct = effectivePrePaymentPercent(params);
 	return Math.round(((total * pct) / 100) * 100) / 100;
 }
 

@@ -68,6 +68,8 @@ export async function createCustomerServiceOffer(params: {
 	address: string;
 	description: string;
 	message?: string;
+	/** Job bid / accepted bid — may book custom price without allows_custom_offer. */
+	fromBid?: boolean;
 }): Promise<{ offer: ServiceOffer | null; error: string | null }> {
 	if (params.offeredPrice <= 0) {
 		return { offer: null, error: "Custom price must be greater than zero." };
@@ -80,6 +82,29 @@ export async function createCustomerServiceOffer(params: {
 	}
 
 	const supabase = getSupabase();
+	if (!params.fromBid) {
+		const { data: serviceRow, error: serviceErr } = await supabase
+			.from("service")
+			.select("allows_custom_offer, allowsCustomOffer")
+			.eq("id", params.serviceId)
+			.maybeSingle();
+		if (serviceErr || !serviceRow) {
+			return {
+				offer: null,
+				error: serviceErr?.message ?? "Service not found.",
+			};
+		}
+		const allows =
+			(serviceRow as Record<string, unknown>).allows_custom_offer === true ||
+			(serviceRow as Record<string, unknown>).allowsCustomOffer === true;
+		if (!allows) {
+			return {
+				offer: null,
+				error: "This service does not accept custom prices.",
+			};
+		}
+	}
+
 	const { data: existing } = await supabase
 		.from("service_offer")
 		.select("id")

@@ -15,6 +15,9 @@ export interface BookingServiceSummary {
 	pricingType?: string | null;
 	billingInterval?: string | null;
 	billingIntervalCount?: number | null;
+	categoryName?: string | null;
+	reviewCount?: number | null;
+	reviewSum?: number | null;
 }
 
 export interface ExtraCharge {
@@ -149,6 +152,15 @@ function parseService(
 		? map.serviceImage.map(String).filter(Boolean)
 		: [];
 
+	const categoryRaw = map.categoryModel ?? map.category_model ?? map.category;
+	const categoryMap =
+		categoryRaw && typeof categoryRaw === "object" && !Array.isArray(categoryRaw)
+			? (categoryRaw as Record<string, unknown>)
+			: null;
+
+	const reviewCount = Number(map.reviewCount ?? map.review_count);
+	const reviewSum = Number(map.reviewSum ?? map.review_sum);
+
 	return {
 		id: asString(map.id) ?? fallbackId ?? "",
 		serviceName: asString(map.serviceName),
@@ -159,6 +171,11 @@ function parseService(
 		billingInterval: asString(map.billing_interval ?? map.billingInterval),
 		billingIntervalCount:
 			Number(map.billing_interval_count ?? map.billingIntervalCount ?? 1) || 1,
+		categoryName:
+			asString(categoryMap?.categoryName ?? categoryMap?.category_name) ??
+			asString(map.categoryName ?? map.category_name),
+		reviewCount: Number.isFinite(reviewCount) ? reviewCount : null,
+		reviewSum: Number.isFinite(reviewSum) ? reviewSum : null,
 	};
 }
 

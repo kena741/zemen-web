@@ -87,7 +87,20 @@ function asString(value: unknown): string | null {
 
 function asBool(value: unknown, fallback = false): boolean {
 	if (value == null) return fallback;
-	return Boolean(value);
+	if (typeof value === "boolean") return value;
+	if (typeof value === "number") return value !== 0;
+	const s = String(value).trim().toLowerCase();
+	if (s === "true" || s === "1" || s === "yes") return true;
+	if (s === "false" || s === "0" || s === "no" || s === "") return false;
+	return fallback;
+}
+
+function parsePricingType(row: Record<string, unknown>): string | null {
+	const raw = asString(row.pricing_type ?? row.pricingType);
+	const upper = (raw ?? "").toUpperCase();
+	if (upper === "RECURRING" || upper === "ONE_TIME") return upper;
+	if (asBool(row.is_recurring ?? row.isRecurring)) return "RECURRING";
+	return upper || "ONE_TIME";
 }
 
 function parseLocation(raw: unknown): {
@@ -144,7 +157,7 @@ export function mapServiceRow(row: Record<string, unknown>): ProviderService {
 		featureRequestedAt: asString(
 			row.feature_requested_at ?? row.featureRequestedAt,
 		),
-		prePayment: asBool(row.prePayment),
+		prePayment: asBool(row.prePayment ?? row.pre_payment),
 		prePaymentPercent: (() => {
 			const n = Number(row.prePaymentPercent ?? row.pre_payment_percent);
 			return Number.isFinite(n) ? n : null;
@@ -170,7 +183,7 @@ export function mapServiceRow(row: Record<string, unknown>): ProviderService {
 		providerImage: asString(
 			(row.providerModel as Record<string, unknown> | undefined)?.profileImage,
 		),
-		pricingType: asString(row.pricing_type ?? row.pricingType),
+		pricingType: parsePricingType(row),
 		billingInterval: asString(row.billing_interval ?? row.billingInterval),
 		billingIntervalCount:
 			Number(row.billing_interval_count ?? row.billingIntervalCount ?? 1) || 1,

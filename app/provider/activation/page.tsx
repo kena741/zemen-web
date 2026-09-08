@@ -1,35 +1,19 @@
 "use client";
 
-import { ChapaCheckout } from "@/components/payments/chapa-checkout";
-import { ProfileBackLink } from "@/components/provider/profile-back-link";
-import { useLocale } from "@/lib/i18n";
-import { useAuth } from "@/store/useAuth";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 
+import { ServiceLoading } from "@/components/service/service-loading";
+
+/** Legacy activation route — listing plan lives at /provider/tier (mobile parity). */
 export default function ProviderActivationPage() {
-	const { t } = useLocale();
-	const { user } = useAuth();
-	const providerId = user?.provider?.id ?? "";
-
+	const router = useRouter();
+	useEffect(() => {
+		router.replace("/provider/tier");
+	}, [router]);
 	return (
-		<div className="mx-auto max-w-lg px-4 py-6">
-			<ProfileBackLink href="/provider/profile" label={t("profileTitle")} />
-			<h1 className="admin-page-title mt-2">{t("activation")}</h1>
-			<p className="mt-2 text-sm text-muted-foreground">
-				{t("providerActivationHint")}
-			</p>
-			<ChapaCheckout
-				email={user?.email}
-				firstName={user?.provider?.firstName ?? user?.name}
-				lastName={user?.provider?.lastName ?? ""}
-				phone={user?.provider?.phoneNumber}
-				purpose="activation"
-				accountType="provider"
-				userId={user?.id ?? ""}
-				providerId={providerId}
-				returnPath="/pay/done?purpose=activation"
-				showAmountInput
-				label={t("activation")}
-			/>
+		<div className="px-4 py-8">
+			<ServiceLoading compact />
 		</div>
 	);
 }

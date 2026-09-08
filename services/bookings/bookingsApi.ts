@@ -431,6 +431,62 @@ function bookingEarningAmount(booking: Booking): number {
 	return Number.isNaN(total) ? 0 : total;
 }
 
+export async function fetchProviderCompletedPayments(
+	providerId: string,
+	authUserId?: string,
+): Promise<{ bookings: Booking[]; todayTotal: number; error: string | null }> {
+	if (!providerId) {
+		return { bookings: [], todayTotal: 0, error: "Missing provider id" };
+	}
+
+	const hidden = new Set(["pending", "rejected", "cancelled", "canceled"]);
+
+	const { data, error } = await getSupabase()
+		.from("booked_service")
+		.select("*")
+		.eq("provider_id", providerId)
+		.order("createdAt", { ascending: false });
+
+	if (error) {
+		console.error("fetchProviderCompletedPayments", error);
+		return { bookings: [], todayTotal: 0, error: error.message };
+	}
+
+	let bookings = (data ?? [])
+		.map((row) => mapBookingRow(row as Record<string, unknown>))
+		.filter((b) => !hidden.has((b.status ?? "").trim().toLowerCase()));
+	const missingIds = bookings
+		.filter((b) => b.serviceId && !b.service?.serviceName)
+		.map((b) => b.serviceId!);
+	const services = await fetchServicesByIds(missingIds);
+	bookings = attachServices(bookings, services);
+
+	// Mobile: today's earning = provider wallet credits created today
+	const ids = [...new Set([providerId, authUserId].filter(Boolean))] as string[];
+	let todayTotal = 0;
+	if (ids.length) {
+		const start = new Date();
+		start.setHours(0, 0, 0, 0);
+		const { data: txs } = await getSupabase()
+			.from("wallet_transaction")
+			.select("amount, isCredit, createdDate, type, userId")
+			.in("userId", ids)
+			.eq("type", "provider")
+			.eq("isCredit", true)
+			.gte("createdDate", start.toISOString());
+		for (const row of txs ?? []) {
+			const r = row as Record<string, unknown>;
+			todayTotal += Number(r.amount ?? 0) || 0;
+		}
+	}
+
+	return {
+		bookings,
+		todayTotal: Math.round(todayTotal * 100) / 100,
+		error: null,
+	};
+}
+
 /** Completed bookings aggregated by calendar month for the current year (Flutter home chart). */
 export async function fetchYearlyRevenueChart(
 	providerId: string,

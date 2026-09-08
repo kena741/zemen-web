@@ -140,7 +140,7 @@ function LoginForm() {
 						{BRAND_NAME}
 					</span>
 				</div>
-				<LocaleThemeToggle />
+				<LocaleThemeToggle variant="auth" />
 			</header>
 
 			<div className="relative z-10 flex flex-1 items-center justify-center px-4 py-6 sm:px-6 sm:py-8">

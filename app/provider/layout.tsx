@@ -64,9 +64,9 @@ export default function ProviderLayout({
 	}
 
 	return (
-		<div className="flex min-h-svh bg-[#f6f6f6]">
-			<aside className="hidden w-60 shrink-0 border-r border-border bg-white px-3 py-5 lg:flex lg:flex-col">
-				<div className="mb-8 flex items-center gap-2.5 px-2">
+		<div className="flex h-svh overflow-hidden bg-[#f6f6f6]">
+			<aside className="hidden h-full w-60 shrink-0 flex-col border-r border-border bg-white px-3 py-5 lg:flex">
+				<div className="mb-8 flex shrink-0 items-center gap-2.5 px-2">
 					<Image
 						src={appIcon}
 						alt=""
@@ -81,7 +81,7 @@ export default function ProviderLayout({
 						<p className="text-[11px] text-muted-foreground">{t("provider")}</p>
 					</div>
 				</div>
-				<nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto">
+				<nav className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto">
 					{sidebarNav.map((item) => {
 						const active = isActive(pathname, item.href);
 						const Icon = item.icon;
@@ -102,7 +102,7 @@ export default function ProviderLayout({
 						);
 					})}
 				</nav>
-				<div className="mt-auto border-t border-border px-1 pt-4">
+				<div className="mt-auto shrink-0 border-t border-border px-1 pt-4">
 					<div className="mb-2 flex items-center gap-2 px-2">
 						<UserAvatar
 							src={user.provider?.profileImage}
@@ -129,13 +129,13 @@ export default function ProviderLayout({
 
 			<div
 				className={cn(
-					"flex min-w-0 flex-1 flex-col",
+					"flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto",
 					bottomVisible
 						? "pb-[calc(4.75rem+env(safe-area-inset-bottom))] lg:pb-0"
 						: "pb-0",
 				)}
 			>
-				<header className="sticky top-0 z-10 hidden items-center justify-between gap-3 border-b border-border/80 bg-white px-8 py-3 lg:flex">
+				<header className="sticky top-0 z-10 hidden shrink-0 items-center justify-between gap-3 border-b border-border/80 bg-white px-8 py-3 lg:flex">
 					<p className="text-sm text-muted-foreground">
 						{t("welcomeBack", { name: user.name.split(" ")[0] })}
 					</p>

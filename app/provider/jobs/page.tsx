@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { ChevronRightIcon } from "lucide-react";
 
 import { ProfileBackLink } from "@/components/provider/profile-back-link";
@@ -16,15 +17,22 @@ import {
 } from "@/services/jobs/jobsApi";
 import { useAuth } from "@/store/useAuth";
 
-export default function ProviderJobsPage() {
+function ProviderJobsContent() {
 	const { t } = useLocale();
 	const { user } = useAuth();
+	const search = useSearchParams();
 	const providerId = user?.id ?? "";
-	const [tab, setTab] = useState<"open" | "bids">("open");
+	const [tab, setTab] = useState<"open" | "bids">(
+		search.get("tab") === "bids" ? "bids" : "open",
+	);
 	const [jobs, setJobs] = useState<ProviderJobRequest[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 	const [q, setQ] = useState("");
+
+	useEffect(() => {
+		setTab(search.get("tab") === "bids" ? "bids" : "open");
+	}, [search]);
 
 	const load = useCallback(async () => {
 		setLoading(true);
@@ -128,5 +136,13 @@ export default function ProviderJobsPage() {
 				)}
 			</div>
 		</div>
+	);
+}
+
+export default function ProviderJobsPage() {
+	return (
+		<Suspense fallback={<AppLoading />}>
+			<ProviderJobsContent />
+		</Suspense>
 	);
 }

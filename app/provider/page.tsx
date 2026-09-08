@@ -9,7 +9,6 @@ import {
 	WrenchIcon,
 } from "lucide-react";
 
-import { BookingRow } from "@/components/provider/booking-row";
 import { UpcomingBookingCard } from "@/components/provider/booking-grid-card";
 import { ProviderHomeHeader } from "@/components/provider/mobile-chrome";
 import { RevenueChart } from "@/components/provider/revenue-chart";
@@ -125,25 +124,16 @@ export default function ProviderDashboardPage() {
 										{t("providerUpcomingBookings")}
 									</h2>
 									<Link
-										href="/provider/bookings"
+										href="/provider/bookings/upcoming"
 										className="text-sm font-semibold text-primary"
 									>
 										{t("commonViewAll")}
 									</Link>
 								</div>
-								<div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-1 scrollbar-none lg:mx-0 lg:grid lg:grid-cols-2 lg:overflow-visible lg:px-0 xl:grid-cols-3">
+								<div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-1 scrollbar-none lg:mx-0 lg:px-0">
 									{data.upcoming.map((b) => (
-										<div key={b.id} className="lg:hidden">
-											<UpcomingBookingCard booking={b} />
-										</div>
+										<UpcomingBookingCard key={b.id} booking={b} />
 									))}
-									<div className="hidden w-full lg:col-span-full lg:block">
-										<div className="rounded-xl bg-white px-2">
-											{data.upcoming.map((b) => (
-												<BookingRow key={b.id} booking={b} />
-											))}
-										</div>
-									</div>
 								</div>
 							</section>
 						) : null}

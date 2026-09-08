@@ -4,6 +4,7 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useMemo, useState } from "react";
 
 import { ProfileBackLink } from "@/components/provider/profile-back-link";
+import { RecurringBadge } from "@/components/recurring/recurring-badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Field, FieldLabel } from "@/components/ui/field";
@@ -11,7 +12,12 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { ServiceLoading } from "@/components/service/service-loading";
 import { useLocale } from "@/lib/i18n";
-import { dueNowAmount, remainingAmount } from "@/lib/recurring";
+import {
+	dueNowAmount,
+	effectivePrePaymentPercent,
+	isRecurringPricingType,
+	remainingAmount,
+} from "@/lib/recurring";
 import { formatAmount } from "@/services/bookings/types";
 import { createCustomerBooking, payBookingWithWallet } from "@/services/customer/bookingsApi";
 import { savePaymentPending } from "@/lib/payment-pending";
@@ -46,6 +52,23 @@ function todayIsoDate() {
 	return `${y}-${m}-${day}`;
 }
 
+/** Matches mobile ServiceModel.discountAmount (≤100 = %, else fixed per unit). */
+function serviceDiscountAmount(
+	discountRaw: string | null | undefined,
+	unitPrice: number,
+	quantity: number,
+): number {
+	const discountValue = Number(String(discountRaw ?? "").trim()) || 0;
+	if (discountValue <= 0) return 0;
+	const lineSubtotal = quantity * unitPrice;
+	if (lineSubtotal <= 0) return 0;
+	if (discountValue <= 100) {
+		return Math.round(((lineSubtotal * discountValue) / 100) * 100) / 100;
+	}
+	const fixedTotal = quantity * discountValue;
+	return Math.min(fixedTotal, lineSubtotal);
+}
+
 function BookServiceForm() {
 	const { t } = useLocale();
 	const params = useParams<{ id: string }>();
@@ -74,8 +97,8 @@ function BookServiceForm() {
 	const [couponCode, setCouponCode] = useState("");
 	const [appliedCoupon, setAppliedCoupon] = useState<Coupon | null>(null);
 	const [couponError, setCouponError] = useState<string | null>(null);
-	const [paymentMethod, setPaymentMethod] = useState<"cash" | "wallet" | "chapa">(
-		"cash",
+	const [paymentMethod, setPaymentMethod] = useState<"wallet" | "chapa">(
+		"chapa",
 	);
 	const [savedAddresses, setSavedAddresses] = useState<CustomerAddress[]>([]);
 	const [payConfig, setPayConfig] = useState<PaymentMethodsConfig | null>(null);
@@ -97,6 +120,13 @@ function BookServiceForm() {
 	}, [bidPrice]);
 
 	useEffect(() => {
+		const raw = search.get("qty");
+		if (!raw) return;
+		const n = Number(raw);
+		if (Number.isFinite(n) && n >= 1 && n <= 10) setQuantity(Math.trunc(n));
+	}, [search]);
+
+	useEffect(() => {
 		void fetchPublicCoupons().then((res) => setCoupons(res.coupons));
 	}, []);
 
@@ -116,24 +146,15 @@ function BookServiceForm() {
 		});
 	}, [customer?.id, user?.id]);
 
-	useEffect(() => {
-		if (paymentMethod === "chapa" && payConfig && !payConfig.chapaEnabled) {
-			setPaymentMethod("cash");
-		}
-	}, [paymentMethod, payConfig]);
-
-	const paymentOptions = (
-		["cash", "wallet", "chapa"] as const
-	).filter((method) => method !== "chapa" || !payConfig || payConfig.chapaEnabled);
-
-	const allowsCustom = Boolean(service?.allowsCustomOffer) || Boolean(bidPrice);
+	const allowsCustom =
+		Boolean(service?.allowsCustomOffer) || Boolean(bidPrice);
 	const unitPrice = useMemo(() => {
-		if (useCustomPrice && customPrice.trim()) {
+		if (allowsCustom && useCustomPrice && customPrice.trim()) {
 			const n = Number(customPrice);
 			return Number.isNaN(n) ? 0 : n;
 		}
 		return catalogPrice;
-	}, [useCustomPrice, customPrice, catalogPrice]);
+	}, [allowsCustom, useCustomPrice, customPrice, catalogPrice]);
 
 	const isCustomOffer =
 		allowsCustom &&
@@ -141,28 +162,47 @@ function BookServiceForm() {
 		customPrice.trim() !== "" &&
 		Math.abs(unitPrice - catalogPrice) > 0.001;
 
+	const isRecurring = isRecurringPricingType(service?.pricingType);
 	const subtotal = unitPrice * quantity;
+	const serviceDiscount = isCustomOffer
+		? 0
+		: serviceDiscountAmount(service?.discount, catalogPrice, quantity);
+	const afterServiceDiscount = Math.max(0, subtotal - serviceDiscount);
 	const discount = appliedCoupon
-		? couponDiscount(appliedCoupon, subtotal)
+		? couponDiscount(appliedCoupon, afterServiceDiscount)
 		: 0;
-	const total = Math.max(0, subtotal - discount);
-	const dueNow = dueNowAmount({
-		total,
+	const total = Math.max(0, afterServiceDiscount - discount);
+	const dueNow = isCustomOffer
+		? 0
+		: dueNowAmount({
+				total,
+				pricingType: service?.pricingType,
+				prePayment: service?.prePayment,
+				prePaymentPercent: service?.prePaymentPercent,
+			});
+	const remaining = remainingAmount(total, dueNow);
+	const prePayPercent = effectivePrePaymentPercent({
 		pricingType: service?.pricingType,
-		prePayment: service?.prePayment,
 		prePaymentPercent: service?.prePaymentPercent,
 	});
-	const remaining = remainingAmount(total, dueNow);
-	const prePayPercent =
-		service?.prePayment &&
-		service.prePaymentPercent != null &&
-		service.prePaymentPercent > 0 &&
-		service.prePaymentPercent < 100
-			? service.prePaymentPercent
-			: null;
+	const hasPartialPrePayment = !isRecurring && !isCustomOffer && prePayPercent < 100;
+
+	const walletAffordable = walletBalance >= dueNow;
+	const chapaEnabled = !payConfig || payConfig.chapaEnabled;
+	const paymentOptions = useMemo(() => {
+		const options: Array<"wallet" | "chapa"> = [];
+		if (walletAffordable) options.push("wallet");
+		if (chapaEnabled) options.push("chapa");
+		return options;
+	}, [walletAffordable, chapaEnabled]);
+
+	useEffect(() => {
+		if (paymentOptions.includes(paymentMethod)) return;
+		const fallback = paymentOptions[0];
+		if (fallback) setPaymentMethod(fallback);
+	}, [paymentMethod, paymentOptions]);
 
 	const paymentLabels = {
-		cash: t("paymentCash"),
 		wallet: t("paymentWallet"),
 		chapa: t("paymentChapa"),
 	} as const;
@@ -179,7 +219,7 @@ function BookServiceForm() {
 			setAppliedCoupon(null);
 			return;
 		}
-		if (subtotal < res.coupon.minAmount) {
+		if (afterServiceDiscount < res.coupon.minAmount) {
 			setCouponError(
 				t("couponMinAmount", {
 					amount: formatAmount(res.coupon.minAmount),
@@ -214,6 +254,10 @@ function BookServiceForm() {
 			setError(t("bookServicePriceRequired"));
 			return;
 		}
+		if (!isCustomOffer && paymentOptions.length === 0) {
+			setError(t("bookServiceInsufficientWallet"));
+			return;
+		}
 
 		const names = (customer.fullName || user.name || t("customer")).split(" ");
 		const firstName = names[0] || t("customer");
@@ -231,6 +275,7 @@ function BookServiceForm() {
 				bookingDate: `${bookingDate}T${startTime}:00`,
 				address: address.trim(),
 				description: description.trim(),
+				fromBid: Boolean(bidPrice) || postJob,
 			});
 			if (!offerRes.offer) {
 				setBusy(false);
@@ -299,9 +344,9 @@ function BookServiceForm() {
 			quantity,
 			price: unitPrice,
 			paymentType: paymentMethod,
-			paymentCompleted: paymentMethod === "cash",
+			paymentCompleted: false,
 			coupon: couponSnapshot,
-			discount,
+			discount: serviceDiscount + discount,
 			totalAmount: total,
 			postJob,
 		});
@@ -327,44 +372,37 @@ function BookServiceForm() {
 			return;
 		}
 
-		if (paymentMethod === "chapa") {
-			savePaymentPending({
+		savePaymentPending({
+			purpose: "booking",
+			userId: user.id,
+			accountType: "customer",
+			amount: String(dueNow),
+			bookingId: res.bookingId,
+		});
+		setBusy(false);
+		const chapaRes = await fetch("/api/pay/chapa", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({
+				amount: dueNow,
+				email: user.email,
+				first_name: firstName,
+				last_name: lastName,
+				phone_number: customer.phone,
 				purpose: "booking",
-				userId: user.id,
-				accountType: "customer",
-				amount: String(dueNow),
-				bookingId: res.bookingId,
-			});
-			setBusy(false);
-			const chapaRes = await fetch("/api/pay/chapa", {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({
-					amount: dueNow,
-					email: user.email,
-					first_name: firstName,
-					last_name: lastName,
-					phone_number: customer.phone,
-					purpose: "booking",
-					return_path: `/pay/done?purpose=booking&amount=${dueNow}`,
-					booking_id: res.bookingId,
-				}),
-			});
-			const chapaData = (await chapaRes.json()) as {
-				checkout_url?: string;
-				error?: string;
-			};
-			if (!chapaRes.ok || !chapaData.checkout_url) {
-				setError(chapaData.error || t("bookServiceChapaFailed"));
-				return;
-			}
-			window.location.href = chapaData.checkout_url;
+				return_path: `/pay/done?purpose=booking&amount=${dueNow}`,
+				booking_id: res.bookingId,
+			}),
+		});
+		const chapaData = (await chapaRes.json()) as {
+			checkout_url?: string;
+			error?: string;
+		};
+		if (!chapaRes.ok || !chapaData.checkout_url) {
+			setError(chapaData.error || t("bookServiceChapaFailed"));
 			return;
 		}
-
-		setBusy(false);
-		dispatch(invalidateBookings());
-		router.replace(`/service/bookings/${res.bookingId}`);
+		window.location.href = chapaData.checkout_url;
 	}
 
 	if (loading || !user) return <ServiceLoading />;
@@ -391,6 +429,30 @@ function BookServiceForm() {
 				{service.serviceName} · {t("serviceCatalog")}{" "}
 				{formatAmount(service.price)}
 			</p>
+			<div className="mt-2 flex flex-wrap items-center gap-2">
+				{isRecurring ? (
+					<RecurringBadge
+						interval={service.billingInterval}
+						count={service.billingIntervalCount}
+					/>
+				) : (
+					<span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-[11px] font-semibold text-muted-foreground">
+						{t("pricingOneTime")}
+					</span>
+				)}
+				{hasPartialPrePayment ? (
+					<span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-[11px] font-semibold text-muted-foreground">
+						{t("bookingPayPercentNow", {
+							percent: String(prePayPercent),
+						})}
+					</span>
+				) : null}
+				{allowsCustom ? (
+					<span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-[11px] font-semibold text-muted-foreground">
+						{t("bookServiceCustomPrice")}
+					</span>
+				) : null}
+			</div>
 
 			<form onSubmit={onSubmit} className="mx-auto mt-6 max-w-lg space-y-4">
 				{error ? (
@@ -599,6 +661,19 @@ function BookServiceForm() {
 						<span className="text-muted-foreground">{t("bookServiceSubtotal")}</span>
 						<span className="tabular-nums">{formatAmount(subtotal)}</span>
 					</div>
+					{serviceDiscount > 0 ? (
+						<div className="mt-1 flex items-center justify-between text-sm">
+							<span className="text-muted-foreground">
+								{t("commonDiscount")}
+								{service?.discount && Number(service.discount) <= 100
+									? ` (${service.discount}%)`
+									: ""}
+							</span>
+							<span className="tabular-nums text-primary">
+								−{formatAmount(serviceDiscount)}
+							</span>
+						</div>
+					) : null}
 					{discount > 0 ? (
 						<div className="mt-1 flex items-center justify-between text-sm">
 							<span className="text-muted-foreground">{t("commonCoupon")}</span>
@@ -613,16 +688,14 @@ function BookServiceForm() {
 							{formatAmount(total)}
 						</span>
 					</div>
-					{dueNow < total ? (
+					{hasPartialPrePayment ? (
 						<>
 							<div className="mt-2 flex items-center justify-between text-sm">
 								<span className="text-muted-foreground">
 									{t("bookingDueNow")}
-									{prePayPercent != null
-										? ` · ${t("bookingPayPercentNow", {
-												percent: String(prePayPercent),
-											})}`
-										: ""}
+									{` · ${t("bookingPayPercentNow", {
+										percent: String(prePayPercent),
+									})}`}
 								</span>
 								<span className="tabular-nums font-medium">
 									{formatAmount(dueNow)}
@@ -641,11 +714,9 @@ function BookServiceForm() {
 					<p className="mt-1 text-xs text-muted-foreground">
 						{isCustomOffer
 							? t("bookServiceCustomOfferNote")
-							: paymentMethod === "cash"
-								? t("bookServicePayCash")
-								: paymentMethod === "wallet"
-									? t("bookServicePayWallet")
-									: t("bookServicePayChapa")}
+							: paymentMethod === "wallet"
+								? t("bookServicePayWallet")
+								: t("bookServicePayChapa")}
 					</p>
 				</div>
 

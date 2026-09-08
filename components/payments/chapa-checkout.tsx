@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useLocale } from "@/lib/i18n";
+import { cn } from "@/lib/utils";
 import {
 	clearPaymentPending,
 	savePaymentPending,
@@ -30,6 +31,10 @@ export interface ChapaCheckoutProps {
 	showAmountInput?: boolean;
 	label?: string;
 	className?: string;
+	/** Full-width CTA matching mobile “Proceed to Pay”. */
+	variant?: "card" | "cta";
+	buttonLabel?: string;
+	disabled?: boolean;
 }
 
 export function ChapaCheckout({
@@ -50,15 +55,23 @@ export function ChapaCheckout({
 	showAmountInput = purpose === "wallet",
 	label,
 	className,
+	variant = "card",
+	buttonLabel,
+	disabled,
 }: ChapaCheckoutProps) {
 	const { t } = useLocale();
 	const [amount, setAmount] = useState(fixedAmount ?? "100");
 	const [busy, setBusy] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 
+	useEffect(() => {
+		if (fixedAmount != null) setAmount(fixedAmount);
+	}, [fixedAmount]);
+
 	const payAmount = fixedAmount ?? amount;
 
 	async function pay() {
+		if (disabled || busy) return;
 		setBusy(true);
 		setError(null);
 
@@ -118,8 +131,29 @@ export function ChapaCheckout({
 		}
 	}
 
+	if (variant === "cta") {
+		return (
+			<div className={className}>
+				<Button
+					type="button"
+					className="h-12 w-full rounded-[10px] text-base font-semibold"
+					onClick={() => void pay()}
+					disabled={busy || disabled || !(Number(payAmount) > 0)}
+				>
+					{busy ? t("commonLoading") : (buttonLabel ?? t("providerProceedToPay"))}
+				</Button>
+				{error ? <p className="mt-2 text-sm text-destructive">{error}</p> : null}
+			</div>
+		);
+	}
+
 	return (
-		<div className={className ?? "mt-4 rounded-xl border border-border bg-white p-4 dark:bg-card"}>
+		<div
+			className={cn(
+				"mt-4 rounded-xl border border-border bg-white p-4 dark:bg-card",
+				className,
+			)}
+		>
 			<p className="text-sm font-medium">{label ?? t("walletTopUp")}</p>
 			<div className="mt-3 flex gap-2">
 				{showAmountInput ? (
@@ -135,7 +169,11 @@ export function ChapaCheckout({
 						ETB {payAmount}
 					</p>
 				)}
-				<Button type="button" onClick={() => void pay()} disabled={busy}>
+				<Button
+					type="button"
+					onClick={() => void pay()}
+					disabled={busy || disabled}
+				>
 					{busy ? "…" : t("payWithChapa")}
 				</Button>
 			</div>
