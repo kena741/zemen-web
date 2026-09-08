@@ -227,7 +227,7 @@ export default function ProviderBookingsPage() {
 					) : null}
 				</div>
 
-				<div className="-mx-4 mt-3 flex h-[38px] gap-2 overflow-x-auto px-4 scrollbar-none">
+				<div className="-mx-4 mt-3 flex h-9.5 gap-2 overflow-x-auto px-4 scrollbar-none">
 					{filters.map((f) => {
 						const active = filter === f.id;
 						return (
@@ -270,7 +270,7 @@ export default function ProviderBookingsPage() {
 							setDateOpen((v) => !v);
 						}}
 						className={cn(
-							"flex flex-[2] items-center gap-1.5 rounded-[10px] border bg-white px-2.5 py-2.5 text-left text-xs font-medium",
+							"flex flex-2 items-center gap-1.5 rounded-[10px] border bg-white px-2.5 py-2.5 text-left text-xs font-medium",
 							dateFrom && dateTo
 								? "border-primary/45 text-primary"
 								: "border-black/10 text-[#525252]",

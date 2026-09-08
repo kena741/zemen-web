@@ -59,7 +59,7 @@ export function BookingGridCard({
 				className,
 			)}
 		>
-			<div className="relative aspect-[4/3] w-full bg-muted">
+			<div className="relative aspect-4/3 w-full bg-muted">
 				{image && !imgFailed ? (
 					// eslint-disable-next-line @next/next/no-img-element
 					<img
@@ -107,9 +107,9 @@ export function UpcomingBookingCard({ booking }: { booking: Booking }) {
 	return (
 		<Link
 			href={`/provider/bookings/${booking.id}`}
-			className="relative flex h-[200px] w-[220px] shrink-0 flex-col overflow-hidden sm:w-[260px]"
+			className="relative flex h-50 w-55 shrink-0 flex-col overflow-hidden sm:w-65"
 		>
-			<div className="h-[140px] w-full overflow-hidden rounded-[10px] bg-muted">
+			<div className="h-35 w-full overflow-hidden rounded-[10px] bg-muted">
 				{image && !imgFailed ? (
 					// eslint-disable-next-line @next/next/no-img-element
 					<img
@@ -124,7 +124,7 @@ export function UpcomingBookingCard({ booking }: { booking: Booking }) {
 					</div>
 				)}
 			</div>
-			<div className="absolute inset-x-0 bottom-2 flex h-[64px] flex-col justify-evenly rounded-b-xl bg-white px-2 py-1.5">
+			<div className="absolute inset-x-0 bottom-2 flex h-16 flex-col justify-evenly rounded-b-xl bg-white px-2 py-1.5">
 				<p className="line-clamp-1 text-sm font-semibold text-[#525252]">
 					{bookingTitle(booking)}
 				</p>
@@ -134,7 +134,7 @@ export function UpcomingBookingCard({ booking }: { booking: Booking }) {
 					</p>
 					<p
 						className={cn(
-							"max-w-[100px] truncate text-right text-xs font-semibold",
+							"max-w-25 truncate text-right text-xs font-semibold",
 							bookingListStatusClass(booking.status),
 						)}
 					>
@@ -171,7 +171,7 @@ export function UpcomingListCard({
 			className="block overflow-hidden rounded-xl bg-white"
 		>
 			<div className="relative">
-				<div className="aspect-[2/1] w-full bg-muted sm:h-[140px] sm:aspect-auto">
+				<div className="aspect-2/1 w-full bg-muted sm:h-35 sm:aspect-auto">
 					{image && !imgFailed ? (
 						// eslint-disable-next-line @next/next/no-img-element
 						<img

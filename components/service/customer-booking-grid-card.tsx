@@ -53,7 +53,7 @@ export function CustomerBookingGridCard({
 				className,
 			)}
 		>
-			<div className="relative aspect-[4/3] w-full bg-muted">
+			<div className="relative aspect-4/3 w-full bg-muted">
 				{image && !imgFailed ? (
 					// eslint-disable-next-line @next/next/no-img-element
 					<img

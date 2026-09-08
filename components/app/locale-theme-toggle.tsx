@@ -20,7 +20,7 @@ function SegmentedControl({
 			role="group"
 			aria-label={ariaLabel}
 			className={cn(
-				"inline-flex items-center rounded-full bg-black/[0.04] p-0.5 dark:bg-white/10",
+				"inline-flex items-center rounded-full bg-black/4 p-0.5 dark:bg-white/10",
 				className,
 			)}
 		>
@@ -94,7 +94,7 @@ export function LocaleThemeToggle({
 						selected={locale === "am"}
 						onClick={() => setLocale("am")}
 						ariaLabel="አማርኛ"
-						className="min-w-[2.5rem]"
+						className="min-w-10"
 					>
 						አማ
 					</SegmentButton>
@@ -102,7 +102,7 @@ export function LocaleThemeToggle({
 						selected={locale === "en"}
 						onClick={() => setLocale("en")}
 						ariaLabel="English"
-						className="min-w-[2.5rem]"
+						className="min-w-10"
 					>
 						EN
 					</SegmentButton>

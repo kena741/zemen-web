@@ -233,7 +233,7 @@ export default function ServiceDetailPage() {
 	return (
 		<div className="mx-auto max-w-lg bg-white pb-28 md:max-w-2xl md:pb-10">
 			{/* Image header — full bleed like mobile */}
-			<div className="relative h-[280px] w-full bg-muted sm:h-[320px]">
+			<div className="relative h-70 w-full bg-muted sm:h-80">
 				{image && !imgFailed ? (
 					// eslint-disable-next-line @next/next/no-img-element
 					<img

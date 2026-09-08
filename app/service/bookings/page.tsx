@@ -154,7 +154,7 @@ export default function CustomerBookingsPage() {
 				</div>
 
 				<div className="flex gap-2">
-					<label className="relative flex h-12 w-[88px] shrink-0 items-center gap-1.5 rounded-md bg-white px-2 text-xs font-medium text-foreground">
+					<label className="relative flex h-12 w-22 shrink-0 items-center gap-1.5 rounded-md bg-white px-2 text-xs font-medium text-foreground">
 						<CalendarIcon className="size-3.5 shrink-0 text-muted-foreground" />
 						<span className="truncate">
 							{date
@@ -172,7 +172,7 @@ export default function CustomerBookingsPage() {
 						/>
 					</label>
 
-					<label className="relative flex h-12 min-w-0 flex-[6] items-center gap-1.5 rounded-md bg-white px-2.5 text-sm">
+					<label className="relative flex h-12 min-w-0 flex-6 items-center gap-1.5 rounded-md bg-white px-2.5 text-sm">
 						<FilterIcon className="size-4 shrink-0 text-muted-foreground" />
 						<select
 							value={filter}
@@ -192,7 +192,7 @@ export default function CustomerBookingsPage() {
 					<button
 						type="button"
 						onClick={() => setNewest((v) => !v)}
-						className="flex h-12 min-w-0 flex-[4] items-center gap-1.5 rounded-md bg-white px-2.5 text-sm font-medium"
+						className="flex h-12 min-w-0 flex-4 items-center gap-1.5 rounded-md bg-white px-2.5 text-sm font-medium"
 					>
 						{newest ? (
 							<ArrowDownIcon className="size-4 shrink-0 text-muted-foreground" />

@@ -144,7 +144,7 @@ function LoginForm() {
 			</header>
 
 			<div className="relative z-10 flex flex-1 items-center justify-center px-4 py-6 sm:px-6 sm:py-8">
-				<div className="w-full max-w-[25rem] overflow-hidden rounded-2xl border border-black/5 bg-white shadow-[0_15px_35px_rgba(23,23,23,0.08),0_5px_15px_rgba(0,0,0,0.04)] sm:rounded-xl">
+				<div className="w-full max-w-100 overflow-hidden rounded-2xl border border-black/5 bg-white shadow-[0_15px_35px_rgba(23,23,23,0.08),0_5px_15px_rgba(0,0,0,0.04)] sm:rounded-xl">
 					<div className="px-5 py-7 sm:px-8 sm:py-8">
 						<h1 className="text-center text-[20px] font-semibold tracking-tight text-foreground sm:text-[22px]">
 							{t("signInToAccount")}

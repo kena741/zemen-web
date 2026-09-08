@@ -308,7 +308,7 @@ export default function CustomerBookingDetailPage() {
 			) : null}
 
 			<div className="overflow-hidden rounded-xl bg-white">
-				<div className="relative h-[180px] w-full bg-muted">
+				<div className="relative h-45 w-full bg-muted">
 					{image ? (
 						// eslint-disable-next-line @next/next/no-img-element
 						<img

@@ -87,7 +87,7 @@ function MenuItem({
 			className="flex items-center gap-3 px-4 py-3.5 transition-colors hover:bg-muted/40"
 		>
 			<Icon
-				className={`size-[22px] shrink-0 ${danger ? "text-destructive" : "text-foreground"}`}
+				className={`size-5.5 shrink-0 ${danger ? "text-destructive" : "text-foreground"}`}
 				strokeWidth={1.75}
 			/>
 			<span
@@ -217,7 +217,7 @@ export default function ProviderProfilePage() {
 							src={provider?.profileImage}
 							name={provider?.fullName ?? user?.name}
 							size="lg"
-							className="size-[90px] text-2xl"
+							className="size-22.5 text-2xl"
 						/>
 						<Link
 							href="/provider/profile/edit"
@@ -357,7 +357,7 @@ export default function ProviderProfilePage() {
 				<MenuGroup title={t("profileAppSettings")}>
 					<div className="flex items-center gap-3 px-4 py-3.5">
 						<PaletteIcon
-							className="size-[22px] shrink-0 text-foreground"
+							className="size-5.5 shrink-0 text-foreground"
 							strokeWidth={1.75}
 						/>
 						<span className="min-w-0 flex-1 text-sm">{t("theme")}</span>
@@ -372,7 +372,7 @@ export default function ProviderProfilePage() {
 					<Divider />
 					<div className="flex items-center gap-3 px-4 py-3.5">
 						<GlobeIcon
-							className="size-[22px] shrink-0 text-foreground"
+							className="size-5.5 shrink-0 text-foreground"
 							strokeWidth={1.75}
 						/>
 						<span className="min-w-0 flex-1 text-sm">{t("language")}</span>
@@ -392,7 +392,7 @@ export default function ProviderProfilePage() {
 						className="flex items-center gap-3 px-4 py-3.5 transition-colors hover:bg-muted/40"
 					>
 						<MailIcon
-							className="size-[22px] shrink-0 text-foreground"
+							className="size-5.5 shrink-0 text-foreground"
 							strokeWidth={1.75}
 						/>
 						<span className="min-w-0 flex-1 text-sm">{t("contactUs")}</span>
@@ -419,7 +419,7 @@ export default function ProviderProfilePage() {
 						onClick={onDeleteAccount}
 						className="flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors hover:bg-muted/40"
 					>
-						<Trash2Icon className="size-[22px] text-destructive" strokeWidth={1.75} />
+						<Trash2Icon className="size-5.5 text-destructive" strokeWidth={1.75} />
 						<span className="text-sm text-destructive">{t("deleteAccount")}</span>
 					</button>
 				</div>
@@ -430,7 +430,7 @@ export default function ProviderProfilePage() {
 						onClick={logout}
 						className="flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors hover:bg-muted/40"
 					>
-						<LogOutIcon className="size-[22px] text-destructive" strokeWidth={1.75} />
+						<LogOutIcon className="size-5.5 text-destructive" strokeWidth={1.75} />
 						<span className="text-sm text-destructive">{t("signOut")}</span>
 					</button>
 				</div>
