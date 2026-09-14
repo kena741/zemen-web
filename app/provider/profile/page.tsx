@@ -202,12 +202,12 @@ export default function ProviderProfilePage() {
 		<div className="mx-auto max-w-3xl">
 			<ProviderMobileTabBar title={t("providerProfileMy")} />
 
-			<div className="hidden items-start justify-between gap-3 lg:flex">
-				<div>
+			<div className="flex items-start justify-between gap-3 px-4 pt-2 lg:px-0 lg:pt-0">
+				<div className="hidden lg:block">
 					<p className="admin-eyebrow">{t("provider")}</p>
 					<h1 className="admin-page-title mt-1">{t("profileTitle")}</h1>
 				</div>
-				<LocaleThemeToggle />
+				<LocaleThemeToggle className="ml-auto" />
 			</div>
 
 			<div className="px-4 pb-8 lg:px-0 lg:pt-6">
@@ -354,6 +354,17 @@ export default function ProviderProfilePage() {
 					/>
 				</MenuGroup>
 
+				<MenuGroup title={t("language")}>
+					<div className="flex items-center gap-3 px-4 py-3.5">
+						<GlobeIcon
+							className="size-5.5 shrink-0 text-foreground"
+							strokeWidth={1.75}
+						/>
+						<span className="min-w-0 flex-1 text-sm">{t("language")}</span>
+						<LocaleThemeToggle mode="locale" />
+					</div>
+				</MenuGroup>
+
 				<MenuGroup title={t("profileAppSettings")}>
 					<div className="flex items-center gap-3 px-4 py-3.5">
 						<PaletteIcon
@@ -370,15 +381,6 @@ export default function ProviderProfilePage() {
 						label={t("profileChangePassword")}
 					/>
 					<Divider />
-					<div className="flex items-center gap-3 px-4 py-3.5">
-						<GlobeIcon
-							className="size-5.5 shrink-0 text-foreground"
-							strokeWidth={1.75}
-						/>
-						<span className="min-w-0 flex-1 text-sm">{t("language")}</span>
-						<LocaleThemeToggle mode="locale" />
-					</div>
-					<Divider />
 					<MenuItem
 						href="/legal/about"
 						icon={InfoIcon}
@@ -387,17 +389,11 @@ export default function ProviderProfilePage() {
 				</MenuGroup>
 
 				<MenuGroup title={t("providerHelpSupport")}>
-					<a
-						href={`mailto:${SUPPORT_EMAIL}`}
-						className="flex items-center gap-3 px-4 py-3.5 transition-colors hover:bg-muted/40"
-					>
-						<MailIcon
-							className="size-5.5 shrink-0 text-foreground"
-							strokeWidth={1.75}
-						/>
-						<span className="min-w-0 flex-1 text-sm">{t("contactUs")}</span>
-						<ChevronRightIcon className="size-4 shrink-0 text-muted-foreground" />
-					</a>
+					<MenuItem
+						href="/provider/contact"
+						icon={MailIcon}
+						label={t("contactUs")}
+					/>
 					<Divider />
 					<div className="px-4 py-3">
 						<TelegramLink className="w-full justify-start" />
