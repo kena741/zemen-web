@@ -136,7 +136,6 @@ export async function signUpProvider(
 			lastName: input.lastName.trim(),
 			userName,
 			phoneNumber: phone,
-			country_code: input.countryCode || "+251",
 			address: input.address?.trim() || "",
 			userType: "Provider",
 			active: true,

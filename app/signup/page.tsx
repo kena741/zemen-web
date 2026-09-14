@@ -10,16 +10,11 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import {
-	homePathForMode,
-	type AppMode,
-} from "@/lib/brand";
+import { type AppMode } from "@/lib/brand";
 import { useLocale } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
-import { syntheticEmailFromPhone } from "@/lib/synthetic-email";
 import {
 	finishSignupLogin,
-	signUpCustomer,
 	signUpProvider,
 } from "@/services/auth/signupApi";
 import { useAuth } from "@/store/useAuth";
@@ -61,37 +56,25 @@ function SignupForm() {
 			return;
 		}
 
-		if (mode === "service" && phone && !email) {
+		if (mode === "service") {
+			sessionStorage.setItem(
+				"zemen_signup_draft",
+				JSON.stringify({
+					firstName,
+					lastName,
+					email: email.trim(),
+					phone,
+					password,
+				}),
+			);
 			router.push(
-				`/verify-phone?mode=service&signup=1&phone=${encodeURIComponent(phone)}&firstName=${encodeURIComponent(firstName)}&lastName=${encodeURIComponent(lastName)}&password=${encodeURIComponent(password)}`,
+				`/verify-phone?mode=service&signup=1&phone=${encodeURIComponent(phone)}`,
 			);
 			return;
 		}
 
 		setBusy(true);
 		try {
-			if (mode === "service") {
-				const result = await signUpCustomer({
-					firstName,
-					lastName,
-					email,
-					phone,
-					password,
-					phoneVerified: Boolean(phone && !email),
-				});
-				if (!result.userId) {
-					setError(result.error);
-					return;
-				}
-				const loginEmail =
-					email.trim() || syntheticEmailFromPhone(phone) || "";
-				await finishSignupLogin(loginEmail, password, "service");
-				const ok = await login(loginEmail, password, "service");
-				if (ok) router.replace(homePathForMode("service"));
-				else router.replace("/login");
-				return;
-			}
-
 			const result = await signUpProvider({
 				firstName,
 				lastName,

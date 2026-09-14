@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 
 import { AuthShell } from "@/components/auth/auth-shell";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -18,6 +18,27 @@ import {
 } from "@/services/auth/signupApi";
 import { resetPasswordByPhone } from "@/services/auth/passwordRecoveryApi";
 import { useAuth } from "@/store/useAuth";
+
+interface SignupDraft {
+	firstName: string;
+	lastName: string;
+	email: string;
+	phone: string;
+	password: string;
+}
+
+function readSignupDraft(phoneFromQuery: string): SignupDraft | null {
+	try {
+		const raw = sessionStorage.getItem("zemen_signup_draft");
+		if (!raw) return null;
+		const draft = JSON.parse(raw) as SignupDraft;
+		if (!draft.phone || !draft.password) return null;
+		if (phoneFromQuery && draft.phone !== phoneFromQuery) return null;
+		return draft;
+	} catch {
+		return null;
+	}
+}
 
 function VerifyPhoneForm() {
 	const search = useSearchParams();
@@ -37,6 +58,7 @@ function VerifyPhoneForm() {
 	const [newPassword, setNewPassword] = useState("");
 	const [error, setError] = useState<string | null>(null);
 	const [busy, setBusy] = useState(false);
+	const [sentOnce, setSentOnce] = useState(false);
 
 	async function sendCode() {
 		setBusy(true);
@@ -48,7 +70,25 @@ function VerifyPhoneForm() {
 			return;
 		}
 		setVerificationId(result.verificationId ?? null);
+		setSentOnce(true);
 	}
+
+	useEffect(() => {
+		if (!isSignup || !phone || sentOnce) return;
+		setSentOnce(true);
+		void (async () => {
+			setBusy(true);
+			setError(null);
+			const result = await sendPhoneOtp(phone);
+			setBusy(false);
+			if (!result.success) {
+				setError(result.error ?? t("commonError"));
+				setSentOnce(false);
+				return;
+			}
+			setVerificationId(result.verificationId ?? null);
+		})();
+	}, [isSignup, phone, sentOnce, t]);
 
 	async function verify() {
 		if (!verificationId) return;
@@ -79,11 +119,22 @@ function VerifyPhoneForm() {
 		}
 
 		if (isSignup) {
+			const draft = readSignupDraft(phone);
+			const signupFirst = draft?.firstName || firstName;
+			const signupLast = draft?.lastName || lastName;
+			const signupPassword = draft?.password || password;
+			const signupEmail = draft?.email?.trim() || "";
+			if (!signupFirst || !signupLast || !signupPassword) {
+				setBusy(false);
+				setError(t("commonError"));
+				return;
+			}
 			const signup = await signUpCustomer({
-				firstName,
-				lastName,
+				firstName: signupFirst,
+				lastName: signupLast,
+				email: signupEmail || undefined,
 				phone,
-				password,
+				password: signupPassword,
 				phoneVerified: true,
 			});
 			if (!signup.userId) {
@@ -91,14 +142,15 @@ function VerifyPhoneForm() {
 				setError(signup.error);
 				return;
 			}
-			const email = syntheticEmailFromPhone(phone);
+			const email = signupEmail || syntheticEmailFromPhone(phone);
 			if (!email) {
 				setBusy(false);
 				setError(t("invalidPhone"));
 				return;
 			}
-			await finishSignupLogin(email, password, "service");
-			const ok = await login(email, password, "service");
+			sessionStorage.removeItem("zemen_signup_draft");
+			await finishSignupLogin(email, signupPassword, "service");
+			const ok = await login(email, signupPassword, "service");
 			setBusy(false);
 			router.replace(ok ? homePathForMode("service") : "/login");
 			return;
