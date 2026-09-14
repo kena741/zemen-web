@@ -16,6 +16,7 @@ export interface BookingServiceSummary {
 	billingInterval?: string | null;
 	billingIntervalCount?: number | null;
 	categoryName?: string | null;
+	subCategoryName?: string | null;
 	reviewCount?: number | null;
 	reviewSum?: number | null;
 }
@@ -157,6 +158,14 @@ function parseService(
 		categoryRaw && typeof categoryRaw === "object" && !Array.isArray(categoryRaw)
 			? (categoryRaw as Record<string, unknown>)
 			: null;
+	const subCategoryRaw =
+		map.subCategoryModel ?? map.sub_category_model ?? map.subCategory;
+	const subCategoryMap =
+		subCategoryRaw &&
+		typeof subCategoryRaw === "object" &&
+		!Array.isArray(subCategoryRaw)
+			? (subCategoryRaw as Record<string, unknown>)
+			: null;
 
 	const reviewCount = Number(map.reviewCount ?? map.review_count);
 	const reviewSum = Number(map.reviewSum ?? map.review_sum);
@@ -174,6 +183,10 @@ function parseService(
 		categoryName:
 			asString(categoryMap?.categoryName ?? categoryMap?.category_name) ??
 			asString(map.categoryName ?? map.category_name),
+		subCategoryName:
+			asString(
+				subCategoryMap?.subCategoryName ?? subCategoryMap?.sub_category_name,
+			) ?? asString(map.subCategoryName ?? map.sub_category_name),
 		reviewCount: Number.isFinite(reviewCount) ? reviewCount : null,
 		reviewSum: Number.isFinite(reviewSum) ? reviewSum : null,
 	};

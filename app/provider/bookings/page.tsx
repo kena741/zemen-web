@@ -12,8 +12,9 @@ import { BookingGridCard } from "@/components/provider/booking-grid-card";
 import { ProviderMobileTabBar } from "@/components/provider/mobile-chrome";
 import { AppLoading } from "@/components/ui/app-loading";
 import { Input } from "@/components/ui/input";
-import { BOOKING_STATUS } from "@/lib/booking-status";
+import { BOOKING_STATUS, PROVIDER_BOOKING_STATUS_FILTERS } from "@/lib/booking-status";
 import { useLocale } from "@/lib/i18n";
+import type { MessageKey } from "@/lib/i18n/messages/en";
 import { cn } from "@/lib/utils";
 import type { Booking } from "@/services/bookings/types";
 import { useAuth } from "@/store/useAuth";
@@ -84,17 +85,27 @@ export default function ProviderBookingsPage() {
 	const [draftTo, setDraftTo] = useState("");
 	const [dateOpen, setDateOpen] = useState(false);
 
-	const filters = useMemo(
-		() => [
+	const filters = useMemo(() => {
+		const labelKey: Record<string, MessageKey> = {
+			[BOOKING_STATUS.pending]: "statusPending",
+			[BOOKING_STATUS.accepted]: "statusAccepted",
+			[BOOKING_STATUS.onTheWay]: "statusOnTheWay",
+			[BOOKING_STATUS.inProgress]: "statusInProgress",
+			[BOOKING_STATUS.hold]: "statusHold",
+			[BOOKING_STATUS.completed]: "statusCompleted",
+			[BOOKING_STATUS.pendingApproval]: "statusPendingApproval",
+			[BOOKING_STATUS.pendingExtraPayment]: "statusPendingExtraPayment",
+			[BOOKING_STATUS.rejected]: "statusRejected",
+			[BOOKING_STATUS.cancelled]: "statusCancelled",
+		};
+		return [
 			{ id: "all", label: t("commonAll") },
-			{ id: BOOKING_STATUS.pending, label: t("statusPending") },
-			{ id: BOOKING_STATUS.accepted, label: t("statusAccepted") },
-			{ id: BOOKING_STATUS.inProgress, label: t("statusInProgress") },
-			{ id: BOOKING_STATUS.completed, label: t("statusCompleted") },
-			{ id: BOOKING_STATUS.rejected, label: t("statusRejected") },
-		],
-		[t],
-	);
+			...PROVIDER_BOOKING_STATUS_FILTERS.map((id) => ({
+				id,
+				label: t(labelKey[id]),
+			})),
+		];
+	}, [t]);
 
 	useEffect(() => {
 		if (!nearest || origin) return;
@@ -113,16 +124,14 @@ export default function ProviderBookingsPage() {
 	const filtered = useMemo(() => {
 		let list = bookings;
 		if (filter !== "all") {
-			if (filter === BOOKING_STATUS.inProgress) {
-				list = list.filter(
-					(b) =>
-						b.status === BOOKING_STATUS.inProgress ||
-						b.status === BOOKING_STATUS.onTheWay ||
-						b.status === BOOKING_STATUS.hold,
-				);
-			} else {
-				list = list.filter((b) => b.status === filter);
-			}
+			const key = filter.replace(/[\s_-]+/g, "").toLowerCase();
+			list = list.filter((b) => {
+				const status = (b.status ?? "").replace(/[\s_-]+/g, "").toLowerCase();
+				if (status === key) return true;
+				// canceled / cancelled parity
+				if (key === "cancelled" && status === "canceled") return true;
+				return false;
+			});
 		}
 		const q = query.trim().toLowerCase();
 		if (q) {

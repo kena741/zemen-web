@@ -9,10 +9,25 @@ export const BOOKING_STATUS = {
 	completed: "completed",
 	pendingExtraPayment: "pending_extra_payment",
 	pendingApproval: "pending_approval",
+	cancelled: "cancelled",
 } as const;
 
 export type BookingStatus =
 	(typeof BOOKING_STATUS)[keyof typeof BOOKING_STATUS];
+
+/** Provider filter chips — mirrors mobile Constant.statusModel fallback (+ all DB statuses). */
+export const PROVIDER_BOOKING_STATUS_FILTERS: BookingStatus[] = [
+	BOOKING_STATUS.pending,
+	BOOKING_STATUS.accepted,
+	BOOKING_STATUS.onTheWay,
+	BOOKING_STATUS.inProgress,
+	BOOKING_STATUS.hold,
+	BOOKING_STATUS.completed,
+	BOOKING_STATUS.pendingApproval,
+	BOOKING_STATUS.pendingExtraPayment,
+	BOOKING_STATUS.rejected,
+	BOOKING_STATUS.cancelled,
+];
 
 export const BOOKING_STATUS_LABEL: Record<string, string> = {
 	pending: "Pending",
@@ -24,6 +39,8 @@ export const BOOKING_STATUS_LABEL: Record<string, string> = {
 	completed: "Completed",
 	pending_extra_payment: "Extra payment",
 	pending_approval: "Pending approval",
+	cancelled: "Cancelled",
+	canceled: "Cancelled",
 };
 
 export function formatBookingStatus(status: string | null | undefined): string {

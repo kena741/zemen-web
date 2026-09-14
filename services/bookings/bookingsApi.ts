@@ -14,7 +14,7 @@ async function fetchServicesByIds(
 
 	const { data, error } = await getSupabase()
 		.from("service")
-		.select("id, serviceName, price, duration, serviceImage")
+		.select("id, serviceName, price, duration, serviceImage, categoryModel, subCategoryModel")
 		.in("id", unique);
 
 	if (error) {
@@ -26,6 +26,14 @@ async function fetchServicesByIds(
 		const r = row as Record<string, unknown>;
 		const id = String(r.id ?? "");
 		if (!id) continue;
+		const categoryModel =
+			r.categoryModel && typeof r.categoryModel === "object"
+				? (r.categoryModel as Record<string, unknown>)
+				: null;
+		const subCategoryModel =
+			r.subCategoryModel && typeof r.subCategoryModel === "object"
+				? (r.subCategoryModel as Record<string, unknown>)
+				: null;
 		map.set(id, {
 			id,
 			serviceName: r.serviceName != null ? String(r.serviceName) : null,
@@ -34,6 +42,14 @@ async function fetchServicesByIds(
 			serviceImage: Array.isArray(r.serviceImage)
 				? r.serviceImage.map(String)
 				: [],
+			categoryName:
+				categoryModel?.categoryName != null
+					? String(categoryModel.categoryName)
+					: null,
+			subCategoryName:
+				subCategoryModel?.subCategoryName != null
+					? String(subCategoryModel.subCategoryName)
+					: null,
 		});
 	}
 	return map;
@@ -141,7 +157,8 @@ export async function assignBookingWorker(params: {
 	const payload: Record<string, unknown> = {
 		status: "accepted",
 		providerMySelf: params.providerMySelf,
-		handymanId: params.providerMySelf ? null : (params.handymanId ?? null),
+		// DB column is snake_case (mobile writes handyman_id)
+		handyman_id: params.providerMySelf ? null : (params.handymanId ?? null),
 	};
 
 	const { data, error } = await getSupabase()
