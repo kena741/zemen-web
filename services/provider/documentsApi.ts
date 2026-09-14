@@ -6,6 +6,15 @@ export interface IdentityDocument {
 	isRequired: boolean;
 }
 
+export type VerifyDocStatus = "required" | "pending" | "approved" | "rejected";
+
+export interface ProviderVerifyDoc {
+	documentId: string;
+	isVerify: boolean | null;
+	documentImage: string | null;
+	status: VerifyDocStatus;
+}
+
 function isSignupIdentityDocument(name: string): boolean {
 	const lower = name.toLowerCase();
 	return lower.includes("national") && lower.includes("id");
@@ -20,6 +29,13 @@ function sortIdentityDocs(a: IdentityDocument, b: IdentityDocument): number {
 	};
 	const diff = rank(a.name) - rank(b.name);
 	return diff !== 0 ? diff : a.name.localeCompare(b.name);
+}
+
+function resolveStatus(isVerify: boolean | null, hasRow: boolean): VerifyDocStatus {
+	if (!hasRow) return "required";
+	if (isVerify === true) return "approved";
+	if (isVerify === false) return "pending";
+	return "pending";
 }
 
 export async function fetchSignupIdentityDocuments(): Promise<{
@@ -50,22 +66,30 @@ export async function fetchSignupIdentityDocuments(): Promise<{
 }
 
 export async function fetchProviderVerifyDocuments(providerId: string): Promise<{
-	byDocumentId: Record<string, { isVerify: boolean }>;
+	byDocumentId: Record<string, ProviderVerifyDoc>;
 	error: string | null;
 }> {
 	const { data, error } = await getSupabase()
 		.from("verify_documents")
-		.select("documentId, isVerify")
+		.select("documentId, isVerify, documentImage")
 		.eq("providerId", providerId);
 
 	if (error) return { byDocumentId: {}, error: error.message };
 
-	const byDocumentId: Record<string, { isVerify: boolean }> = {};
+	const byDocumentId: Record<string, ProviderVerifyDoc> = {};
 	for (const row of data ?? []) {
 		const r = row as Record<string, unknown>;
 		const id = String(r.documentId ?? "");
 		if (!id) continue;
-		byDocumentId[id] = { isVerify: r.isVerify === true };
+		const isVerify =
+			r.isVerify == null ? null : Boolean(r.isVerify);
+		byDocumentId[id] = {
+			documentId: id,
+			isVerify,
+			documentImage:
+				r.documentImage != null ? String(r.documentImage) : null,
+			status: resolveStatus(isVerify, true),
+		};
 	}
 	return { byDocumentId, error: null };
 }
