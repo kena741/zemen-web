@@ -242,16 +242,55 @@ export default function ServiceDetailPage() {
 						/>
 						<DetailRow label={t("commonAddress")} value={service.address} />
 						<DetailRow
+							label={t("providerApprovalStatus")}
+							value={
+								service.approved === true
+									? t("statusApproved")
+									: service.approved === false
+										? t("providerPendingApproval")
+										: t("commonStatus")
+							}
+						/>
+						<DetailRow
+							label={t("pricingOneTime")}
+							value={
+								service.pricingType === "RECURRING"
+									? `${t("pricingRecurring")} · ${service.billingInterval ?? "MONTH"} × ${service.billingIntervalCount || 1}`
+									: t("pricingOneTime")
+							}
+						/>
+						{service.pricingType !== "RECURRING" ? (
+							<DetailRow
+								label={t("providerPrePaymentPercent")}
+								value={
+									service.prePayment
+										? `${service.prePaymentPercent ?? 100}%`
+										: t("commonOptional")
+								}
+							/>
+						) : null}
+						<DetailRow
+							label={t("providerAllowCustomPrice")}
+							value={service.allowsCustomOffer ? t("commonYes") : t("commonNo")}
+						/>
+						<DetailRow
 							label={t("serviceReviews")}
 							value={
 								<Link
 									href={`/provider/services/${service.id}/reviews`}
-									className="text-primary hover:underline"
+									className="inline-flex items-center gap-1 text-primary hover:underline"
 								>
-									{t("providerReviewsCount", {
-										rating: service.reviewSum ?? "0",
-										count: service.reviewCount ?? "0",
-									})}
+									<StarIcon className="size-3.5 fill-amber-400 text-amber-400" />
+									{(() => {
+										const count = Number(service.reviewCount ?? 0) || 0;
+										const sum = Number(service.reviewSum ?? 0) || 0;
+										const avg =
+											count > 0 ? Math.round((sum / count) * 10) / 10 : 0;
+										return t("providerReviewsAvg", {
+											rating: avg.toFixed(1),
+											count: String(count),
+										});
+									})()}
 								</Link>
 							}
 						/>

@@ -273,7 +273,12 @@ export async function upsertService(params: {
 		description: params.input.description.trim(),
 		duration: "00:00",
 		feature: params.input.feature ?? false,
-		prePayment: true,
+		prePayment: params.input.prePayment ?? true,
+		prePaymentPercent:
+			params.input.prePaymentPercent != null
+				? Number(params.input.prePaymentPercent)
+				: 100,
+		allows_custom_offer: Boolean(params.input.allowsCustomOffer),
 		createdAt: params.input.createdAt || new Date().toISOString(),
 		serviceImage: serviceImages,
 		likedUser: params.input.likedUser ?? [],

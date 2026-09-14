@@ -122,6 +122,7 @@ export default function ProviderServicesPage() {
 							key={service.id}
 							service={service}
 							compact
+							showActiveToggle={filter !== "archived"}
 							providerName={user?.name}
 							providerImage={user?.provider?.profileImage}
 						/>

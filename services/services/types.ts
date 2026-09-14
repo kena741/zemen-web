@@ -77,6 +77,9 @@ export interface ServiceFormInput {
 	pricingType?: string;
 	billingInterval?: string;
 	billingIntervalCount?: number;
+	prePayment?: boolean;
+	prePaymentPercent?: number | null;
+	allowsCustomOffer?: boolean;
 }
 
 function asString(value: unknown): string | null {

@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 import { XIcon } from "lucide-react";
 
+import { PlacesAddressField } from "@/components/addresses/places-address-field";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,6 +15,7 @@ import {
 	type RecurringPaymentSettings,
 	RECURRING_PAYMENT_SETTINGS_DEFAULT,
 } from "@/lib/recurring";
+import { useLocale } from "@/lib/i18n";
 import { fetchRecurringPaymentSettings } from "@/services/config/recurringSettingsApi";
 import {
 	fetchCategories,
@@ -49,6 +51,7 @@ export function ServiceForm({
 	initial,
 	onSuccess,
 }: ServiceFormProps) {
+	const { t } = useLocale();
 	const [categories, setCategories] = useState<ServiceCategory[]>([]);
 	const [subCategories, setSubCategories] = useState<ServiceSubCategory[]>([]);
 	const [serviceName, setServiceName] = useState(initial?.serviceName ?? "");
@@ -62,12 +65,8 @@ export function ServiceForm({
 	);
 	const [description, setDescription] = useState(initial?.description ?? "");
 	const [address, setAddress] = useState(initial?.address ?? "");
-	const [latitude, setLatitude] = useState(
-		initial?.latitude != null ? String(initial.latitude) : "",
-	);
-	const [longitude, setLongitude] = useState(
-		initial?.longitude != null ? String(initial.longitude) : "",
-	);
+	const [latitude, setLatitude] = useState(initial?.latitude ?? 0);
+	const [longitude, setLongitude] = useState(initial?.longitude ?? 0);
 	const [status, setStatus] = useState(initial?.status ?? true);
 	const [pricingType, setPricingType] = useState(
 		initial?.pricingType ?? "ONE_TIME",
@@ -77,6 +76,17 @@ export function ServiceForm({
 	);
 	const [billingIntervalCount, setBillingIntervalCount] = useState(
 		String(initial?.billingIntervalCount ?? 1),
+	);
+	const isRecurring = pricingType === "RECURRING";
+	const [prePaymentPercent, setPrePaymentPercent] = useState(
+		String(
+			initial?.prePaymentPercent != null && initial.prePaymentPercent > 0
+				? initial.prePaymentPercent
+				: 100,
+		),
+	);
+	const [allowsCustomOffer, setAllowsCustomOffer] = useState(
+		initial?.allowsCustomOffer ?? false,
 	);
 	const [existingImages, setExistingImages] = useState<string[]>(
 		initial?.serviceImage ?? [],
@@ -190,6 +200,11 @@ export function ServiceForm({
 		setBusy(true);
 		setError(null);
 
+		const percent = Math.min(
+			100,
+			Math.max(1, Number(prePaymentPercent) || 100),
+		);
+
 		const res = await upsertService({
 			authUserId,
 			isEdit: mode === "edit",
@@ -205,8 +220,8 @@ export function ServiceForm({
 				discount,
 				description,
 				address,
-				latitude: latitude.trim() ? Number(latitude) : 0,
-				longitude: longitude.trim() ? Number(longitude) : 0,
+				latitude,
+				longitude,
 				status,
 				existingImages,
 				newFiles,
@@ -218,6 +233,9 @@ export function ServiceForm({
 				pricingType,
 				billingInterval,
 				billingIntervalCount: Number(billingIntervalCount) || 1,
+				prePayment: !isRecurring,
+				prePaymentPercent: isRecurring ? 100 : percent,
+				allowsCustomOffer,
 			},
 		});
 
@@ -230,7 +248,7 @@ export function ServiceForm({
 	}
 
 	return (
-		<form onSubmit={handleSubmit} className="space-y-5">
+		<form onSubmit={(e) => void handleSubmit(e)} className="space-y-5">
 			{error ? (
 				<Alert variant="destructive">
 					<AlertDescription>{error}</AlertDescription>
@@ -238,19 +256,19 @@ export function ServiceForm({
 			) : null}
 
 			<div className="space-y-1.5">
-				<Label htmlFor="name">Service name</Label>
+				<Label htmlFor="name">{t("providerServiceName")}</Label>
 				<Input
 					id="name"
 					required
 					value={serviceName}
 					onChange={(e) => setServiceName(e.target.value)}
-					placeholder="e.g. Deep house cleaning"
+					placeholder={t("providerServiceNamePlaceholder")}
 				/>
 			</div>
 
 			<div className="grid gap-3 sm:grid-cols-2">
 				<div className="space-y-1.5">
-					<Label htmlFor="category">Category</Label>
+					<Label htmlFor="category">{t("commonCategory")}</Label>
 					<select
 						id="category"
 						required
@@ -262,7 +280,7 @@ export function ServiceForm({
 						}}
 						className="h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
 					>
-						<option value="">Select category</option>
+						<option value="">{t("providerSelectCategory")}</option>
 						{categories.map((c) => (
 							<option key={c.id} value={c.id}>
 								{c.categoryName}
@@ -271,7 +289,7 @@ export function ServiceForm({
 					</select>
 				</div>
 				<div className="space-y-1.5">
-					<Label htmlFor="subcategory">Subcategory</Label>
+					<Label htmlFor="subcategory">{t("providerSubcategory")}</Label>
 					<select
 						id="subcategory"
 						required
@@ -280,7 +298,7 @@ export function ServiceForm({
 						onChange={(e) => setSubCategoryId(e.target.value)}
 						className="h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
 					>
-						<option value="">Select subcategory</option>
+						<option value="">{t("providerSelectSubcategory")}</option>
 						{subCategories.map((s) => (
 							<option key={s.id} value={s.id}>
 								{s.subCategoryName}
@@ -292,7 +310,7 @@ export function ServiceForm({
 
 			<div className="grid gap-3 sm:grid-cols-2">
 				<div className="space-y-1.5">
-					<Label htmlFor="price">Price (ETB)</Label>
+					<Label htmlFor="price">{t("commonPrice")} (ETB)</Label>
 					<Input
 						id="price"
 						type="number"
@@ -302,12 +320,11 @@ export function ServiceForm({
 						value={price}
 						onChange={(e) => setPrice(e.target.value)}
 					/>
-					<p className="text-xs text-muted-foreground">
-						Minimum {SERVICE_CONSTRAINTS.minPrice} ETB
-					</p>
 				</div>
 				<div className="space-y-1.5">
-					<Label htmlFor="discount">Discount % (optional)</Label>
+					<Label htmlFor="discount">
+						{t("commonDiscount")} % ({t("commonOptional")})
+					</Label>
 					<Input
 						id="discount"
 						type="number"
@@ -319,62 +336,88 @@ export function ServiceForm({
 				</div>
 			</div>
 
-			<div className="grid gap-3 sm:grid-cols-2">
-				<div className="space-y-1.5">
-					<Label htmlFor="pricing-type">Pricing</Label>
-					<select
-						id="pricing-type"
-						value={pricingType}
-						onChange={(e) => setPricingType(e.target.value)}
-						className="h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm"
-					>
-						<option value="ONE_TIME">One-time</option>
-						<option value="RECURRING">Recurring</option>
-					</select>
-				</div>
-				{pricingType === "RECURRING" ? (
-					<>
+			<div className="space-y-3 rounded-xl bg-white p-4 shadow-sm ring-1 ring-black/5">
+				<p className="text-sm font-semibold">{t("bookServicePayment")}</p>
+				<div className="grid gap-3 sm:grid-cols-2">
+					<div className="space-y-1.5">
+						<Label htmlFor="pricing-type">{t("pricingOneTime")}</Label>
+						<select
+							id="pricing-type"
+							value={pricingType}
+							onChange={(e) => setPricingType(e.target.value)}
+							className="h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm"
+						>
+							<option value="ONE_TIME">{t("pricingOneTime")}</option>
+							<option value="RECURRING">{t("pricingRecurring")}</option>
+						</select>
+					</div>
+					{isRecurring ? (
+						<>
+							<div className="space-y-1.5">
+								<Label htmlFor="billing-interval">{t("billingInterval")}</Label>
+								<select
+									id="billing-interval"
+									value={billingInterval}
+									onChange={(e) => setBillingInterval(e.target.value)}
+									className="h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm"
+								>
+									{intervalOptions.map((o) => (
+										<option key={o.value} value={o.value}>
+											{o.label}
+										</option>
+									))}
+								</select>
+							</div>
+							<div className="space-y-1.5 sm:col-span-2">
+								<Label htmlFor="billing-interval-count">
+									{t("providerBillingEveryN")}
+								</Label>
+								<Input
+									id="billing-interval-count"
+									type="number"
+									min={1}
+									max={24}
+									value={billingIntervalCount}
+									onChange={(e) => setBillingIntervalCount(e.target.value)}
+								/>
+							</div>
+						</>
+					) : (
 						<div className="space-y-1.5">
-							<Label htmlFor="billing-interval">Billing interval</Label>
-							<select
-								id="billing-interval"
-								value={billingInterval}
-								onChange={(e) => setBillingInterval(e.target.value)}
-								className="h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm"
-							>
-								{intervalOptions.map((o) => (
-									<option key={o.value} value={o.value}>
-										{o.label}
-									</option>
-								))}
-							</select>
-						</div>
-						<div className="space-y-1.5 sm:col-span-2">
-							<Label htmlFor="billing-interval-count">
-								Every N intervals
-							</Label>
+							<Label htmlFor="prepay">{t("providerPrePaymentPercent")}</Label>
 							<Input
-								id="billing-interval-count"
+								id="prepay"
 								type="number"
 								min={1}
-								max={24}
-								value={billingIntervalCount}
-								onChange={(e) => setBillingIntervalCount(e.target.value)}
+								max={100}
+								value={prePaymentPercent}
+								onChange={(e) => setPrePaymentPercent(e.target.value)}
 							/>
+							<p className="text-xs text-muted-foreground">
+								{t("providerPrePaymentHint")}
+							</p>
 						</div>
-					</>
-				) : null}
+					)}
+				</div>
+				<label className="flex items-center gap-2 text-sm">
+					<input
+						type="checkbox"
+						checked={allowsCustomOffer}
+						onChange={(e) => setAllowsCustomOffer(e.target.checked)}
+						className="size-4 rounded border-input"
+					/>
+					{t("providerAllowCustomPrice")}
+				</label>
 			</div>
 
 			<div className="space-y-1.5">
-				<Label htmlFor="description">Description</Label>
+				<Label htmlFor="description">{t("requestDescription")}</Label>
 				<Textarea
 					id="description"
 					required
 					rows={5}
 					value={description}
 					onChange={(e) => setDescription(e.target.value)}
-					placeholder="Describe what’s included…"
 				/>
 				<p className="text-xs text-muted-foreground">
 					{description.trim().length}/{SERVICE_CONSTRAINTS.minDescription} min ·{" "}
@@ -383,42 +426,22 @@ export function ServiceForm({
 			</div>
 
 			<div className="space-y-1.5">
-				<Label htmlFor="address">Address / service area</Label>
-				<Input
-					id="address"
-					required
+				<Label>{t("commonAddress")}</Label>
+				<PlacesAddressField
 					value={address}
-					onChange={(e) => setAddress(e.target.value)}
-					placeholder="Neighborhood, city"
+					required
+					onChange={setAddress}
+					onLocationChange={(loc) => {
+						if (!loc) return;
+						setLatitude(loc.lat);
+						setLongitude(loc.lng);
+					}}
 				/>
-			</div>
-
-			<div className="grid gap-3 sm:grid-cols-2">
-				<div className="space-y-1.5">
-					<Label htmlFor="lat">Latitude (optional)</Label>
-					<Input
-						id="lat"
-						type="number"
-						step="any"
-						value={latitude}
-						onChange={(e) => setLatitude(e.target.value)}
-					/>
-				</div>
-				<div className="space-y-1.5">
-					<Label htmlFor="lng">Longitude (optional)</Label>
-					<Input
-						id="lng"
-						type="number"
-						step="any"
-						value={longitude}
-						onChange={(e) => setLongitude(e.target.value)}
-					/>
-				</div>
 			</div>
 
 			<div className="space-y-2">
 				<div className="flex items-center justify-between gap-2">
-					<Label>Images</Label>
+					<Label>{t("providerServiceImages")}</Label>
 					<span className="text-xs text-muted-foreground">
 						{imageSlotsUsed}/{SERVICE_CONSTRAINTS.maxImages}
 					</span>
@@ -441,7 +464,7 @@ export function ServiceForm({
 								type="button"
 								onClick={() => removeExisting(url)}
 								className="absolute top-1 right-1 rounded-full bg-black/60 p-0.5 text-white"
-								aria-label="Remove image"
+								aria-label={t("commonClear")}
 							>
 								<XIcon className="size-3.5" />
 							</button>
@@ -458,7 +481,7 @@ export function ServiceForm({
 								type="button"
 								onClick={() => removeNew(i)}
 								className="absolute top-1 right-1 rounded-full bg-black/60 p-0.5 text-white"
-								aria-label="Remove image"
+								aria-label={t("commonClear")}
 							>
 								<XIcon className="size-3.5" />
 							</button>
@@ -485,21 +508,21 @@ export function ServiceForm({
 					onChange={(e) => setStatus(e.target.checked)}
 					className="size-4 rounded border-input"
 				/>
-				Active listing
+				{t("providerServiceActiveListing")}
 			</label>
 
 			{mode === "edit" ? (
 				<p className="text-xs text-muted-foreground">
-					Saving edits sets the listing back to pending approval.
+					{t("providerServiceEditPendingHint")}
 				</p>
 			) : null}
 
 			<Button type="submit" disabled={busy} className="w-full sm:w-auto">
 				{busy
-					? "Saving…"
+					? t("commonSaving")
 					: mode === "edit"
-						? "Save changes"
-						: "Create service"}
+						? t("commonSaveChanges")
+						: t("providerAddService")}
 			</Button>
 		</form>
 	);
