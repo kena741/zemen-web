@@ -293,8 +293,17 @@ export default function CustomerBookingDetailPage() {
 		: formatBookingStatus(booking.status);
 	const showOtp = shouldShowCustomerBookingOtp(booking.otp, booking.status);
 
+	const hasActions =
+		showNextCyclePay ||
+		canComplete ||
+		showWalletPay ||
+		canCancel ||
+		canReview ||
+		hasReview ||
+		Boolean(booking.providerId);
+
 	return (
-		<div className="mx-auto max-w-lg px-4 pb-10 pt-4 md:px-6 md:pt-8">
+		<div className="mx-auto flex min-h-[min(100dvh,56rem)] max-w-lg flex-col px-4 pt-4 md:px-6 md:pt-8">
 			<ProfileBackLink
 				href="/service/bookings"
 				label={detailTitle}
@@ -307,258 +316,257 @@ export default function CustomerBookingDetailPage() {
 				</Alert>
 			) : null}
 
-			<div className="overflow-hidden rounded-xl bg-white">
-				<div className="relative h-45 w-full bg-muted">
-					{image ? (
-						// eslint-disable-next-line @next/next/no-img-element
-						<img
-							src={image}
-							alt=""
-							className="size-full object-cover"
-						/>
-					) : (
-						<div className="flex size-full items-center justify-center text-muted-foreground">
-							<ImageIcon className="size-10 opacity-35" />
-						</div>
-					)}
-					{isRecurring ? (
-						<div className="absolute top-2.5 left-2.5">
-							<RecurringBadge
-								interval={booking.service?.billingInterval}
-								count={booking.service?.billingIntervalCount}
+			<div className="flex-1 space-y-4 pb-4">
+				<div className="overflow-hidden rounded-xl bg-white shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
+					<div className="relative aspect-video w-full bg-muted">
+						{image ? (
+							// eslint-disable-next-line @next/next/no-img-element
+							<img
+								src={image}
+								alt=""
+								className="size-full object-cover"
 							/>
-						</div>
-					) : null}
-				</div>
-				<div className="space-y-3 px-2.5 py-3">
-					<div className="flex items-center gap-2">
-						<h1 className="min-w-0 flex-1 truncate text-lg font-bold">
-							{booking.service?.serviceName || t("bookingTitle")}
-						</h1>
-						{isRecurring && daysLeft != null ? (
-							<span className="shrink-0 text-sm font-extrabold text-[#F59E0B]">
-								{daysLeft < 0
-									? t("bookingCycleEnded")
-									: t("bookingDaysLeft", { days: String(daysLeft) })}
-							</span>
-						) : null}
+						) : (
+							<div className="flex size-full items-center justify-center text-muted-foreground">
+								<ImageIcon className="size-10 opacity-35" />
+							</div>
+						)}
 						{isRecurring ? (
-							<RecurringBadge
-								interval={booking.service?.billingInterval}
-								count={booking.service?.billingIntervalCount}
-							/>
+							<div className="absolute top-2.5 left-2.5">
+								<RecurringBadge
+									interval={booking.service?.billingInterval}
+									count={booking.service?.billingIntervalCount}
+								/>
+							</div>
 						) : null}
 					</div>
-
-					{showOtp && booking.otp ? <BookingOtpChip otp={booking.otp} /> : null}
-
-					{address ? (
-						<div className="flex items-start gap-1.5">
-							<MapPinIcon className="mt-0.5 size-5 shrink-0 text-primary" />
-							<p className="text-sm font-semibold leading-snug">{address}</p>
+					<div className="space-y-2.5 px-3.5 py-3.5">
+						<div className="flex items-start gap-2">
+							<h1 className="min-w-0 flex-1 text-lg font-bold leading-snug text-balance">
+								{booking.service?.serviceName || t("bookingTitle")}
+							</h1>
+							{isRecurring && daysLeft != null ? (
+								<span className="shrink-0 pt-0.5 text-sm font-extrabold text-[#F59E0B]">
+									{daysLeft < 0
+										? t("bookingCycleEnded")
+										: t("bookingDaysLeft", { days: String(daysLeft) })}
+								</span>
+							) : null}
 						</div>
-					) : null}
-				</div>
-			</div>
 
-			{status === "rejected" || status === "cancelled" || status === "canceled" ? (
-				<div className="mt-6">
-					<p className="text-base font-bold">{t("bookingReason")}</p>
-					<p className="mt-3 rounded-md bg-destructive/10 px-3 py-3 text-sm font-semibold text-destructive">
-						{booking.reason?.trim() || t("bookingNoReason")}
+						{showOtp && booking.otp ? <BookingOtpChip otp={booking.otp} /> : null}
+
+						{address ? (
+							<div className="flex items-start gap-1.5">
+								<MapPinIcon className="mt-0.5 size-4 shrink-0 text-primary" />
+								<p className="min-w-0 text-sm font-semibold leading-snug wrap-break-word">
+									{address}
+								</p>
+							</div>
+						) : null}
+					</div>
+				</div>
+
+				{status === "rejected" || status === "cancelled" || status === "canceled" ? (
+					<div>
+						<p className="text-base font-bold">{t("bookingReason")}</p>
+						<p className="mt-2 rounded-md bg-destructive/10 px-3 py-3 text-sm font-semibold wrap-break-word text-destructive">
+							{booking.reason?.trim() || t("bookingNoReason")}
+						</p>
+					</div>
+				) : null}
+
+				{offer ? (
+					<p className="rounded-lg bg-muted px-3 py-2 text-xs">
+						{t("bookingCustomOffer")} ·{" "}
+						<span className="capitalize font-medium">{offer.status}</span>
+						{offer.offeredPrice != null
+							? ` · ${formatAmount(offer.offeredPrice)}`
+							: ""}
 					</p>
-				</div>
-			) : null}
+				) : null}
 
-			{offer ? (
-				<p className="mt-4 rounded-lg bg-muted px-3 py-2 text-xs">
-					{t("bookingCustomOffer")} ·{" "}
-					<span className="capitalize font-medium">{offer.status}</span>
-					{offer.offeredPrice != null
-						? ` · ${formatAmount(offer.offeredPrice)}`
-						: ""}
-				</p>
-			) : null}
-
-			<div className="mt-6 space-y-3 rounded-xl bg-white p-4">
-				<Row
-					label={t("bookingWhen")}
-					value={formatDateTime(booking.bookingDate ?? booking.startTime)}
-				/>
-				<Row
-					label={t("bookingAmount")}
-					value={formatAmount(booking.totalAmount ?? booking.subTotal)}
-				/>
-				<Row
-					label={t("bookingPayment")}
-					value={
-						booking.paymentCompleted
-							? t("bookingPaidWith", {
-									type: booking.paymentType || t("commonPaid"),
-								})
-							: booking.paymentType || t("commonUnpaid")
-					}
-				/>
-				{booking.handymanId ? (
+				<div className="divide-y divide-border/70 overflow-hidden rounded-xl bg-white shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
 					<Row
-						label={t("bookingHandyman")}
+						label={t("bookingWhen")}
+						value={formatDateTime(booking.bookingDate ?? booking.startTime)}
+					/>
+					<Row
+						label={t("bookingAmount")}
+						value={formatAmount(booking.totalAmount ?? booking.subTotal)}
+					/>
+					<Row
+						label={t("bookingPayment")}
 						value={
-							<Link
-								href={`/service/bookings/${booking.id}/handyman`}
-								className="text-primary underline"
-							>
-								{t("bookingViewHandyman")}
-							</Link>
+							booking.paymentCompleted
+								? t("bookingPaidWith", {
+										type: booking.paymentType || t("commonPaid"),
+									})
+								: booking.paymentType || t("commonUnpaid")
 						}
 					/>
-				) : null}
-				{booking.currentPeriodEnd ? (
-					<Row
-						label={t("bookingPeriodEnds")}
-						value={formatDateTime(booking.currentPeriodEnd)}
-					/>
-				) : null}
-				{booking.description ? (
-					<Row label={t("bookingNotes")} value={booking.description} />
-				) : null}
-			</div>
+					{booking.handymanId ? (
+						<Row
+							label={t("bookingHandyman")}
+							value={
+								<Link
+									href={`/service/bookings/${booking.id}/handyman`}
+									className="font-semibold text-primary underline-offset-2 hover:underline"
+								>
+									{t("bookingViewHandyman")}
+								</Link>
+							}
+						/>
+					) : null}
+					{booking.currentPeriodEnd ? (
+						<Row
+							label={t("bookingPeriodEnds")}
+							value={formatDateTime(booking.currentPeriodEnd)}
+						/>
+					) : null}
+					{booking.description?.trim() ? (
+						<Row label={t("bookingNotes")} value={booking.description.trim()} />
+					) : null}
+				</div>
 
-			{showNextCyclePay ? (
-				<div className="mt-5 space-y-3 rounded-xl bg-white p-4">
-					<p className="text-sm text-muted-foreground">
-						{t("bookingNextCycleNotice", { period: periodNoun })}
-					</p>
-					{!showNextCycleConfirm ? (
-						<Button
-							className="w-full"
-							disabled={busy}
-							onClick={() => setShowNextCycleConfirm(true)}
-						>
-							{t("bookingPayNextCycleFor", { period: periodNoun })} ·{" "}
-							{formatAmount(nextCycleAmount)}
-						</Button>
-					) : (
-						<div className="space-y-2">
-							<p className="text-sm font-medium">{t("bookingConfirmPayTitle")}</p>
-							<p className="text-xs text-muted-foreground">
-								{formatAmount(nextCycleAmount)}
-							</p>
-							<div className="flex flex-col gap-2 sm:flex-row">
-								<Button
-									className="flex-1"
-									disabled={busy}
-									onClick={() => void onPayNextCycleWallet()}
-								>
-									{busy ? t("bookingPaying") : t("bookingPayWithWallet")}
-								</Button>
-								<Button
-									variant="outline"
-									className="flex-1"
-									disabled={busy}
-									onClick={() => void onPayNextCycleChapa()}
-								>
-									{busy ? t("bookingStarting") : t("bookingPayWithChapa")}
-								</Button>
-							</div>
+				{showNextCyclePay ? (
+					<div className="space-y-3 rounded-xl bg-white p-4 shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
+						<p className="text-sm text-muted-foreground">
+							{t("bookingNextCycleNotice", { period: periodNoun })}
+						</p>
+						{!showNextCycleConfirm ? (
 							<Button
-								variant="ghost"
 								className="w-full"
 								disabled={busy}
-								onClick={() => setShowNextCycleConfirm(false)}
+								onClick={() => setShowNextCycleConfirm(true)}
 							>
+								{t("bookingPayNextCycleFor", { period: periodNoun })} ·{" "}
+								{formatAmount(nextCycleAmount)}
+							</Button>
+						) : (
+							<div className="space-y-2">
+								<p className="text-sm font-medium">{t("bookingConfirmPayTitle")}</p>
+								<p className="text-xs text-muted-foreground">
+									{formatAmount(nextCycleAmount)}
+								</p>
+								<div className="flex flex-col gap-2 sm:flex-row">
+									<Button
+										className="flex-1"
+										disabled={busy}
+										onClick={() => void onPayNextCycleWallet()}
+									>
+										{busy ? t("bookingPaying") : t("bookingPayWithWallet")}
+									</Button>
+									<Button
+										variant="outline"
+										className="flex-1"
+										disabled={busy}
+										onClick={() => void onPayNextCycleChapa()}
+									>
+										{busy ? t("bookingStarting") : t("bookingPayWithChapa")}
+									</Button>
+								</div>
+								<Button
+									variant="ghost"
+									className="w-full"
+									disabled={busy}
+									onClick={() => setShowNextCycleConfirm(false)}
+								>
+									{t("commonCancel")}
+								</Button>
+							</div>
+						)}
+					</div>
+				) : null}
+
+				{canReview && showReview ? (
+					<div className="space-y-2 rounded-xl bg-white p-4 shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
+						<Label htmlFor="rating">{t("bookingRating")}</Label>
+						<Input
+							id="rating"
+							type="number"
+							min={1}
+							max={5}
+							value={rating}
+							onChange={(e) => setRating(Number(e.target.value) || 5)}
+						/>
+						<Label htmlFor="comment">{t("bookingComment")}</Label>
+						<Textarea
+							id="comment"
+							rows={3}
+							value={comment}
+							onChange={(e) => setComment(e.target.value)}
+						/>
+						<div className="flex gap-2">
+							<Button disabled={busy} onClick={() => void onReview()}>
+								{t("bookingSubmitReview")}
+							</Button>
+							<Button variant="ghost" onClick={() => setShowReview(false)}>
 								{t("commonCancel")}
 							</Button>
 						</div>
-					)}
-				</div>
-			) : null}
+					</div>
+				) : null}
 
-			{canComplete ? (
-				<Button
-					className="mt-5 w-full"
-					disabled={busy}
-					onClick={() => void onComplete()}
-				>
-					{busy ? t("bookingCompleting") : t("bookingComplete")}
-				</Button>
-			) : null}
+				{hasReview ? (
+					<p className="text-center text-xs text-muted-foreground">
+						{t("bookingAlreadyReviewed")}
+					</p>
+				) : null}
+			</div>
 
-			{showWalletPay ? (
-				<Button
-					className="mt-5 w-full"
-					disabled={busy}
-					onClick={() => void onPayWallet()}
-				>
-					{busy ? t("bookingPaying") : t("bookingPayWallet")}
-				</Button>
-			) : null}
-
-			{canCancel ? (
-				<Button
-					variant="outline"
-					className="mt-3 w-full text-destructive"
-					disabled={busy}
-					onClick={onCancel}
-				>
-					{busy ? t("bookingCancelling") : t("bookingCancel")}
-				</Button>
-			) : null}
-
-			{canReview ? (
-				<>
-					{!showReview ? (
+			{hasActions ? (
+				<div className="sticky bottom-0 -mx-4 mt-auto space-y-2 border-t border-border/60 bg-background/95 px-4 py-3 backdrop-blur-sm md:-mx-6 md:px-6">
+					{canComplete ? (
 						<Button
-							variant="secondary"
-							className="mt-3 w-full"
+							className="w-full"
+							disabled={busy}
+							onClick={() => void onComplete()}
+						>
+							{busy ? t("bookingCompleting") : t("bookingComplete")}
+						</Button>
+					) : null}
+
+					{showWalletPay ? (
+						<Button
+							className="w-full"
+							disabled={busy}
+							onClick={() => void onPayWallet()}
+						>
+							{busy ? t("bookingPaying") : t("bookingPayWallet")}
+						</Button>
+					) : null}
+
+					{canReview && !showReview ? (
+						<Button
+							variant="outline"
+							className="w-full border-primary/30 text-primary"
 							onClick={() => setShowReview(true)}
 						>
 							{t("bookingAddReview")}
 						</Button>
-					) : (
-						<div className="mt-3 space-y-2 rounded-xl bg-white p-4">
-							<Label htmlFor="rating">{t("bookingRating")}</Label>
-							<Input
-								id="rating"
-								type="number"
-								min={1}
-								max={5}
-								value={rating}
-								onChange={(e) => setRating(Number(e.target.value) || 5)}
-							/>
-							<Label htmlFor="comment">{t("bookingComment")}</Label>
-							<Textarea
-								id="comment"
-								rows={3}
-								value={comment}
-								onChange={(e) => setComment(e.target.value)}
-							/>
-							<div className="flex gap-2">
-								<Button disabled={busy} onClick={() => void onReview()}>
-									{t("bookingSubmitReview")}
-								</Button>
-								<Button variant="ghost" onClick={() => setShowReview(false)}>
-									{t("commonCancel")}
-								</Button>
-							</div>
-						</div>
-					)}
-				</>
-			) : null}
+					) : null}
 
-			{hasReview ? (
-				<p className="mt-3 text-center text-xs text-muted-foreground">
-					{t("bookingAlreadyReviewed")}
-				</p>
-			) : null}
+					{booking.providerId ? (
+						<Button
+							className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
+							onClick={() => router.push(`/service/inbox/${booking.providerId}`)}
+						>
+							{t("bookingMessageProvider")}
+						</Button>
+					) : null}
 
-			{booking.providerId ? (
-				<Button
-					variant="secondary"
-					className="mt-3 w-full"
-					onClick={() => router.push(`/service/inbox/${booking.providerId}`)}
-				>
-					{t("bookingMessageProvider")}
-				</Button>
+					{canCancel ? (
+						<Button
+							variant="outline"
+							className="w-full border-destructive/30 text-destructive hover:bg-destructive/5"
+							disabled={busy}
+							onClick={onCancel}
+						>
+							{busy ? t("bookingCancelling") : t("bookingCancel")}
+						</Button>
+					) : null}
+				</div>
 			) : null}
 		</div>
 	);
@@ -566,9 +574,11 @@ export default function CustomerBookingDetailPage() {
 
 function Row({ label, value }: { label: string; value: React.ReactNode }) {
 	return (
-		<div>
-			<p className="text-xs text-muted-foreground">{label}</p>
-			<div className="mt-0.5 text-sm font-medium whitespace-pre-wrap">{value}</div>
+		<div className="px-3.5 py-3">
+			<p className="text-[13px] font-medium text-muted-foreground">{label}</p>
+			<div className="mt-1 text-[15px] font-semibold leading-snug wrap-break-word whitespace-pre-wrap">
+				{value}
+			</div>
 		</div>
 	);
 }
