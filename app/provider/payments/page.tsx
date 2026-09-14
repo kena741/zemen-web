@@ -2,14 +2,14 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { ImageIcon } from "lucide-react";
 
 import { ProfileBackLink } from "@/components/provider/profile-back-link";
 import { StatusBadge } from "@/components/provider/status-badge";
 import { ServiceLoading } from "@/components/service/service-loading";
+import { formatBookingStatus } from "@/lib/booking-status";
 import { useLocale } from "@/lib/i18n";
-import {
-	fetchProviderCompletedPayments,
-} from "@/services/bookings/bookingsApi";
+import { fetchProviderCompletedPayments } from "@/services/bookings/bookingsApi";
 import {
 	formatAmount,
 	formatDateTime,
@@ -65,37 +65,64 @@ export default function ProviderPaymentsPage() {
 				<ul className="mt-6 space-y-3">
 					{bookings.map((booking) => {
 						const amount =
-							Number(booking.subTotal ?? booking.totalAmount ?? 0) || 0;
+							Number(booking.totalAmount ?? booking.subTotal ?? 0) || 0;
 						const extra = Number(booking.extraChargeAmount ?? 0) || 0;
-						const name = [booking.firstName, booking.lastName]
-							.filter(Boolean)
-							.join(" ");
+						const image = booking.service?.serviceImage?.[0] ?? null;
+						const subCategory =
+							booking.service?.subCategoryName ||
+							booking.service?.categoryName ||
+							null;
 						return (
 							<li key={booking.id}>
 								<Link
 									href={`/provider/bookings/${booking.id}`}
-									className="block rounded-xl bg-white p-4 shadow-sm ring-1 ring-black/5"
+									className="block overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-black/5"
 								>
-									<div className="flex items-start justify-between gap-3">
-										<div className="min-w-0">
+									<div className="flex gap-3 p-3">
+										<div className="relative size-20 shrink-0 overflow-hidden rounded-lg bg-muted">
+											{image ? (
+												// eslint-disable-next-line @next/next/no-img-element
+												<img
+													src={image}
+													alt=""
+													className="size-full object-cover"
+												/>
+											) : (
+												<div className="flex size-full items-center justify-center text-muted-foreground">
+													<ImageIcon className="size-6 opacity-40" />
+												</div>
+											)}
+										</div>
+										<div className="min-w-0 flex-1">
 											<p className="truncate text-sm font-semibold">
 												{booking.service?.serviceName || t("bookingTitle")}
 											</p>
-											<p className="mt-0.5 text-xs text-muted-foreground">
-												{name || t("customer")}
-											</p>
-											<p className="text-xs text-muted-foreground">
-												#{booking.id.slice(0, 6)} ·{" "}
-												{formatDateTime(
-													booking.endTime ??
-														booking.createdAt ??
-														booking.bookingDate,
-												)}
-											</p>
+											{subCategory ? (
+												<p className="mt-0.5 truncate text-xs text-muted-foreground">
+													{subCategory}
+												</p>
+											) : null}
+											<div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+												<StatusBadge status={booking.status} />
+												<span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold">
+													{booking.paymentCompleted
+														? t("commonPaid")
+														: booking.status === "pending_approval"
+															? t("statusPendingApproval")
+															: t("commonUnpaid")}
+												</span>
+											</div>
 										</div>
-										<StatusBadge status={booking.status} />
 									</div>
-									<div className="mt-3 space-y-1.5 rounded-lg border border-border px-3 py-2 text-sm">
+									<div className="space-y-1.5 border-t border-border/60 px-3 py-2.5 text-sm">
+										<div className="flex justify-between gap-2">
+											<span className="text-muted-foreground">
+												{t("commonStatus")}
+											</span>
+											<span className="capitalize">
+												{formatBookingStatus(booking.status)}
+											</span>
+										</div>
 										<div className="flex justify-between gap-2">
 											<span className="text-muted-foreground">
 												{t("bookingPayment")}
@@ -113,20 +140,30 @@ export default function ProviderPaymentsPage() {
 											<span className="text-muted-foreground">
 												{t("bookingAmount")}
 											</span>
-											<span className="font-medium text-primary tabular-nums">
+											<span className="font-semibold text-primary tabular-nums">
 												{formatAmount(amount)}
 											</span>
 										</div>
-										{extra > 0 ? (
-											<div className="flex justify-between gap-2">
-												<span className="text-muted-foreground">
-													{t("providerExtraCharge")}
-												</span>
-												<span className="tabular-nums text-primary">
-													{formatAmount(extra)}
-												</span>
-											</div>
-										) : null}
+										<div className="flex justify-between gap-2">
+											<span className="text-muted-foreground">
+												{t("providerExtraCharge")}
+											</span>
+											<span className="tabular-nums">
+												{formatAmount(extra)}
+											</span>
+										</div>
+										<div className="flex justify-between gap-2">
+											<span className="text-muted-foreground">
+												{t("bookingWhen")}
+											</span>
+											<span className="text-right text-xs">
+												{formatDateTime(
+													booking.createdAt ??
+														booking.endTime ??
+														booking.bookingDate,
+												)}
+											</span>
+										</div>
 									</div>
 								</Link>
 							</li>
