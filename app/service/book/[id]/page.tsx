@@ -4,6 +4,7 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useMemo, useState } from "react";
 
 import { ProfileBackLink } from "@/components/provider/profile-back-link";
+import { PlacesAddressField } from "@/components/addresses/places-address-field";
 import { RecurringBadge } from "@/components/recurring/recurring-badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -88,6 +89,10 @@ function BookServiceForm() {
 	const [bookingDate, setBookingDate] = useState(todayIsoDate());
 	const [startTime, setStartTime] = useState("09:00");
 	const [address, setAddress] = useState("");
+	const [addressLocation, setAddressLocation] = useState<{
+		lat: number;
+		lng: number;
+	} | null>(null);
 	const [description, setDescription] = useState("");
 	const [quantity, setQuantity] = useState(1);
 	const catalogPrice = Number(service?.price ?? 0) || 0;
@@ -166,7 +171,7 @@ function BookServiceForm() {
 	const subtotal = unitPrice * quantity;
 	const serviceDiscount = isCustomOffer
 		? 0
-		: serviceDiscountAmount(service?.discount, catalogPrice, quantity);
+		: serviceDiscountAmount(service?.discount, unitPrice, quantity);
 	const afterServiceDiscount = Math.max(0, subtotal - serviceDiscount);
 	const discount = appliedCoupon
 		? couponDiscount(appliedCoupon, afterServiceDiscount)
@@ -246,7 +251,7 @@ function BookServiceForm() {
 			setError(t("bookServiceEnterAddress"));
 			return;
 		}
-		if (isCustomOffer && !description.trim()) {
+		if (!description.trim()) {
 			setError(t("bookServiceDescriptionRequired"));
 			return;
 		}
@@ -254,8 +259,12 @@ function BookServiceForm() {
 			setError(t("bookServicePriceRequired"));
 			return;
 		}
-		if (!isCustomOffer && paymentOptions.length === 0) {
+		if (!isCustomOffer && dueNow > 0 && paymentOptions.length === 0) {
 			setError(t("bookServiceInsufficientWallet"));
+			return;
+		}
+		if (!isCustomOffer && dueNow > 0 && !paymentMethod) {
+			setError(t("bookServicePaymentRequired"));
 			return;
 		}
 
@@ -292,7 +301,8 @@ function BookServiceForm() {
 				bookingDate,
 				startTime: `${bookingDate}T${startTime}:00`,
 				address: address.trim(),
-				description,
+				location: addressLocation,
+				description: description.trim(),
 				quantity,
 				price: unitPrice,
 				paymentType: "",
@@ -340,11 +350,12 @@ function BookServiceForm() {
 			bookingDate,
 			startTime: `${bookingDate}T${startTime}:00`,
 			address: address.trim(),
-			description,
+			location: addressLocation,
+			description: description.trim(),
 			quantity,
 			price: unitPrice,
-			paymentType: paymentMethod,
-			paymentCompleted: false,
+			paymentType: dueNow > 0 ? paymentMethod : "free",
+			paymentCompleted: dueNow <= 0,
 			coupon: couponSnapshot,
 			discount: serviceDiscount + discount,
 			totalAmount: total,
@@ -353,6 +364,13 @@ function BookServiceForm() {
 		if (!res.bookingId) {
 			setBusy(false);
 			setError(res.error || t("bookServiceCreateFailed"));
+			return;
+		}
+
+		if (dueNow <= 0) {
+			dispatch(invalidateBookings());
+			setBusy(false);
+			router.replace(`/service/bookings/${res.bookingId}`);
 			return;
 		}
 
@@ -546,7 +564,14 @@ function BookServiceForm() {
 							value=""
 							onChange={(e) => {
 								const picked = savedAddresses.find((a) => a.id === e.target.value);
-								if (picked?.address) setAddress(picked.address);
+								if (!picked?.address) return;
+								setAddress(picked.address);
+								if (picked.location) {
+									setAddressLocation({
+										lat: Number(picked.location.latitude),
+										lng: Number(picked.location.longitude),
+									});
+								}
 							}}
 						>
 							<option value="">{t("bookServicePickSavedAddress")}</option>
@@ -557,35 +582,29 @@ function BookServiceForm() {
 							))}
 						</select>
 					) : null}
-					<Textarea
+					<PlacesAddressField
 						id="address"
-						required
-						rows={3}
-						placeholder={t("bookServiceAddressPlaceholder")}
 						value={address}
-						onChange={(e) => setAddress(e.target.value)}
-						className="bg-white"
+						required
+						onChange={setAddress}
+						onLocationChange={setAddressLocation}
 					/>
 				</Field>
 
 				<Field>
-					<FieldLabel htmlFor="notes">
-						{isCustomOffer
-							? t("bookServiceDescription")
-							: t("bookServiceNotes")}
-					</FieldLabel>
+					<FieldLabel htmlFor="notes">{t("bookServiceDescription")}</FieldLabel>
 					<Textarea
 						id="notes"
 						rows={3}
-						required={isCustomOffer}
-						placeholder={t("bookServiceNotesPlaceholder")}
+						required
+						placeholder={t("bookServiceDescriptionPlaceholder")}
 						value={description}
 						onChange={(e) => setDescription(e.target.value)}
 						className="bg-white"
 					/>
 				</Field>
 
-				{!isCustomOffer ? (
+				{!isCustomOffer && coupons.length > 0 ? (
 					<div className="space-y-2 rounded-xl bg-white p-4 shadow-sm ring-1 ring-black/5">
 						<p className="text-sm font-medium">{t("bookServiceCoupon")}</p>
 						<div className="flex gap-2">
@@ -610,49 +629,53 @@ function BookServiceForm() {
 								})}
 							</p>
 						) : null}
-						{coupons.length > 0 ? (
-							<div className="flex flex-wrap gap-1.5 pt-1">
-								{coupons.slice(0, 4).map((c) => (
-									<button
-										key={c.id}
-										type="button"
-										className="rounded-md bg-muted px-2 py-1 text-[11px] font-medium"
-										onClick={() => {
-											setCouponCode(c.code ?? "");
-											setAppliedCoupon(c);
-											setCouponError(null);
-										}}
-									>
-										{c.code}
-									</button>
-								))}
-							</div>
-						) : null}
-					</div>
-				) : null}
-
-				{!isCustomOffer ? (
-					<div className="space-y-2 rounded-xl bg-white p-4 shadow-sm ring-1 ring-black/5">
-						<p className="text-sm font-medium">{t("bookServicePayment")}</p>
-						<div className="flex flex-wrap gap-2">
-							{paymentOptions.map((method) => (
+						<div className="flex flex-wrap gap-1.5 pt-1">
+							{coupons.slice(0, 4).map((c) => (
 								<button
-									key={method}
+									key={c.id}
 									type="button"
-									className={`rounded-md px-3 py-1.5 text-xs font-medium ${
-										paymentMethod === method
-											? "bg-primary text-primary-foreground"
-											: "bg-muted text-foreground"
-									}`}
-									onClick={() => setPaymentMethod(method)}
+									className="rounded-md bg-muted px-2 py-1 text-[11px] font-medium"
+									onClick={() => {
+										setCouponCode(c.code ?? "");
+										setAppliedCoupon(c);
+										setCouponError(null);
+									}}
 								>
-									{paymentLabels[method]}
-									{method === "wallet"
-										? ` (${formatAmount(walletBalance)})`
-										: ""}
+									{c.code}
 								</button>
 							))}
 						</div>
+					</div>
+				) : null}
+
+				{!isCustomOffer && dueNow > 0 ? (
+					<div className="space-y-2 rounded-xl bg-white p-4 shadow-sm ring-1 ring-black/5">
+						<p className="text-sm font-medium">{t("bookServicePayment")}</p>
+						{paymentOptions.length === 0 ? (
+							<p className="text-xs text-destructive">
+								{t("bookServiceInsufficientWallet")}
+							</p>
+						) : (
+							<div className="flex flex-wrap gap-2">
+								{paymentOptions.map((method) => (
+									<button
+										key={method}
+										type="button"
+										className={`rounded-md px-3 py-1.5 text-xs font-medium ${
+											paymentMethod === method
+												? "bg-primary text-primary-foreground"
+												: "bg-muted text-foreground"
+										}`}
+										onClick={() => setPaymentMethod(method)}
+									>
+										{paymentLabels[method]}
+										{method === "wallet"
+											? ` (${formatAmount(walletBalance)})`
+											: ""}
+									</button>
+								))}
+							</div>
+						)}
 					</div>
 				) : null}
 

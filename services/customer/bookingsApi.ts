@@ -95,6 +95,7 @@ export type CreateBookingInput = {
 	bookingDate: string;
 	startTime: string;
 	address: string;
+	location?: { lat: number; lng: number } | null;
 	description?: string;
 	quantity: number;
 	price: number;
@@ -138,7 +139,12 @@ export async function createCustomerBooking(
 		paymentCompleted: Boolean(input.paymentCompleted),
 		description: input.description?.trim() || "",
 		otp,
-		bookingAddress: { address: input.address },
+		bookingAddress: {
+			address: input.address,
+			...(input.location
+				? { latitude: input.location.lat, longitude: input.location.lng }
+				: {}),
+		},
 		createdAt: now,
 		providerMySelf: false,
 		postJob: Boolean(input.postJob),
