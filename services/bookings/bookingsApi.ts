@@ -1,3 +1,4 @@
+import { isUpcomingBooking } from "@/lib/booking-status";
 import { getSupabase } from "@/lib/supabase/client";
 import {
 	mapBookingRow,
@@ -366,15 +367,17 @@ export async function fetchDashboardSnapshot(providerId: string): Promise<{
 		mapBookingRow(row as Record<string, unknown>),
 	);
 	const pending = bookings.filter((b) => b.status === "pending").length;
-	const activeStatuses = new Set([
-		"pending",
-		"accepted",
-		"on_the_way",
-		"in_progress",
-		"hold",
-	]);
+	const nowMs = Date.now();
+	// Upcoming: pending bookings scheduled for today or later
 	const upcoming = bookings
-		.filter((b) => b.status != null && activeStatuses.has(b.status))
+		.filter((b) =>
+			isUpcomingBooking({
+				status: b.status,
+				bookingDate: b.bookingDate,
+				startTime: b.startTime,
+				nowMs,
+			}),
+		)
 		.slice(0, 8);
 
 	const missingIds = upcoming

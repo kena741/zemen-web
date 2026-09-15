@@ -110,7 +110,7 @@ export default function CustomerBookingDetailPage() {
 			return;
 		}
 		dispatch(invalidateBookings());
-		refresh();
+		router.replace("/service/bookings");
 	}
 
 	async function onPayWallet() {

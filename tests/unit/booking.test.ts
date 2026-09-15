@@ -4,6 +4,7 @@ import {
 	BOOKING_STATUS,
 	PROVIDER_BOOKING_STATUS_FILTERS,
 	formatBookingStatus,
+	isUpcomingBooking,
 	statusTone,
 } from "@/lib/booking-status";
 import { formatAmount, formatDateTime } from "@/services/bookings/types";
@@ -30,6 +31,38 @@ describe("booking status", () => {
 	it("exposes provider filter list", () => {
 		expect(PROVIDER_BOOKING_STATUS_FILTERS).toContain(BOOKING_STATUS.pending);
 		expect(PROVIDER_BOOKING_STATUS_FILTERS).toContain(BOOKING_STATUS.completed);
+	});
+
+	it("upcoming is pending for today or later", () => {
+		const nowMs = Date.parse("2026-06-01T12:00:00.000Z");
+		expect(
+			isUpcomingBooking({
+				status: "pending",
+				bookingDate: "2026-06-02T10:00:00.000Z",
+				nowMs,
+			}),
+		).toBe(true);
+		expect(
+			isUpcomingBooking({
+				status: "pending",
+				bookingDate: "2026-06-01T08:00:00.000Z",
+				nowMs,
+			}),
+		).toBe(true);
+		expect(
+			isUpcomingBooking({
+				status: "accepted",
+				bookingDate: "2026-06-02T10:00:00.000Z",
+				nowMs,
+			}),
+		).toBe(false);
+		expect(
+			isUpcomingBooking({
+				status: "pending",
+				bookingDate: "2026-05-01T10:00:00.000Z",
+				nowMs,
+			}),
+		).toBe(false);
 	});
 });
 

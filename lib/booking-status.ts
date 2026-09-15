@@ -48,6 +48,27 @@ export function formatBookingStatus(status: string | null | undefined): string {
 	return BOOKING_STATUS_LABEL[status] ?? status.replaceAll("_", " ");
 }
 
+/** Pending bookings for today or later (mobile upcoming + today's pending). */
+export function isUpcomingBooking(params: {
+	status: string | null | undefined;
+	bookingDate?: string | null;
+	startTime?: string | null;
+	nowMs?: number;
+}): boolean {
+	if (params.status !== BOOKING_STATUS.pending) return false;
+	const raw = params.bookingDate ?? params.startTime;
+	if (!raw) return false;
+	const when = new Date(raw);
+	if (Number.isNaN(when.getTime())) return false;
+	const now = new Date(params.nowMs ?? Date.now());
+	const startOfToday = new Date(
+		now.getFullYear(),
+		now.getMonth(),
+		now.getDate(),
+	).getTime();
+	return when.getTime() >= startOfToday;
+}
+
 export function statusTone(
 	status: string | null | undefined,
 ): "neutral" | "warning" | "success" | "danger" | "info" {
