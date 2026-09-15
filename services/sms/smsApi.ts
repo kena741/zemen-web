@@ -27,6 +27,64 @@ function otpRecipient(phone: string): string {
 	return digits;
 }
 
+function asRecord(value: unknown): Record<string, unknown> | null {
+	if (value && typeof value === "object" && !Array.isArray(value)) {
+		return value as Record<string, unknown>;
+	}
+	return null;
+}
+
+/** Matches mobile SmsService — acknowledge/success + nested response.verificationId */
+function parseSendOtpResponse(data: unknown): SmsOtpResult {
+	const root = asRecord(data);
+	if (!root) return { success: false, error: "Invalid OTP response" };
+
+	const nested = asRecord(root.response);
+	const verificationId =
+		String(nested?.verificationId ?? root.verificationId ?? "").trim() ||
+		undefined;
+
+	const acknowledged =
+		root.acknowledge === "success" ||
+		root.success === true ||
+		Boolean(verificationId);
+
+	if (acknowledged && verificationId) {
+		return { success: true, verificationId };
+	}
+
+	return {
+		success: false,
+		error:
+			String(root.error ?? root.message ?? nested?.message ?? "").trim() ||
+			"Failed to send OTP",
+	};
+}
+
+function parseVerifyOtpResponse(data: unknown, httpOk: boolean): SmsVerifyResult {
+	const root = asRecord(data);
+	if (!httpOk) {
+		return {
+			success: false,
+			error:
+				String(root?.error ?? root?.message ?? "").trim() || "Invalid code",
+		};
+	}
+	if (!root) return { success: true };
+
+	if (root.success === false || root.acknowledge === "failed") {
+		return {
+			success: false,
+			error: String(root.error ?? root.message ?? "Invalid code"),
+		};
+	}
+
+	return {
+		success: true,
+		message: String(root.message ?? "").trim() || undefined,
+	};
+}
+
 export async function sendPhoneOtp(phone: string): Promise<SmsOtpResult> {
 	const recipient = otpRecipient(phone);
 	if (!recipient) return { success: false, error: "Invalid phone number" };
@@ -34,22 +92,32 @@ export async function sendPhoneOtp(phone: string): Promise<SmsOtpResult> {
 	try {
 		const res = await fetch(`${smsBase()}/send-otp`, {
 			method: "POST",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({ recipient, codeLength: 6, ttlSeconds: 300 }),
+			headers: {
+				"Content-Type": "application/json",
+				Accept: "application/json",
+			},
+			// Body shape mirrors mobile SmsService.sendOtp
+			body: JSON.stringify({
+				recipient,
+				code_length: 6,
+				code_type: 0,
+				ttl: 300,
+				message_prefix: "Your verification code is",
+				message_postfix: "",
+				callback: "",
+			}),
 		});
-		const data = (await res.json()) as {
-			success?: boolean;
-			verificationId?: string;
-			error?: string;
-			message?: string;
-		};
-		if (!res.ok || !data.success) {
+		const data: unknown = await res.json();
+		if (!res.ok) {
+			const root = asRecord(data);
 			return {
 				success: false,
-				error: data.error || data.message || "Failed to send OTP",
+				error:
+					String(root?.error ?? root?.message ?? "").trim() ||
+					`OTP send failed: ${res.status}`,
 			};
 		}
-		return { success: true, verificationId: data.verificationId };
+		return parseSendOtpResponse(data);
 	} catch {
 		return { success: false, error: "No internet connection" };
 	}
@@ -61,26 +129,25 @@ export async function verifyPhoneOtp(
 	verificationId: string,
 ): Promise<SmsVerifyResult> {
 	const recipient = otpRecipient(phone);
-	if (!recipient) return { success: false, error: "Invalid phone number" };
+	if (!recipient || !verificationId.trim()) {
+		return { success: false, error: "Invalid verification details" };
+	}
 
 	try {
 		const res = await fetch(`${smsBase()}/verify-otp`, {
 			method: "POST",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({ recipient, code: code.trim(), verificationId }),
+			headers: {
+				"Content-Type": "application/json",
+				Accept: "application/json",
+			},
+			body: JSON.stringify({
+				code: code.trim(),
+				recipient,
+				verification_id: verificationId,
+			}),
 		});
-		const data = (await res.json()) as {
-			success?: boolean;
-			error?: string;
-			message?: string;
-		};
-		if (!res.ok || !data.success) {
-			return {
-				success: false,
-				error: data.error || data.message || "Invalid code",
-			};
-		}
-		return { success: true, message: data.message };
+		const data: unknown = await res.json();
+		return parseVerifyOtpResponse(data, res.ok);
 	} catch {
 		return { success: false, error: "No internet connection" };
 	}
