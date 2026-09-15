@@ -89,7 +89,7 @@ function SignupForm() {
 			await finishSignupLogin(email, password, "provider");
 			setMode("provider");
 			const ok = await login(email, password, "provider");
-			if (ok) router.replace("/provider/verify-id");
+			if (ok) router.replace("/provider/verify-id?signup=1");
 			else router.replace("/login");
 		} finally {
 			setBusy(false);
