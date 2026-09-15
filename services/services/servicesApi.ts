@@ -209,8 +209,23 @@ function validateServiceForm(input: ServiceFormInput): string | null {
 	const discount = input.discount.trim();
 	if (discount) {
 		const d = Number(discount);
-		if (Number.isNaN(d) || d < 0 || d > 100) {
-			return "Discount must be between 0 and 100.";
+		if (
+			Number.isNaN(d) ||
+			d < SERVICE_CONSTRAINTS.minDiscount ||
+			d > SERVICE_CONSTRAINTS.maxDiscount
+		) {
+			return `Discount must be between ${SERVICE_CONSTRAINTS.minDiscount} and ${SERVICE_CONSTRAINTS.maxDiscount}.`;
+		}
+	}
+
+	if (input.prePayment && input.prePaymentPercent != null) {
+		const pct = Number(input.prePaymentPercent);
+		if (
+			!(SERVICE_CONSTRAINTS.prePaymentPercents as readonly number[]).includes(
+				pct,
+			)
+		) {
+			return `Pre-payment must be ${SERVICE_CONSTRAINTS.prePaymentPercents.join(" or ")}%.`;
 		}
 	}
 

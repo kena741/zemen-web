@@ -10,9 +10,11 @@ export const RECURRING_CYCLES = [
 	RECURRING_YEAR,
 ] as const;
 
+export type RecurringCycle = (typeof RECURRING_CYCLES)[number];
+
 export interface RecurringPaymentSettings {
 	enabled: boolean;
-	availableCycles: string[];
+	availableCycles: RecurringCycle[];
 	paymentWindowDays: number;
 }
 
@@ -22,39 +24,17 @@ export const RECURRING_PAYMENT_SETTINGS_DEFAULT: RecurringPaymentSettings = {
 	paymentWindowDays: 3,
 };
 
-export function parseRecurringPaymentSettings(
-	raw: unknown,
-): RecurringPaymentSettings {
-	if (!raw || typeof raw !== "object") return RECURRING_PAYMENT_SETTINGS_DEFAULT;
-	const map = raw as Record<string, unknown>;
-	const enabled =
-		map.enabled !== false && String(map.enabled).toLowerCase() !== "false";
-	const cycles: string[] = [];
-	const cyclesRaw = map.available_cycles ?? map.availableCycles;
-	if (Array.isArray(cyclesRaw)) {
-		for (const item of cyclesRaw) {
-			const cycle = normalizeBillingInterval(String(item));
-			if (!cycles.includes(cycle)) cycles.push(cycle);
-		}
-	}
-	if (cycles.length === 0) cycles.push(...RECURRING_CYCLES);
-	const window =
-		Number.parseInt(
-			String(map.payment_window_days ?? map.paymentWindowDays ?? "3"),
-			10,
-		) || 3;
-	return {
-		enabled,
-		availableCycles: cycles,
-		paymentWindowDays: window > 0 ? window : 3,
-	};
-}
-
-export function normalizeBillingInterval(raw: string | null | undefined): string {
+/** Provider-facing cycles only. Admin may also store MINUTE/HOUR for testing — those are ignored. */
+export function parseBillingCycle(
+	raw: string | null | undefined,
+): RecurringCycle | null {
 	switch ((raw ?? "").trim().toUpperCase()) {
 		case "WEEK":
 		case "WEEKLY":
 			return RECURRING_WEEK;
+		case "MONTH":
+		case "MONTHLY":
+			return RECURRING_MONTH;
 		case "QUARTER":
 		case "QUARTERLY":
 		case "EVERY_3_MONTHS":
@@ -64,8 +44,54 @@ export function normalizeBillingInterval(raw: string | null | undefined): string
 		case "ANNUAL":
 			return RECURRING_YEAR;
 		default:
-			return RECURRING_MONTH;
+			return null;
 	}
+}
+
+export function parseRecurringPaymentSettings(
+	raw: unknown,
+): RecurringPaymentSettings {
+	if (!raw || typeof raw !== "object") return RECURRING_PAYMENT_SETTINGS_DEFAULT;
+	const map = raw as Record<string, unknown>;
+	const enabled =
+		map.enabled !== false && String(map.enabled).toLowerCase() !== "false";
+	const cycles: RecurringCycle[] = [];
+	const cyclesRaw = map.available_cycles ?? map.availableCycles;
+	if (Array.isArray(cyclesRaw)) {
+		for (const item of cyclesRaw) {
+			const cycle = parseBillingCycle(String(item));
+			if (cycle && !cycles.includes(cycle)) cycles.push(cycle);
+		}
+	}
+	// Match mobile: empty or monthly-only seed → all provider cycles.
+	if (
+		cycles.length === 0 ||
+		(cycles.length === 1 && cycles[0] === RECURRING_MONTH)
+	) {
+		return {
+			enabled,
+			availableCycles: [...RECURRING_CYCLES],
+			paymentWindowDays: paymentWindowDaysFrom(map),
+		};
+	}
+	return {
+		enabled,
+		availableCycles: cycles,
+		paymentWindowDays: paymentWindowDaysFrom(map),
+	};
+}
+
+function paymentWindowDaysFrom(map: Record<string, unknown>): number {
+	const window =
+		Number.parseInt(
+			String(map.payment_window_days ?? map.paymentWindowDays ?? "3"),
+			10,
+		) || 3;
+	return window > 0 ? window : 3;
+}
+
+export function normalizeBillingInterval(raw: string | null | undefined): string {
+	return parseBillingCycle(raw) ?? RECURRING_MONTH;
 }
 
 export function billingIntervalLabel(raw: string | null | undefined): string {

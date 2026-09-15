@@ -1,21 +1,16 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useMemo, useState } from "react";
-import { XIcon } from "lucide-react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { ImagePlusIcon, XIcon } from "lucide-react";
 
 import { PlacesAddressField } from "@/components/addresses/places-address-field";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
-	normalizeBillingInterval,
 	type RecurringPaymentSettings,
 	RECURRING_PAYMENT_SETTINGS_DEFAULT,
 } from "@/lib/recurring";
 import { useLocale } from "@/lib/i18n";
+import { cn } from "@/lib/utils";
 import { fetchRecurringPaymentSettings } from "@/services/config/recurringSettingsApi";
 import {
 	fetchCategories,
@@ -43,6 +38,121 @@ const INTERVAL_OPTIONS = [
 	{ value: "QUARTER", label: "Quarterly" },
 	{ value: "YEAR", label: "Yearly" },
 ] as const;
+
+const fieldClass =
+	"w-full rounded-xl border-0 bg-[#eef3ea] px-4 py-3.5 text-[15px] text-foreground outline-none transition-[box-shadow,background-color] placeholder:text-muted-foreground/70 focus:bg-white focus:ring-2 focus:ring-primary/25";
+
+function Section({
+	step,
+	title,
+	hint,
+	children,
+}: {
+	step: string;
+	title: string;
+	hint?: string;
+	children: ReactNode;
+}) {
+	return (
+		<section className="relative space-y-4 pt-2">
+			<div className="flex items-end gap-3">
+				<span className="font-mono text-[11px] font-semibold tracking-[0.14em] text-primary/70">
+					{step}
+				</span>
+				<div className="min-w-0 flex-1 border-b border-primary/10 pb-2">
+					<h2 className="text-[17px] font-semibold tracking-tight text-foreground text-balance">
+						{title}
+					</h2>
+					{hint ? (
+						<p className="mt-0.5 text-[13px] text-muted-foreground">{hint}</p>
+					) : null}
+				</div>
+			</div>
+			{children}
+		</section>
+	);
+}
+
+function Chip({
+	selected,
+	disabled,
+	onClick,
+	children,
+}: {
+	selected: boolean;
+	disabled?: boolean;
+	onClick: () => void;
+	children: ReactNode;
+}) {
+	return (
+		<button
+			type="button"
+			disabled={disabled}
+			onClick={onClick}
+			aria-pressed={selected}
+			className={cn(
+				"rounded-full px-3.5 py-2 text-[13px] font-medium transition-colors duration-150",
+				"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2",
+				"disabled:cursor-not-allowed disabled:opacity-40",
+				selected
+					? "bg-primary text-primary-foreground shadow-sm"
+					: "bg-[#e8efe3] text-foreground hover:bg-[#dce8d4]",
+			)}
+		>
+			{children}
+		</button>
+	);
+}
+
+function ToggleRow({
+	checked,
+	onChange,
+	label,
+	description,
+}: {
+	checked: boolean;
+	onChange: (next: boolean) => void;
+	label: string;
+	description?: string;
+}) {
+	return (
+		<button
+			type="button"
+			role="switch"
+			aria-checked={checked}
+			onClick={() => onChange(!checked)}
+			className={cn(
+				"flex w-full items-center justify-between gap-4 rounded-2xl px-4 py-3.5 text-left transition-colors duration-150",
+				"bg-[#eef3ea] hover:bg-[#e4ecde]",
+				"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
+			)}
+		>
+			<span className="min-w-0">
+				<span className="block text-[14px] font-medium text-foreground">
+					{label}
+				</span>
+				{description ? (
+					<span className="mt-0.5 block text-[12px] text-muted-foreground">
+						{description}
+					</span>
+				) : null}
+			</span>
+			<span
+				className={cn(
+					"relative h-6 w-11 shrink-0 rounded-full transition-colors duration-150",
+					checked ? "bg-primary" : "bg-black/15",
+				)}
+			>
+				<span
+					className={cn(
+						"absolute top-0.5 left-0.5 size-5 rounded-full bg-white shadow transition-transform duration-150",
+						checked && "translate-x-5",
+					)}
+				/>
+			</span>
+		</button>
+	);
+}
 
 export function ServiceForm({
 	mode,
@@ -74,17 +184,11 @@ export function ServiceForm({
 	const [billingInterval, setBillingInterval] = useState(
 		initial?.billingInterval ?? "MONTH",
 	);
-	const [billingIntervalCount, setBillingIntervalCount] = useState(
-		String(initial?.billingIntervalCount ?? 1),
-	);
 	const isRecurring = pricingType === "RECURRING";
-	const [prePaymentPercent, setPrePaymentPercent] = useState(
-		String(
-			initial?.prePaymentPercent != null && initial.prePaymentPercent > 0
-				? initial.prePaymentPercent
-				: 100,
-		),
-	);
+	const [prePaymentPercent, setPrePaymentPercent] = useState(() => {
+		const pct = initial?.prePaymentPercent;
+		return pct === 10 ? 10 : 100;
+	});
 	const [allowsCustomOffer, setAllowsCustomOffer] = useState(
 		initial?.allowsCustomOffer ?? false,
 	);
@@ -159,9 +263,7 @@ export function ServiceForm({
 		[subCategories, subCategoryId],
 	);
 	const intervalOptions = useMemo(() => {
-		const allowed = new Set(
-			recurringSettings.availableCycles.map((c) => normalizeBillingInterval(c)),
-		);
+		const allowed = new Set(recurringSettings.availableCycles);
 		const filtered = INTERVAL_OPTIONS.filter((o) => allowed.has(o.value));
 		return filtered.length > 0 ? filtered : [...INTERVAL_OPTIONS];
 	}, [recurringSettings.availableCycles]);
@@ -197,13 +299,27 @@ export function ServiceForm({
 
 	async function handleSubmit(e: React.FormEvent) {
 		e.preventDefault();
+		if (!categoryId || !subCategoryId) {
+			setError(t("providerSelectCategory"));
+			return;
+		}
 		setBusy(true);
 		setError(null);
 
-		const percent = Math.min(
-			100,
-			Math.max(1, Number(prePaymentPercent) || 100),
-		);
+		const discountTrim = discount.trim();
+		if (discountTrim) {
+			const d = Number(discountTrim);
+			if (
+				Number.isNaN(d) ||
+				d < SERVICE_CONSTRAINTS.minDiscount ||
+				d > SERVICE_CONSTRAINTS.maxDiscount
+			) {
+				setError(
+					`Discount must be between ${SERVICE_CONSTRAINTS.minDiscount} and ${SERVICE_CONSTRAINTS.maxDiscount}.`,
+				);
+				return;
+			}
+		}
 
 		const res = await upsertService({
 			authUserId,
@@ -217,7 +333,7 @@ export function ServiceForm({
 				categoryName: selectedCategory?.categoryName ?? "",
 				subCategoryName: selectedSub?.subCategoryName ?? "",
 				price,
-				discount,
+				discount: discountTrim,
 				description,
 				address,
 				latitude,
@@ -232,10 +348,10 @@ export function ServiceForm({
 				feature: initial?.feature ?? false,
 				pricingType,
 				billingInterval,
-				billingIntervalCount: Number(billingIntervalCount) || 1,
+				billingIntervalCount: isRecurring ? 1 : undefined,
 				prePayment: !isRecurring,
-				prePaymentPercent: isRecurring ? 100 : percent,
-				allowsCustomOffer,
+				prePaymentPercent: isRecurring ? 100 : prePaymentPercent,
+				allowsCustomOffer: isRecurring ? false : allowsCustomOffer,
 			},
 		});
 
@@ -247,210 +363,228 @@ export function ServiceForm({
 		onSuccess(res.serviceId);
 	}
 
+	const descLen = description.trim().length;
+
 	return (
-		<form onSubmit={(e) => void handleSubmit(e)} className="space-y-5">
+		<form onSubmit={(e) => void handleSubmit(e)} className="space-y-10 pb-28">
 			{error ? (
-				<Alert variant="destructive">
-					<AlertDescription>{error}</AlertDescription>
-				</Alert>
+				<div
+					role="alert"
+					className="rounded-2xl bg-destructive/10 px-4 py-3 text-[14px] text-destructive"
+				>
+					{error}
+				</div>
 			) : null}
 
-			<div className="space-y-1.5">
-				<Label htmlFor="name">{t("providerServiceName")}</Label>
-				<Input
+			<Section step="01" title={t("providerServiceName")}>
+				<input
 					id="name"
 					required
 					value={serviceName}
 					onChange={(e) => setServiceName(e.target.value)}
 					placeholder={t("providerServiceNamePlaceholder")}
+					className={fieldClass}
 				/>
-			</div>
+			</Section>
 
-			<div className="grid gap-3 sm:grid-cols-2">
-				<div className="space-y-1.5">
-					<Label htmlFor="category">{t("commonCategory")}</Label>
-					<select
-						id="category"
-						required
-						disabled={loadingMeta}
-						value={categoryId}
-						onChange={(e) => {
-							setCategoryId(e.target.value);
-							setSubCategoryId("");
-						}}
-						className="h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-					>
-						<option value="">{t("providerSelectCategory")}</option>
-						{categories.map((c) => (
-							<option key={c.id} value={c.id}>
-								{c.categoryName}
-							</option>
-						))}
-					</select>
-				</div>
-				<div className="space-y-1.5">
-					<Label htmlFor="subcategory">{t("providerSubcategory")}</Label>
-					<select
-						id="subcategory"
-						required
-						disabled={!categoryId}
-						value={subCategoryId}
-						onChange={(e) => setSubCategoryId(e.target.value)}
-						className="h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-					>
-						<option value="">{t("providerSelectSubcategory")}</option>
-						{subCategories.map((s) => (
-							<option key={s.id} value={s.id}>
-								{s.subCategoryName}
-							</option>
-						))}
-					</select>
-				</div>
-			</div>
-
-			<div className="grid gap-3 sm:grid-cols-2">
-				<div className="space-y-1.5">
-					<Label htmlFor="price">{t("commonPrice")} (ETB)</Label>
-					<Input
-						id="price"
-						type="number"
-						min={SERVICE_CONSTRAINTS.minPrice}
-						step="1"
-						required
-						value={price}
-						onChange={(e) => setPrice(e.target.value)}
-					/>
-				</div>
-				<div className="space-y-1.5">
-					<Label htmlFor="discount">
-						{t("commonDiscount")} % ({t("commonOptional")})
-					</Label>
-					<Input
-						id="discount"
-						type="number"
-						min={0}
-						max={100}
-						value={discount}
-						onChange={(e) => setDiscount(e.target.value)}
-					/>
-				</div>
-			</div>
-
-			<div className="space-y-3 rounded-xl bg-white p-4 shadow-sm ring-1 ring-black/5">
-				<p className="text-sm font-semibold">{t("bookServicePayment")}</p>
-				<div className="grid gap-3 sm:grid-cols-2">
-					<div className="space-y-1.5">
-						<Label htmlFor="pricing-type">{t("pricingOneTime")}</Label>
-						<select
-							id="pricing-type"
-							value={pricingType}
-							onChange={(e) => setPricingType(e.target.value)}
-							className="h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm"
-						>
-							<option value="ONE_TIME">{t("pricingOneTime")}</option>
-							<option value="RECURRING">{t("pricingRecurring")}</option>
-						</select>
-					</div>
-					{isRecurring ? (
-						<>
-							<div className="space-y-1.5">
-								<Label htmlFor="billing-interval">{t("billingInterval")}</Label>
-								<select
-									id="billing-interval"
-									value={billingInterval}
-									onChange={(e) => setBillingInterval(e.target.value)}
-									className="h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm"
-								>
-									{intervalOptions.map((o) => (
-										<option key={o.value} value={o.value}>
-											{o.label}
-										</option>
-									))}
-								</select>
-							</div>
-							<div className="space-y-1.5 sm:col-span-2">
-								<Label htmlFor="billing-interval-count">
-									{t("providerBillingEveryN")}
-								</Label>
-								<Input
-									id="billing-interval-count"
-									type="number"
-									min={1}
-									max={24}
-									value={billingIntervalCount}
-									onChange={(e) => setBillingIntervalCount(e.target.value)}
-								/>
-							</div>
-						</>
+			<Section
+				step="02"
+				title={t("commonCategory")}
+				hint={t("providerSelectCategory")}
+			>
+				<div className="flex flex-wrap gap-2">
+					{loadingMeta ? (
+						<p className="text-[13px] text-muted-foreground">
+							{t("commonLoading")}
+						</p>
 					) : (
-						<div className="space-y-1.5">
-							<Label htmlFor="prepay">{t("providerPrePaymentPercent")}</Label>
-							<Input
-								id="prepay"
-								type="number"
-								min={1}
-								max={100}
-								value={prePaymentPercent}
-								onChange={(e) => setPrePaymentPercent(e.target.value)}
-							/>
-							<p className="text-xs text-muted-foreground">
-								{t("providerPrePaymentHint")}
-							</p>
-						</div>
+						categories.map((c) => (
+							<Chip
+								key={c.id}
+								selected={categoryId === c.id}
+								onClick={() => {
+									setCategoryId(c.id);
+									setSubCategoryId("");
+								}}
+							>
+								{c.categoryName}
+							</Chip>
+						))
 					)}
 				</div>
-				<label className="flex items-center gap-2 text-sm">
-					<input
-						type="checkbox"
-						checked={allowsCustomOffer}
-						onChange={(e) => setAllowsCustomOffer(e.target.checked)}
-						className="size-4 rounded border-input"
-					/>
-					{t("providerAllowCustomPrice")}
-				</label>
-			</div>
+				{categoryId ? (
+					<div className="space-y-2 pt-2">
+						<p className="text-[12px] font-medium tracking-wide text-muted-foreground uppercase">
+							{t("providerSubcategory")}
+						</p>
+						<div className="flex flex-wrap gap-2">
+							{subCategories.length === 0 ? (
+								<p className="text-[13px] text-muted-foreground">…</p>
+							) : (
+								subCategories.map((s) => (
+									<Chip
+										key={s.id}
+										selected={subCategoryId === s.id}
+										onClick={() => setSubCategoryId(s.id)}
+									>
+										{s.subCategoryName}
+									</Chip>
+								))
+							)}
+						</div>
+					</div>
+				) : null}
+			</Section>
 
-			<div className="space-y-1.5">
-				<Label htmlFor="description">{t("requestDescription")}</Label>
-				<Textarea
-					id="description"
+			<Section step="03" title={t("bookServicePayment")}>
+				{(recurringSettings.enabled || isRecurring) ? (
+					<div className="grid grid-cols-2 gap-2 rounded-2xl bg-[#e8efe3] p-1.5">
+						{(
+							[
+								["ONE_TIME", t("pricingOneTime")],
+								["RECURRING", t("pricingRecurring")],
+							] as const
+						).map(([value, label]) => (
+							<button
+								key={value}
+								type="button"
+								aria-pressed={pricingType === value}
+								onClick={() => setPricingType(value)}
+								className={cn(
+									"rounded-xl py-3 text-[14px] font-semibold transition-colors duration-150",
+									"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
+									pricingType === value
+										? "bg-white text-primary shadow-sm"
+										: "text-muted-foreground hover:text-foreground",
+								)}
+							>
+								{label}
+							</button>
+						))}
+					</div>
+				) : null}
+
+				<div className="grid gap-3 sm:grid-cols-2">
+					<label className="block space-y-1.5">
+						<span className="text-[12px] font-medium text-muted-foreground">
+							{t("commonPrice")} (ETB)
+						</span>
+						<input
+							type="number"
+							min={SERVICE_CONSTRAINTS.minPrice}
+							step="1"
+							required
+							value={price}
+							onChange={(e) => setPrice(e.target.value)}
+							className={fieldClass}
+						/>
+					</label>
+					<label className="block space-y-1.5">
+						<span className="text-[12px] font-medium text-muted-foreground">
+							{t("commonDiscount")} % ({t("commonOptional")}) ·{" "}
+							{SERVICE_CONSTRAINTS.minDiscount}–
+							{SERVICE_CONSTRAINTS.maxDiscount}
+						</span>
+						<input
+							type="number"
+							min={SERVICE_CONSTRAINTS.minDiscount}
+							max={SERVICE_CONSTRAINTS.maxDiscount}
+							step="1"
+							value={discount}
+							onChange={(e) => setDiscount(e.target.value)}
+							placeholder={`${SERVICE_CONSTRAINTS.minDiscount}–${SERVICE_CONSTRAINTS.maxDiscount}`}
+							className={fieldClass}
+						/>
+					</label>
+				</div>
+
+				{isRecurring ? (
+					<div className="space-y-3">
+						<p className="text-[12px] font-medium tracking-wide text-muted-foreground uppercase">
+							{t("billingInterval")}
+						</p>
+						<div className="flex flex-wrap gap-2">
+							{intervalOptions.map((o) => (
+								<Chip
+									key={o.value}
+									selected={billingInterval === o.value}
+									onClick={() => setBillingInterval(o.value)}
+								>
+									{o.label}
+								</Chip>
+							))}
+						</div>
+					</div>
+				) : (
+					<div className="space-y-3">
+						<p className="text-[12px] font-medium tracking-wide text-muted-foreground uppercase">
+							{t("providerPrePaymentPercent")}
+						</p>
+						<div className="flex flex-wrap gap-2">
+							{SERVICE_CONSTRAINTS.prePaymentPercents.map((pct) => (
+								<Chip
+									key={pct}
+									selected={prePaymentPercent === pct}
+									onClick={() => setPrePaymentPercent(pct)}
+								>
+									{pct}%
+								</Chip>
+							))}
+						</div>
+						<p className="text-[12px] text-muted-foreground">
+							{t("providerPrePaymentHint")}
+						</p>
+					</div>
+				)}
+
+				{!isRecurring ? (
+					<ToggleRow
+						checked={allowsCustomOffer}
+						onChange={setAllowsCustomOffer}
+						label={t("providerAllowCustomPrice")}
+					/>
+				) : null}
+			</Section>
+
+			<Section step="04" title={t("requestDescription")}>
+				<textarea
 					required
 					rows={5}
 					value={description}
 					onChange={(e) => setDescription(e.target.value)}
+					className={cn(fieldClass, "min-h-[140px] resize-y leading-relaxed")}
 				/>
-				<p className="text-xs text-muted-foreground">
-					{description.trim().length}/{SERVICE_CONSTRAINTS.minDescription} min ·{" "}
+				<p className="text-[12px] text-muted-foreground tabular-nums">
+					{descLen}/{SERVICE_CONSTRAINTS.minDescription} min ·{" "}
 					{SERVICE_CONSTRAINTS.maxDescription} max
 				</p>
-			</div>
+			</Section>
 
-			<div className="space-y-1.5">
-				<Label>{t("commonAddress")}</Label>
-				<PlacesAddressField
-					value={address}
-					required
-					onChange={setAddress}
-					onLocationChange={(loc) => {
-						if (!loc) return;
-						setLatitude(loc.lat);
-						setLongitude(loc.lng);
-					}}
-				/>
-			</div>
-
-			<div className="space-y-2">
-				<div className="flex items-center justify-between gap-2">
-					<Label>{t("providerServiceImages")}</Label>
-					<span className="text-xs text-muted-foreground">
-						{imageSlotsUsed}/{SERVICE_CONSTRAINTS.maxImages}
-					</span>
+			<Section step="05" title={t("commonAddress")}>
+				<div className="rounded-2xl bg-[#eef3ea] p-3 [&_input]:border-0 [&_input]:bg-white/80 [&_input]:shadow-none">
+					<PlacesAddressField
+						value={address}
+						required
+						onChange={setAddress}
+						onLocationChange={(loc) => {
+							if (!loc) return;
+							setLatitude(loc.lat);
+							setLongitude(loc.lng);
+						}}
+					/>
 				</div>
-				<div className="flex flex-wrap gap-2">
+			</Section>
+
+			<Section
+				step="06"
+				title={t("providerServiceImages")}
+				hint={`${imageSlotsUsed}/${SERVICE_CONSTRAINTS.maxImages}`}
+			>
+				<div className="flex flex-wrap gap-3">
 					{existingImages.map((url) => (
 						<div
 							key={url}
-							className="relative size-20 overflow-hidden rounded-lg border border-border bg-muted"
+							className="relative size-[88px] overflow-hidden rounded-2xl bg-[#e8efe3]"
 						>
 							<Image
 								src={url}
@@ -458,12 +592,12 @@ export function ServiceForm({
 								fill
 								className="object-cover"
 								unoptimized
-								sizes="80px"
+								sizes="88px"
 							/>
 							<button
 								type="button"
 								onClick={() => removeExisting(url)}
-								className="absolute top-1 right-1 rounded-full bg-black/60 p-0.5 text-white"
+								className="absolute top-1.5 right-1.5 rounded-full bg-black/55 p-1 text-white"
 								aria-label={t("commonClear")}
 							>
 								<XIcon className="size-3.5" />
@@ -473,57 +607,71 @@ export function ServiceForm({
 					{newPreviews.map((url, i) => (
 						<div
 							key={url}
-							className="relative size-20 overflow-hidden rounded-lg border border-border bg-muted"
+							className="relative size-[88px] overflow-hidden rounded-2xl bg-[#e8efe3]"
 						>
 							{/* eslint-disable-next-line @next/next/no-img-element */}
 							<img src={url} alt="" className="size-full object-cover" />
 							<button
 								type="button"
 								onClick={() => removeNew(i)}
-								className="absolute top-1 right-1 rounded-full bg-black/60 p-0.5 text-white"
+								className="absolute top-1.5 right-1.5 rounded-full bg-black/55 p-1 text-white"
 								aria-label={t("commonClear")}
 							>
 								<XIcon className="size-3.5" />
 							</button>
 						</div>
 					))}
+					{slotsLeft > 0 ? (
+						<label className="flex size-[88px] cursor-pointer flex-col items-center justify-center gap-1 rounded-2xl border border-dashed border-primary/25 bg-[#eef3ea] text-primary transition-colors hover:bg-[#e4ecde]">
+							<ImagePlusIcon className="size-5" />
+							<span className="text-[11px] font-medium">{t("commonAdd")}</span>
+							<input
+								type="file"
+								accept="image/*"
+								multiple
+								className="sr-only"
+								onChange={(e) => {
+									onPickFiles(e.target.files);
+									e.target.value = "";
+								}}
+							/>
+						</label>
+					) : null}
 				</div>
-				{slotsLeft > 0 ? (
-					<Input
-						type="file"
-						accept="image/*"
-						multiple
-						onChange={(e) => {
-							onPickFiles(e.target.files);
-							e.target.value = "";
-						}}
-					/>
-				) : null}
-			</div>
+			</Section>
 
-			<label className="flex items-center gap-2 text-sm">
-				<input
-					type="checkbox"
-					checked={status}
-					onChange={(e) => setStatus(e.target.checked)}
-					className="size-4 rounded border-input"
-				/>
-				{t("providerServiceActiveListing")}
-			</label>
+			<ToggleRow
+				checked={status}
+				onChange={setStatus}
+				label={t("providerServiceActiveListing")}
+			/>
 
 			{mode === "edit" ? (
-				<p className="text-xs text-muted-foreground">
+				<p className="text-[12px] text-muted-foreground">
 					{t("providerServiceEditPendingHint")}
 				</p>
 			) : null}
 
-			<Button type="submit" disabled={busy} className="w-full sm:w-auto">
-				{busy
-					? t("commonSaving")
-					: mode === "edit"
-						? t("commonSaveChanges")
-						: t("providerAddService")}
-			</Button>
+			<div className="pointer-events-none fixed inset-x-0 bottom-0 z-20 flex justify-center p-4 lg:pl-60">
+				<div className="pointer-events-auto w-full max-w-2xl">
+					<button
+						type="submit"
+						disabled={busy}
+						className={cn(
+							"h-12 w-full rounded-2xl bg-primary text-[15px] font-semibold text-primary-foreground shadow-[0_8px_24px_-8px_rgba(23,67,9,0.55)] transition-[transform,opacity] duration-150",
+							"hover:opacity-95 active:scale-[0.99]",
+							"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2",
+							"disabled:cursor-not-allowed disabled:opacity-60",
+						)}
+					>
+						{busy
+							? t("commonSaving")
+							: mode === "edit"
+								? t("commonSaveChanges")
+								: t("providerAddService")}
+					</button>
+				</div>
+			</div>
 		</form>
 	);
 }

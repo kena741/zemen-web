@@ -16,20 +16,19 @@ export async function fetchRecurringPaymentSettings(): Promise<RecurringPaymentS
 		try {
 			const { data, error } = await getSupabase()
 				.from("app_settings")
-				.select("data, value")
+				.select("data")
 				.eq("id", "constant")
 				.maybeSingle();
 			if (error || !data) {
 				cached = RECURRING_PAYMENT_SETTINGS_DEFAULT;
 				return cached;
 			}
-			const row = data as Record<string, unknown>;
-			const map =
-				(row.data as Record<string, unknown> | null) ??
-				(typeof row.value === "object" && row.value
-					? (row.value as Record<string, unknown>)
-					: null);
-			const raw = map?.recurring_payments ?? map?.recurringPayments;
+			const map = (data as { data?: unknown }).data;
+			const root =
+				map && typeof map === "object"
+					? (map as Record<string, unknown>)
+					: null;
+			const raw = root?.recurring_payments ?? root?.recurringPayments;
 			cached = parseRecurringPaymentSettings(raw);
 			return cached;
 		} catch {

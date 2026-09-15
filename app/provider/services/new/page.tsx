@@ -23,14 +23,27 @@ export default function NewServicePage() {
 	}
 
 	return (
-		<div className="mx-auto max-w-2xl">
-			<ProfileBackLink href="/provider/services" label={t("providerServicesTitle")} />
-			<p className="admin-eyebrow">{t("providerServicesTitle")}</p>
-			<h1 className="admin-page-title mt-1">{t("providerAddService")}</h1>
-			<p className="mt-2 text-sm text-muted-foreground">
-				{t("providerServiceCreateSubtitle")}
-			</p>
-			<div className="mt-6 rounded-xl border border-border bg-white p-4 shadow-xs sm:p-5">
+		<div className="relative mx-auto max-w-2xl pb-8">
+			<div
+				aria-hidden
+				className="pointer-events-none absolute -top-8 right-0 h-48 w-48 rounded-full bg-primary/8 blur-3xl"
+			/>
+			<ProfileBackLink
+				href="/provider/services"
+				label={t("providerServicesTitle")}
+			/>
+			<header className="mt-4 space-y-2">
+				<p className="font-mono text-[11px] font-semibold tracking-[0.16em] text-primary/70 uppercase">
+					{t("providerServicesTitle")}
+				</p>
+				<h1 className="text-[28px] leading-[1.15] font-semibold tracking-tight text-foreground text-balance sm:text-[32px]">
+					{t("providerAddService")}
+				</h1>
+				<p className="max-w-md text-[15px] leading-snug text-muted-foreground text-pretty">
+					{t("providerServiceCreateSubtitle")}
+				</p>
+			</header>
+			<div className="mt-8">
 				<ServiceForm
 					mode="create"
 					providerId={providerId}
