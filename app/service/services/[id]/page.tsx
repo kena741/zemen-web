@@ -6,12 +6,9 @@ import {
 	ArrowLeftIcon,
 	ChevronLeftIcon,
 	ChevronRightIcon,
-	ClockIcon,
 	HeartIcon,
 	ImageIcon,
 	MapPinIcon,
-	MinusIcon,
-	PlusIcon,
 	StarIcon,
 } from "lucide-react";
 
@@ -21,9 +18,12 @@ import { UserAvatar } from "@/components/ui/user-avatar";
 import { RecurringBadge } from "@/components/recurring/recurring-badge";
 import { loginPathForGuest } from "@/lib/guest";
 import { useLocale } from "@/lib/i18n";
-import { isRecurringPricingType } from "@/lib/recurring";
+import {
+	effectivePrePaymentPercent,
+	isRecurringPricingType,
+} from "@/lib/recurring";
 import { cn } from "@/lib/utils";
-import { formatAmount, formatDateTime } from "@/services/bookings/types";
+import { formatDateTime } from "@/services/bookings/types";
 import { toggleServiceFavorite } from "@/services/catalog/catalogApi";
 import {
 	fetchServiceReviews,
@@ -62,31 +62,6 @@ function haversineKm(
 	return 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-/** Matches mobile ServiceModel.discountAmount (≤100 = %, else fixed per unit). */
-function serviceDiscountAmount(
-	discountRaw: string | null | undefined,
-	unitPrice: number,
-	quantity: number,
-): number {
-	const discountValue = Number(String(discountRaw ?? "").trim()) || 0;
-	if (discountValue <= 0) return 0;
-	const lineSubtotal = quantity * unitPrice;
-	if (lineSubtotal <= 0) return 0;
-	if (discountValue <= 100) {
-		return Math.round(((lineSubtotal * discountValue) / 100) * 100) / 100;
-	}
-	const fixedTotal = quantity * discountValue;
-	return Math.min(fixedTotal, lineSubtotal);
-}
-
-function discountOffLabel(discountRaw: string | null | undefined): string {
-	const raw = String(discountRaw ?? "").trim();
-	if (!raw) return "0% off";
-	const n = Number(raw) || 0;
-	if (n > 0 && n <= 100) return `${raw}% off`;
-	return `ETB ${raw} off`;
-}
-
 export default function ServiceDetailPage() {
 	const { t } = useLocale();
 	const params = useParams<{ id: string }>();
@@ -100,7 +75,6 @@ export default function ServiceDetailPage() {
 	const [favBusy, setFavBusy] = useState(false);
 	const [reviews, setReviews] = useState<ServiceReview[]>([]);
 	const [distanceKm, setDistanceKm] = useState<number | null>(null);
-	const [quantity, setQuantity] = useState(1);
 	const [tab, setTab] = useState<"about" | "gallery" | "feedback">("about");
 	const [galleryFailed, setGalleryFailed] = useState<Record<number, boolean>>(
 		{},
@@ -111,15 +85,11 @@ export default function ServiceDetailPage() {
 	const image = service?.serviceImage[imgIndex] ?? service?.serviceImage[0];
 	const detailPath = `/service/services/${params.id}`;
 	const isRecurring = isRecurringPricingType(service?.pricingType ?? null);
-
-	const unitPrice = Number(service?.price ?? 0) || 0;
-	const priceLine = unitPrice * quantity;
-	const discountAmt = serviceDiscountAmount(
-		service?.discount,
-		unitPrice,
-		quantity,
-	);
-	const total = Math.max(0, Math.round((priceLine - discountAmt) * 100) / 100);
+	const prePayPercent = effectivePrePaymentPercent({
+		pricingType: service?.pricingType,
+		prePaymentPercent: service?.prePaymentPercent,
+	});
+	const hasPartialPrePayment = !isRecurring && prePayPercent < 100;
 
 	useEffect(() => {
 		if (!params.id) return;
@@ -190,7 +160,7 @@ export default function ServiceDetailPage() {
 
 	function onBook() {
 		if (!service) return;
-		const bookPath = `/service/book/${service.id}?qty=${quantity}`;
+		const bookPath = `/service/book/${service.id}`;
 		if (requireAuth(bookPath)) return;
 		router.push(bookPath);
 	}
@@ -223,15 +193,22 @@ export default function ServiceDetailPage() {
 		);
 	}
 
-	const category =
-		service.subCategoryName || service.categoryName || t("serviceTitle");
 	const hasDiscount =
 		Boolean(service.discount) &&
 		service.discount !== "0" &&
 		Number(service.discount) > 0;
+	const typeLabel =
+		(service.type ?? "").trim().toLowerCase() === "fixed"
+			? t("bookServiceTypeFixed")
+			: (service.type?.trim() || null);
+	const descPrefix = hasDiscount
+		? Number(service.discount) <= 100
+			? `(${service.discount}% off) `
+			: `(ETB ${service.discount} off) `
+		: "";
 
 	return (
-		<div className="mx-auto max-w-lg bg-white pb-28 md:max-w-2xl md:pb-10">
+		<div className="mx-auto max-w-lg bg-[#f6f6f6] pb-28 md:max-w-2xl md:pb-10">
 			{/* Image header — full bleed like mobile */}
 			<div className="relative h-70 w-full bg-muted sm:h-80">
 				{image && !imgFailed ? (
@@ -285,6 +262,9 @@ export default function ServiceDetailPage() {
 						>
 							<ChevronRightIcon className="size-5" />
 						</button>
+						<span className="absolute right-3 bottom-3 rounded-full bg-black/55 px-2.5 py-1 text-[11px] font-bold text-white tabular-nums">
+							{imgIndex + 1}/{service.serviceImage.length}
+						</span>
 						<div className="absolute right-0 bottom-3 left-0 flex justify-center gap-1.5">
 							{service.serviceImage.map((_, i) => (
 								<button
@@ -305,81 +285,15 @@ export default function ServiceDetailPage() {
 				) : null}
 			</div>
 
-			<div className="px-4 pt-4">
-				{/* Title + price */}
-				<div className="flex items-start justify-between gap-3">
-					<div className="min-w-0 flex-1">
-						<h1 className="text-[20px] font-bold leading-tight tracking-tight text-foreground">
-							{service.serviceName}
-						</h1>
-						<div className="mt-2 flex flex-wrap items-center gap-2">
-							{isRecurring ? (
-								<RecurringBadge
-									interval={service.billingInterval}
-									count={service.billingIntervalCount}
-								/>
-							) : (
-								<span className="inline-flex items-center rounded-full bg-[#F2F2F2] px-2.5 py-0.5 text-[11px] font-medium text-[#525252]">
-									{t("pricingOneTime")}
-								</span>
-							)}
-							{hasDiscount ? (
-								<span className="inline-flex items-center rounded-full bg-[#E53935] px-2.5 py-0.5 text-[11px] font-bold text-white">
-									{Number(service.discount) <= 100
-										? `${service.discount}% OFF`
-										: `ETB ${service.discount} OFF`}
-								</span>
-							) : null}
-						</div>
-						<p className="mt-1.5 text-sm text-[#8E8E93]">{category}</p>
-					</div>
-					<p className="shrink-0 text-[18px] font-bold tabular-nums text-primary">
-						{formatAmount(service.price)}
-					</p>
-				</div>
+			<div className="bg-white px-4 pt-4 pb-2">
+				<h1 className="text-[20px] font-bold leading-tight tracking-tight text-foreground text-balance">
+					{service.serviceName}
+				</h1>
+				{service.address ? (
+					<p className="mt-1.5 text-[14px] text-[#8E8E93]">{service.address}</p>
+				) : null}
 
-				{/* Meta rows */}
-				<div className="mt-4 space-y-2 text-sm text-[#6B6B6B]">
-					<div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
-						{rating != null ? (
-							<span className="inline-flex items-center gap-1">
-								<StarIcon className="size-4 fill-[#FFA723] text-[#FFA723]" />
-								<span>
-									{rating.toFixed(1)}{" "}
-									{t("serviceReviewCount", {
-										count: String(service.reviewCount ?? 0),
-									})}
-								</span>
-							</span>
-						) : null}
-						{service.duration ? (
-							<span className="inline-flex items-center gap-1">
-								<ClockIcon className="size-4" />
-								{service.duration}
-							</span>
-						) : null}
-					</div>
-					{service.address ? (
-						<div className="flex items-start gap-1.5">
-							<MapPinIcon className="mt-0.5 size-4 shrink-0" />
-							<span className="leading-snug">{service.address}</span>
-						</div>
-					) : null}
-					{distanceKm != null ? (
-						<div className="flex items-center gap-1.5">
-							<MapPinIcon className="size-4 shrink-0" />
-							{t("serviceDistanceAway", {
-								km:
-									distanceKm < 10
-										? distanceKm.toFixed(1)
-										: String(Math.round(distanceKm)),
-							})}
-						</div>
-					) : null}
-				</div>
-
-				{/* Tabs — About / Gallery / Feedback */}
-				<div className="mt-5 flex gap-2">
+				<div className="mt-4 flex gap-2">
 					{(
 						[
 							{ id: "about" as const, label: t("serviceTabAbout") },
@@ -394,10 +308,10 @@ export default function ServiceDetailPage() {
 								type="button"
 								onClick={() => setTab(item.id)}
 								className={cn(
-									"flex-1 rounded-full border px-2 py-1.5 text-[13px] font-bold transition-colors duration-150",
+									"rounded-full border px-4 py-1.5 text-[13px] font-bold transition-colors duration-150",
 									active
-										? "border-primary/55 bg-primary/10 text-primary"
-										: "border-black/20 bg-white text-foreground/70",
+										? "border-primary/40 bg-primary/12 text-primary"
+										: "border-black/15 bg-white text-foreground/75",
 								)}
 							>
 								{item.label}
@@ -406,31 +320,68 @@ export default function ServiceDetailPage() {
 					})}
 				</div>
 
+				{distanceKm != null ? (
+					<div className="mt-3 flex justify-end">
+						<span className="inline-flex items-center gap-1 text-[13px] font-medium text-foreground">
+							<MapPinIcon className="size-3.5 text-primary" />
+							{t("serviceDistanceAway", {
+								km:
+									distanceKm < 10
+										? distanceKm.toFixed(1)
+										: String(Math.round(distanceKm)),
+							})}
+						</span>
+					</div>
+				) : null}
+			</div>
+
+			<div className="px-4 pt-3">
 				{tab === "about" ? (
-					<div className="mt-5 space-y-5">
+					<div className="space-y-5">
 						<section>
 							<h2 className="text-[15px] font-extrabold text-foreground">
 								{t("serviceDescription")}
 							</h2>
 							{service.description ? (
-								<p className="mt-2 whitespace-pre-wrap text-[14px] leading-relaxed text-[#8E8E93]">
+								<p className="mt-2 whitespace-pre-wrap text-[14px] leading-relaxed text-[#6B6B6B]">
+									{descPrefix}
 									{service.description}
 								</p>
 							) : (
 								<p className="mt-2 text-sm text-muted-foreground">—</p>
 							)}
-							{service.allowsCustomOffer ? (
-								<p className="mt-2 text-xs text-muted-foreground">
-									{t("serviceCustomOfferHint")}
+							{service.address ? (
+								<p className="mt-2 inline-flex items-start gap-1.5 text-[13px] text-[#8E8E93]">
+									<MapPinIcon className="mt-0.5 size-3.5 shrink-0" />
+									<span>{service.address}</span>
 								</p>
 							) : null}
+							<div className="mt-3 flex flex-wrap gap-2">
+								{typeLabel ? (
+									<span className="rounded-md bg-[#EFEFEF] px-2.5 py-1 text-[12px] font-semibold text-[#525252]">
+										{typeLabel}
+									</span>
+								) : null}
+								{isRecurring ? (
+									<RecurringBadge
+										interval={service.billingInterval}
+										count={service.billingIntervalCount}
+									/>
+								) : hasPartialPrePayment ? (
+									<span className="rounded-md bg-[#EFEFEF] px-2.5 py-1 text-[12px] font-semibold text-[#525252]">
+										{t("bookingPayPercentNow", {
+											percent: String(prePayPercent),
+										})}
+									</span>
+								) : null}
+							</div>
 						</section>
 
 						<section>
 							<h2 className="text-[15px] font-extrabold text-foreground">
 								{t("serviceOperatedBy")}
 							</h2>
-							<div className="mt-3 flex items-center gap-3 rounded-2xl border border-black/10 bg-white p-3.5">
+							<div className="mt-3 flex items-center gap-3">
 								<UserAvatar
 									src={service.providerImage}
 									name={service.providerName}
@@ -441,72 +392,32 @@ export default function ServiceDetailPage() {
 									<p className="truncate text-[15px] font-bold text-foreground">
 										{service.providerName || t("provider")}
 									</p>
-									<p className="text-sm text-[#8E8E93]">
-										{t("serviceProvider")}
-									</p>
-								</div>
-							</div>
-						</section>
-
-						<section>
-							<div className="flex items-center justify-between">
-								<h2 className="text-[15px] font-extrabold text-foreground">
-									{t("bookServiceQty")}
-								</h2>
-								<div className="flex items-center gap-3 rounded-xl border border-black/10 bg-white px-2 py-1.5">
-									<button
-										type="button"
-										onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-										disabled={quantity <= 1}
-										className="inline-flex size-8 items-center justify-center rounded-lg text-foreground disabled:opacity-40"
-										aria-label="−"
-									>
-										<MinusIcon className="size-4" />
-									</button>
-									<span className="min-w-6 text-center text-sm font-bold tabular-nums">
-										{quantity}
-									</span>
-									<button
-										type="button"
-										onClick={() => setQuantity((q) => Math.min(10, q + 1))}
-										disabled={quantity >= 10}
-										className="inline-flex size-8 items-center justify-center rounded-lg text-foreground disabled:opacity-40"
-										aria-label="+"
-									>
-										<PlusIcon className="size-4" />
-									</button>
-								</div>
-							</div>
-
-							<h2 className="mt-5 text-[15px] font-extrabold text-foreground">
-								{t("servicePriceDetail")}
-							</h2>
-							<div className="mt-3 space-y-2.5 rounded-xl border border-black/10 bg-[#FAFAFA] p-4 dark:bg-muted/40">
-								<div className="flex items-start justify-between gap-3 text-sm">
-									<span className="text-[#6B6B6B]">
-										{t("bookServicePriceLine")}
-									</span>
-									<span className="text-right font-medium tabular-nums text-foreground">
-										{formatAmount(unitPrice)} × {quantity} ={" "}
-										{formatAmount(priceLine)}
-									</span>
-								</div>
-								{discountAmt > 0 ? (
-									<div className="flex items-center justify-between gap-3 text-sm">
-										<span className="text-[#6B6B6B]">
-											{t("commonDiscount")} ({discountOffLabel(service.discount)})
-										</span>
-										<span className="font-medium tabular-nums text-primary">
-											−{formatAmount(discountAmt)}
-										</span>
-									</div>
-								) : null}
-								<div className="border-t border-black/5 pt-2.5" />
-								<div className="flex items-center justify-between gap-3 text-sm font-bold">
-									<span>{t("commonTotal")}</span>
-									<span className="tabular-nums text-primary">
-										{formatAmount(total)}
-									</span>
+									{rating != null ? (
+										<div className="mt-0.5 flex items-center gap-1.5">
+											{Array.from({ length: 5 }).map((_, i) => (
+												<StarIcon
+													key={i}
+													className={cn(
+														"size-3.5",
+														i < Math.round(rating)
+															? "fill-[#FFA723] text-[#FFA723]"
+															: "text-muted-foreground/30",
+													)}
+												/>
+											))}
+											<span className="text-[13px] text-[#6B6B6B]">
+												{rating.toFixed(1)} (
+												{t("serviceReviewCount", {
+													count: String(service.reviewCount ?? 0),
+												})}
+												)
+											</span>
+										</div>
+									) : (
+										<p className="text-sm text-[#8E8E93]">
+											{t("serviceProvider")}
+										</p>
+									)}
 								</div>
 							</div>
 						</section>
@@ -613,8 +524,11 @@ export default function ServiceDetailPage() {
 				style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}
 			>
 				<div className="mx-auto max-w-lg md:max-w-2xl">
-					<Button className="h-12 w-full rounded-xl text-[15px] font-semibold" onClick={onBook}>
-						{t("serviceBook")} · {formatAmount(total)}
+					<Button
+						className="h-12 w-full rounded-xl text-[15px] font-semibold"
+						onClick={onBook}
+					>
+						{t("serviceBook")}
 					</Button>
 				</div>
 			</div>

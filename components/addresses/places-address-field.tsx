@@ -68,6 +68,8 @@ export function PlacesAddressField({
 	onLocationChange,
 	required,
 	className,
+	inputClassName,
+	compact = false,
 }: {
 	id?: string;
 	label?: string;
@@ -76,6 +78,8 @@ export function PlacesAddressField({
 	onLocationChange?: (loc: LatLng | null) => void;
 	required?: boolean;
 	className?: string;
+	inputClassName?: string;
+	compact?: boolean;
 }) {
 	const { t } = useLocale();
 	const autoId = useId();
@@ -228,36 +232,63 @@ export function PlacesAddressField({
 					value={value}
 					onChange={(e) => onChange(e.target.value)}
 					placeholder={t("bookServiceAddressPlaceholder")}
-					className="bg-white"
+					className={cn("bg-white", inputClassName)}
 					autoComplete="street-address"
 				/>
 			</Field>
 
 			{mapsKey ? (
-				<div className="flex flex-wrap gap-2">
-					<Button
-						type="button"
-						variant="outline"
-						size="sm"
-						disabled={busyLoc || !scriptReady}
-						onClick={() => void useCurrentLocation()}
-						className="gap-1.5"
-					>
-						<LocateFixedIcon className="size-3.5" />
-						{busyLoc ? t("commonLoading") : t("bookServiceUseCurrentLocation")}
-					</Button>
-					<Button
-						type="button"
-						variant="outline"
-						size="sm"
-						disabled={!scriptReady}
-						onClick={() => setMapOpen(true)}
-						className="gap-1.5"
-					>
-						<MapPinIcon className="size-3.5" />
-						{t("bookServicePickOnMap")}
-					</Button>
-				</div>
+				compact ? (
+					<div className="flex gap-2">
+						<button
+							type="button"
+							disabled={busyLoc || !scriptReady}
+							onClick={() => void useCurrentLocation()}
+							className="inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-lg bg-[#f0f0ee] text-[12px] font-medium text-foreground transition-colors duration-150 hover:bg-[#e8e8e4] disabled:opacity-50"
+						>
+							<LocateFixedIcon className="size-3.5" />
+							{busyLoc
+								? t("commonLoading")
+								: t("bookServiceUseCurrentLocation")}
+						</button>
+						<button
+							type="button"
+							disabled={!scriptReady}
+							onClick={() => setMapOpen(true)}
+							className="inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-lg bg-[#f0f0ee] text-[12px] font-medium text-foreground transition-colors duration-150 hover:bg-[#e8e8e4] disabled:opacity-50"
+						>
+							<MapPinIcon className="size-3.5" />
+							{t("bookServicePickOnMap")}
+						</button>
+					</div>
+				) : (
+					<div className="flex flex-wrap gap-2">
+						<Button
+							type="button"
+							variant="outline"
+							size="sm"
+							disabled={busyLoc || !scriptReady}
+							onClick={() => void useCurrentLocation()}
+							className="gap-1.5"
+						>
+							<LocateFixedIcon className="size-3.5" />
+							{busyLoc
+								? t("commonLoading")
+								: t("bookServiceUseCurrentLocation")}
+						</Button>
+						<Button
+							type="button"
+							variant="outline"
+							size="sm"
+							disabled={!scriptReady}
+							onClick={() => setMapOpen(true)}
+							className="gap-1.5"
+						>
+							<MapPinIcon className="size-3.5" />
+							{t("bookServicePickOnMap")}
+						</Button>
+					</div>
+				)
 			) : null}
 
 			{mapError ? <p className="text-xs text-destructive">{mapError}</p> : null}

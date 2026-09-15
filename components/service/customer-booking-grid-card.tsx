@@ -25,8 +25,19 @@ function bookingTitle(booking: Booking): string {
 }
 
 function bookingAmount(booking: Booking): string {
+	const status = (booking.status ?? "")
+		.trim()
+		.toLowerCase()
+		.replace(/[\s_-]+/g, "");
+	const postJob =
+		status === "completed" ||
+		status === "pendingapproval" ||
+		status === "pendingextrapayment" ||
+		status === "adminpaid";
 	return formatAmount(
-		booking.service?.price ?? booking.totalAmount ?? booking.subTotal,
+		postJob
+			? (booking.subTotal ?? booking.totalAmount ?? booking.service?.price)
+			: (booking.service?.price ?? booking.totalAmount ?? booking.subTotal),
 	);
 }
 

@@ -291,12 +291,16 @@ export async function acceptJobBid(params: {
 
 export async function cancelCustomerBooking(
 	bookingId: string,
+	reason?: string,
 ): Promise<{ ok: boolean; error: string | null }> {
 	const { error } = await getSupabase()
 		.from("booked_service")
-		.update({ status: "rejected", reason: "Cancelled by customer" })
+		.update({
+			status: "rejected",
+			reason: (reason ?? "").trim() || "Cancelled by customer",
+		})
 		.eq("id", bookingId)
-		.eq("status", "pending");
+		.in("status", ["pending", "accepted"]);
 
 	if (error) {
 		console.error("cancelCustomerBooking", error);
