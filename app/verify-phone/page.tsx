@@ -74,7 +74,7 @@ function VerifyPhoneForm() {
 	}
 
 	useEffect(() => {
-		if (!isSignup || !phone || sentOnce) return;
+		if ((!isSignup && !isReset) || !phone || sentOnce) return;
 		setSentOnce(true);
 		void (async () => {
 			setBusy(true);
@@ -88,7 +88,7 @@ function VerifyPhoneForm() {
 			}
 			setVerificationId(result.verificationId ?? null);
 		})();
-	}, [isSignup, phone, sentOnce, t]);
+	}, [isSignup, isReset, phone, sentOnce, t]);
 
 	async function verify() {
 		if (!verificationId) return;
