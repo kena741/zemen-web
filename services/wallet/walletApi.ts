@@ -109,8 +109,33 @@ export async function requestWithdrawal(params: {
 
 	if (balErr) return { ok: false, error: balErr.message };
 	const balance = Number(provider?.walletAmount ?? 0) || 0;
-	if (params.amount > balance) {
-		return { ok: false, error: "Amount exceeds wallet balance" };
+
+	// Soft-hold pending like mobile — admin deducts only on complete.
+	const { data: pendingRows } = await supabase
+		.from("withdrawal_history")
+		.select("amount, paymentStatus")
+		.eq("providerId", params.providerId);
+
+	let pendingTotal = 0;
+	for (const row of pendingRows ?? []) {
+		const status = String(
+			(row as { paymentStatus?: string }).paymentStatus ?? "pending",
+		)
+			.trim()
+			.toLowerCase();
+		if (status === "pending" || status === "" || status === "hold") {
+			pendingTotal += Number((row as { amount?: string }).amount ?? 0) || 0;
+		}
+	}
+	const available = Math.round((balance - pendingTotal) * 100) / 100;
+	if (params.amount > available) {
+		return {
+			ok: false,
+			error:
+				available <= 0
+					? "No available balance (pending withdrawals hold funds)"
+					: `Amount exceeds available balance (${available.toFixed(2)} ETB)`,
+		};
 	}
 
 	const id = crypto.randomUUID();
@@ -129,18 +154,35 @@ export async function requestWithdrawal(params: {
 	});
 
 	if (error) return { ok: false, error: error.message };
-
-	// Deduct locally like mobile pending flow expectations — if RLS blocks, withdraw row still exists
-	const newBalance = balance - params.amount;
-	const { error: walletErr } = await supabase
-		.from("provider")
-		.update({ walletAmount: newBalance })
-		.eq("id", params.providerId);
-
-	if (walletErr) {
-		console.error("requestWithdrawal wallet update", walletErr);
-		// Don't fail hard — admin may process from pending request
-	}
-
 	return { ok: true, error: null };
+}
+
+/** Restore funds for premature web deducts (rejected or still pending). */
+export async function restorePrematureWithdrawalDeducts(): Promise<{
+	refunded: number;
+	error: string | null;
+}> {
+	try {
+		const { data } = await getSupabase().auth.getSession();
+		const token = data.session?.access_token;
+		if (!token) return { refunded: 0, error: null };
+
+		const res = await fetch("/api/wallet/refund-rejected", {
+			method: "POST",
+			headers: { Authorization: `Bearer ${token}` },
+		});
+		const json = (await res.json()) as {
+			refunded?: number;
+			error?: string;
+		};
+		if (!res.ok) {
+			return { refunded: 0, error: json.error ?? "Restore failed" };
+		}
+		return { refunded: Number(json.refunded ?? 0) || 0, error: null };
+	} catch (e) {
+		return {
+			refunded: 0,
+			error: e instanceof Error ? e.message : "Restore failed",
+		};
+	}
 }
