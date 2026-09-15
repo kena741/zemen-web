@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { ChapaTopUp } from "@/components/payments/chapa-top-up";
 import { ProfileBackLink } from "@/components/provider/profile-back-link";
@@ -13,7 +13,11 @@ import { Label } from "@/components/ui/label";
 import { useLocale } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { formatAmount, formatDateTime } from "@/services/bookings/types";
-import { requestWithdrawal } from "@/services/wallet/walletApi";
+import {
+	requestWithdrawal,
+	restorePrematureWithdrawalDeducts,
+} from "@/services/wallet/walletApi";
+import type { WithdrawRequest } from "@/services/wallet/types";
 import { useAppDispatch } from "@/store/hooks";
 import { invalidateProviderWallet } from "@/store/providerCacheSlice";
 import { useAuth } from "@/store/useAuth";
@@ -21,6 +25,47 @@ import {
 	useCachedProviderBank,
 	useCachedProviderWallet,
 } from "@/store/useProviderCache";
+
+function isPendingStatus(status: string | null | undefined): boolean {
+	const s = (status ?? "pending").trim().toLowerCase();
+	return s === "pending" || s === "" || s === "hold";
+}
+
+function isRejectedStatus(status: string | null | undefined): boolean {
+	const s = (status ?? "").trim().toLowerCase();
+	return s === "rejected" || s === "failed" || s === "declined";
+}
+
+function isApprovedStatus(status: string | null | undefined): boolean {
+	const s = (status ?? "").trim().toLowerCase();
+	return s === "approved" || s === "completed" || s === "success";
+}
+
+function rejectionReason(w: WithdrawRequest): string | null {
+	if (!isRejectedStatus(w.paymentStatus)) return null;
+	return w.rejectionReason?.trim() || w.adminNote?.trim() || null;
+}
+
+function matchesDateHour(
+	iso: string | null | undefined,
+	date: string,
+	hour: string,
+): boolean {
+	if (!date && !hour) return true;
+	if (!iso) return false;
+	const d = new Date(iso);
+	if (Number.isNaN(d.getTime())) return false;
+	if (date) {
+		const y = d.getFullYear();
+		const m = String(d.getMonth() + 1).padStart(2, "0");
+		const day = String(d.getDate()).padStart(2, "0");
+		if (`${y}-${m}-${day}` !== date) return false;
+	}
+	if (hour !== "") {
+		if (d.getHours() !== Number(hour)) return false;
+	}
+	return true;
+}
 
 export default function WalletPage() {
 	const { t } = useLocale();
@@ -44,42 +89,58 @@ export default function WalletPage() {
 	const [withdrawFilter, setWithdrawFilter] = useState<
 		"all" | "pending" | "approved" | "rejected"
 	>("all");
+	const [filterDate, setFilterDate] = useState("");
+	const [filterHour, setFilterHour] = useState("");
+	const restoredRef = useRef(false);
+
+	useEffect(() => {
+		if (!providerId || restoredRef.current) return;
+		restoredRef.current = true;
+		void restorePrematureWithdrawalDeducts().then((res) => {
+			if (res.refunded > 0) {
+				dispatch(invalidateProviderWallet());
+				refresh();
+			}
+		});
+	}, [providerId, dispatch, refresh]);
 
 	const defaultBank = banks.find((b) => b.isDefault) ?? banks[0] ?? null;
 
+	const pendingTotal = useMemo(
+		() =>
+			wallet.withdrawals
+				.filter((w) => isPendingStatus(w.paymentStatus))
+				.reduce((sum, w) => sum + (Number(w.amount ?? 0) || 0), 0),
+		[wallet.withdrawals],
+	);
+	const availableBalance =
+		Math.round((wallet.balance - pendingTotal) * 100) / 100;
+
 	const filteredWithdrawals = wallet.withdrawals.filter((w) => {
-		if (withdrawFilter === "all") return true;
-		const status = (w.paymentStatus ?? "pending").toLowerCase();
-		if (withdrawFilter === "approved")
-			return (
-				status === "approved" ||
-				status === "completed" ||
-				status === "success"
-			);
-		if (withdrawFilter === "rejected")
-			return (
-				status === "rejected" ||
-				status === "failed" ||
-				status === "declined"
-			);
-		return status === "pending";
+		if (withdrawFilter === "approved" && !isApprovedStatus(w.paymentStatus))
+			return false;
+		if (withdrawFilter === "rejected" && !isRejectedStatus(w.paymentStatus))
+			return false;
+		if (withdrawFilter === "pending" && !isPendingStatus(w.paymentStatus))
+			return false;
+		return matchesDateHour(w.createdDate, filterDate, filterHour);
 	});
 
+	const filteredTransactions = wallet.transactions.filter((tx) =>
+		matchesDateHour(tx.createdDate, filterDate, filterHour),
+	);
+
+	const hasDateFilter = Boolean(filterDate || filterHour);
+
 	function withdrawStatusLabel(status: string | null) {
-		const s = (status ?? "pending").toLowerCase();
-		if (s === "approved" || s === "completed" || s === "success")
-			return t("statusApproved");
-		if (s === "rejected" || s === "failed" || s === "declined")
-			return t("statusRejected");
+		if (isApprovedStatus(status)) return t("statusApproved");
+		if (isRejectedStatus(status)) return t("statusRejected");
 		return t("statusPending");
 	}
 
 	function withdrawStatusClass(status: string | null) {
-		const s = (status ?? "pending").toLowerCase();
-		if (s === "rejected" || s === "failed" || s === "declined")
-			return "bg-destructive/15 text-destructive";
-		if (s === "approved" || s === "completed" || s === "success")
-			return "bg-primary/10 text-primary";
+		if (isRejectedStatus(status)) return "bg-destructive/15 text-destructive";
+		if (isApprovedStatus(status)) return "bg-primary/10 text-primary";
 		return "bg-amber-100 text-amber-900";
 	}
 
@@ -129,6 +190,13 @@ export default function WalletPage() {
 				<p className="mt-2 text-3xl font-semibold tracking-tight tabular-nums">
 					{loading ? "…" : formatAmount(String(wallet.balance))}
 				</p>
+				{pendingTotal > 0 ? (
+					<p className="mt-1 text-sm text-primary-foreground/85">
+						{t("providerWalletAvailable")}: {formatAmount(String(availableBalance))}
+						{" · "}
+						{t("providerWalletPendingHold")}: {formatAmount(String(pendingTotal))}
+					</p>
+				) : null}
 				<div className="mt-4">
 					<ChapaTopUp
 						email={user?.email}
@@ -169,7 +237,7 @@ export default function WalletPage() {
 
 			{showWithdraw ? (
 				<form
-					onSubmit={submitWithdraw}
+					onSubmit={(e) => void submitWithdraw(e)}
 					className="mt-4 space-y-3 rounded-xl border border-border bg-white p-4 shadow-xs"
 				>
 					{defaultBank ? (
@@ -187,6 +255,9 @@ export default function WalletPage() {
 							</Link>
 						</p>
 					)}
+					<p className="text-xs text-muted-foreground">
+						{t("providerWalletAvailable")}: {formatAmount(String(availableBalance))}
+					</p>
 					<div className="space-y-1.5">
 						<Label htmlFor="amount">{t("commonAmountEtb")}</Label>
 						<Input
@@ -194,6 +265,7 @@ export default function WalletPage() {
 							type="number"
 							min={1}
 							step="0.01"
+							max={Math.max(0, availableBalance)}
 							required
 							value={amount}
 							onChange={(e) => setAmount(e.target.value)}
@@ -230,6 +302,52 @@ export default function WalletPage() {
 				</Button>
 			</div>
 
+			<div className="mt-3 flex flex-wrap items-end gap-2">
+				<div className="space-y-1">
+					<Label htmlFor="filter-date" className="text-xs">
+						{t("providerFilterByDate")}
+					</Label>
+					<Input
+						id="filter-date"
+						type="date"
+						value={filterDate}
+						onChange={(e) => setFilterDate(e.target.value)}
+						className="h-9 w-auto bg-white"
+					/>
+				</div>
+				<div className="space-y-1">
+					<Label htmlFor="filter-hour" className="text-xs">
+						{t("providerFilterByHour")}
+					</Label>
+					<select
+						id="filter-hour"
+						value={filterHour}
+						onChange={(e) => setFilterHour(e.target.value)}
+						className="flex h-9 rounded-md border border-input bg-white px-2 text-sm"
+					>
+						<option value="">{t("commonAll")}</option>
+						{Array.from({ length: 24 }, (_, h) => (
+							<option key={h} value={String(h)}>
+								{String(h).padStart(2, "0")}:00
+							</option>
+						))}
+					</select>
+				</div>
+				{hasDateFilter ? (
+					<Button
+						type="button"
+						size="sm"
+						variant="ghost"
+						onClick={() => {
+							setFilterDate("");
+							setFilterHour("");
+						}}
+					>
+						{t("commonClear")}
+					</Button>
+				) : null}
+			</div>
+
 			{tab === "withdraw" ? (
 				<div className="mt-3 flex gap-1.5 overflow-x-auto scrollbar-none">
 					{(
@@ -257,12 +375,12 @@ export default function WalletPage() {
 				{loading ? (
 					<AppLoading compact />
 				) : tab === "tx" ? (
-					wallet.transactions.length === 0 ? (
+					filteredTransactions.length === 0 ? (
 						<p className="py-10 text-center text-sm text-muted-foreground">
 							{t("providerWalletNoTransactions")}
 						</p>
 					) : (
-						wallet.transactions.map((tx) => (
+						filteredTransactions.map((tx) => (
 							<div
 								key={tx.id}
 								className="flex items-start justify-between gap-3 border-b border-border py-3 last:border-b-0"
@@ -292,29 +410,40 @@ export default function WalletPage() {
 						{t("providerWalletNoWithdrawals")}
 					</p>
 				) : (
-					filteredWithdrawals.map((w) => (
-						<div
-							key={w.id}
-							className="flex items-start justify-between gap-3 border-b border-border py-3 last:border-b-0"
-						>
-							<div className="min-w-0">
-								<span
-									className={cn(
-										"inline-flex rounded-md px-2 py-0.5 text-xs font-medium capitalize",
-										withdrawStatusClass(w.paymentStatus),
-									)}
-								>
-									{withdrawStatusLabel(w.paymentStatus)}
-								</span>
-								<p className="mt-1 text-xs text-muted-foreground">
-									{w.bankName} · {formatDateTime(w.createdDate)}
+					filteredWithdrawals.map((w) => {
+						const reason = rejectionReason(w);
+						return (
+							<div
+								key={w.id}
+								className="flex items-start justify-between gap-3 border-b border-border py-3 last:border-b-0"
+							>
+								<div className="min-w-0">
+									<span
+										className={cn(
+											"inline-flex rounded-md px-2 py-0.5 text-xs font-medium capitalize",
+											withdrawStatusClass(w.paymentStatus),
+										)}
+									>
+										{withdrawStatusLabel(w.paymentStatus)}
+									</span>
+									<p className="mt-1 text-xs text-muted-foreground">
+										{w.bankName} · {formatDateTime(w.createdDate)}
+									</p>
+									{reason ? (
+										<p className="mt-1.5 text-xs leading-snug text-destructive">
+											<span className="font-semibold">
+												{t("providerWalletRejectionReason")}:
+											</span>{" "}
+											{reason}
+										</p>
+									) : null}
+								</div>
+								<p className="shrink-0 text-sm font-semibold tabular-nums">
+									{formatAmount(w.amount)}
 								</p>
 							</div>
-							<p className="shrink-0 text-sm font-semibold tabular-nums">
-								{formatAmount(w.amount)}
-							</p>
-						</div>
-					))
+						);
+					})
 				)}
 			</div>
 		</div>
