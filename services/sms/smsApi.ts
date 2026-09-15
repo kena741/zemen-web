@@ -1,4 +1,11 @@
-const SMS_BASE = "https://betegna-ai.vercel.app";
+function smsBase(): string {
+	// Browser → same-origin proxy (betegna-ai CORS blocks web origins)
+	if (typeof window !== "undefined") return "/api/sms";
+	return (
+		process.env.SMS_API_BASE_URL?.trim().replace(/\/$/, "") ||
+		"https://betegna-ai.vercel.app/sms"
+	);
+}
 
 export interface SmsOtpResult {
 	success: boolean;
@@ -25,7 +32,7 @@ export async function sendPhoneOtp(phone: string): Promise<SmsOtpResult> {
 	if (!recipient) return { success: false, error: "Invalid phone number" };
 
 	try {
-		const res = await fetch(`${SMS_BASE}/sms/send-otp`, {
+		const res = await fetch(`${smsBase()}/send-otp`, {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
 			body: JSON.stringify({ recipient, codeLength: 6, ttlSeconds: 300 }),
@@ -37,7 +44,10 @@ export async function sendPhoneOtp(phone: string): Promise<SmsOtpResult> {
 			message?: string;
 		};
 		if (!res.ok || !data.success) {
-			return { success: false, error: data.error || data.message || "Failed to send OTP" };
+			return {
+				success: false,
+				error: data.error || data.message || "Failed to send OTP",
+			};
 		}
 		return { success: true, verificationId: data.verificationId };
 	} catch {
@@ -54,7 +64,7 @@ export async function verifyPhoneOtp(
 	if (!recipient) return { success: false, error: "Invalid phone number" };
 
 	try {
-		const res = await fetch(`${SMS_BASE}/sms/verify-otp`, {
+		const res = await fetch(`${smsBase()}/verify-otp`, {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
 			body: JSON.stringify({ recipient, code: code.trim(), verificationId }),
@@ -65,7 +75,10 @@ export async function verifyPhoneOtp(
 			message?: string;
 		};
 		if (!res.ok || !data.success) {
-			return { success: false, error: data.error || data.message || "Invalid code" };
+			return {
+				success: false,
+				error: data.error || data.message || "Invalid code",
+			};
 		}
 		return { success: true, message: data.message };
 	} catch {

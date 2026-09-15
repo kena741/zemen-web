@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 
 import { AuthShell } from "@/components/auth/auth-shell";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -58,7 +58,7 @@ function VerifyPhoneForm() {
 	const [newPassword, setNewPassword] = useState("");
 	const [error, setError] = useState<string | null>(null);
 	const [busy, setBusy] = useState(false);
-	const [sentOnce, setSentOnce] = useState(false);
+	const autoSendStarted = useRef(false);
 
 	async function sendCode() {
 		setBusy(true);
@@ -70,25 +70,24 @@ function VerifyPhoneForm() {
 			return;
 		}
 		setVerificationId(result.verificationId ?? null);
-		setSentOnce(true);
 	}
 
 	useEffect(() => {
-		if ((!isSignup && !isReset) || !phone || sentOnce) return;
-		setSentOnce(true);
+		if ((!isSignup && !isReset) || !phone || autoSendStarted.current) return;
+		autoSendStarted.current = true;
 		void (async () => {
 			setBusy(true);
 			setError(null);
 			const result = await sendPhoneOtp(phone);
 			setBusy(false);
 			if (!result.success) {
+				// Keep autoSendStarted true — never loop on failure; user can tap Send.
 				setError(result.error ?? t("commonError"));
-				setSentOnce(false);
 				return;
 			}
 			setVerificationId(result.verificationId ?? null);
 		})();
-	}, [isSignup, isReset, phone, sentOnce, t]);
+	}, [isSignup, isReset, phone, t]);
 
 	async function verify() {
 		if (!verificationId) return;
