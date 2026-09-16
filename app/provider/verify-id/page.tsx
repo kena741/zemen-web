@@ -14,6 +14,7 @@ import {
 
 import { ProfileBackLink } from "@/components/provider/profile-back-link";
 import { useLocale } from "@/lib/i18n";
+import type { MessageKey } from "@/lib/i18n/messages/en";
 import { cn } from "@/lib/utils";
 import { uploadVerifyDocument } from "@/services/auth/verificationApi";
 import {
@@ -32,7 +33,7 @@ type SubCategoryOption = { id: string; name: string };
 
 function statusMeta(
 	status: VerifyDocStatus,
-	t: (key: string) => string,
+	t: (key: MessageKey) => string,
 ): { label: string; chip: string; icon: "upload" | "ok" | "pending" | "reject" } {
 	switch (status) {
 		case "approved":
