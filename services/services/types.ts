@@ -212,6 +212,9 @@ export const SERVICE_CONSTRAINTS = {
 	maxDescription: 2000,
 	minDiscount: 1,
 	maxDiscount: 90,
+	minPrePaymentPercent: 10,
+	maxPrePaymentPercent: 100,
+	/** @deprecated use min/maxPrePaymentPercent — kept for callers expecting a list */
 	prePaymentPercents: [10, 100] as const,
 	storageBucket: "betegnabucket",
 } as const;

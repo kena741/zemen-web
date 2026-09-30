@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { PlusIcon, SearchIcon } from "lucide-react";
 
 import { ProfileBackLink } from "@/components/provider/profile-back-link";
@@ -11,6 +11,12 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useLocale } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
+import {
+	canCreateService,
+	fetchProviderTierMax,
+	isOnFreeServicePlan,
+	serviceCreateLimit,
+} from "@/services/provider/tiersApi";
 import { useAuth } from "@/store/useAuth";
 import { useCachedProviderServices } from "@/store/useProviderCache";
 
@@ -24,6 +30,20 @@ export default function ProviderServicesPage() {
 		useCachedProviderServices(providerId);
 	const [filter, setFilter] = useState<ServiceFilter>("active");
 	const [query, setQuery] = useState("");
+	const [tierMax, setTierMax] = useState(0);
+
+	useEffect(() => {
+		if (!providerId) return;
+		void fetchProviderTierMax(providerId).then(setTierMax);
+	}, [providerId]);
+
+	const activeCount = useMemo(
+		() => services.filter((s) => !s.archived).length,
+		[services],
+	);
+	const limit = serviceCreateLimit(tierMax);
+	const canAdd = canCreateService(tierMax, activeCount);
+	const onFree = isOnFreeServicePlan(tierMax);
 
 	const visible = services
 		.filter((s) => {
@@ -52,11 +72,18 @@ export default function ProviderServicesPage() {
 		{ id: "archived", label: t("providerServiceArchived") },
 	];
 
+	const addHref = canAdd ? "/provider/services/new" : "/provider/tier";
+	const addLabel = canAdd
+		? t("providerAddService")
+		: t("providerFreeServiceUpgrade");
+
 	return (
 		<div className="mx-auto w-full max-w-5xl pb-20 lg:pb-0">
 			<div className="lg:hidden">
 				<ProfileBackLink href="/provider/profile" label={t("profileTitle")} />
-				<h1 className="text-lg font-normal text-[#464646]">{t("providerServicesAll")}</h1>
+				<h1 className="text-lg font-normal text-[#464646]">
+					{t("providerServicesAll")}
+				</h1>
 			</div>
 
 			<div className="hidden flex-wrap items-end justify-between gap-3 lg:flex">
@@ -66,20 +93,37 @@ export default function ProviderServicesPage() {
 					<p className="mt-1.5 text-sm text-muted-foreground">
 						{loading ? t("commonLoading") : countLabel}
 					</p>
+					{onFree && !loading ? (
+						<p className="mt-1 text-xs text-muted-foreground">
+							{t("providerFreeServiceLimit", {
+								used: activeCount,
+								limit,
+							})}
+						</p>
+					) : null}
 				</div>
 				<div className="flex gap-2">
 					<Link
-						href="/provider/services/new"
+						href={addHref}
 						className={cn(
 							buttonVariants({ size: "sm" }),
 							"inline-flex items-center gap-1.5",
 						)}
 					>
 						<PlusIcon className="size-3.5" />
-						{t("providerAddService")}
+						{addLabel}
 					</Link>
 				</div>
 			</div>
+
+			{onFree && !loading ? (
+				<p className="mt-2 text-xs text-muted-foreground lg:hidden">
+					{t("providerFreeServiceLimit", {
+						used: activeCount,
+						limit,
+					})}
+				</p>
+			) : null}
 
 			<div className="relative mt-3 lg:mt-5">
 				<SearchIcon className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -113,7 +157,9 @@ export default function ProviderServicesPage() {
 				<AppLoading compact />
 			) : visible.length === 0 ? (
 				<div className="mt-5 rounded-xl bg-white px-4 py-12 text-center">
-					<p className="text-sm text-muted-foreground">{t("providerNoServices")}</p>
+					<p className="text-sm text-muted-foreground">
+						{t("providerNoServices")}
+					</p>
 				</div>
 			) : (
 				<div className="mt-4 grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-3">
@@ -135,14 +181,14 @@ export default function ProviderServicesPage() {
 				style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}
 			>
 				<Link
-					href="/provider/services/new"
+					href={addHref}
 					className={cn(
 						buttonVariants(),
 						"flex h-12 w-full items-center justify-center gap-2 rounded-xl text-base",
 					)}
 				>
 					<PlusIcon className="size-4" />
-					{t("providerAddService")}
+					{addLabel}
 				</Link>
 			</div>
 		</div>

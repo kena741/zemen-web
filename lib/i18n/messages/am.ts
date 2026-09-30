@@ -708,12 +708,18 @@ export const am: Record<MessageKey, string> = {
 	providerApprovalStatus: "ማጽደቅ",
 	providerPrePaymentPercent: "ቅድመ ክፍያ (%)",
 	providerPrePaymentHint: "ቦታ ሲያስይዙ ደንበኞች የሚከፍሉት መቶኛ (አንድ ጊዜ አገልግሎቶች)።",
+	providerPrePaymentRangeHint: "ከ {min}% እስከ {max}% ያስገቡ።",
 	providerAllowCustomPrice: "ብጁ ዋጋ ቅናሾችን ፍቀድ",
 	providerBillingEveryN: "በየ N ጊዜ",
 	providerServiceName: "የአገልግሎት ስም",
 	providerServiceNamePlaceholder: "ለምሳሌ ጥልቅ ቤት ማጽዳት",
 	providerSelectCategory: "ምድብ ይምረጡ",
 	providerSelectSubcategory: "ንዑስ ምድብ ይምረጡ",
+	providerFreeServiceLimit:
+		"ነጻ ዕቅድ፡ {used}/{limit} አገልግሎቶች። ተጨማሪ ለመጨመር ያሻሽሉ።",
+	providerFreeServiceUpgrade: "ዕቅድ አሻሽል",
+	providerServiceLimitReached:
+		"የአገልግሎት ገደብ ተደርሷል ({used}/{limit})። ተጨማሪ ለመጨመር ዕቅድዎን ያሻሽሉ።",
 	providerServiceImages: "ምስሎች",
 	providerServiceActiveListing: "ንቁ ዝርዝር",
 	providerServiceEditPendingHint: "ማስቀመጥ ዝርዝሩን ወደ ማጽደቅ በመጠባበቅ ይመልሳል።",

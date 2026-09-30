@@ -721,12 +721,18 @@ export const en = {
 	providerApprovalStatus: "Approval",
 	providerPrePaymentPercent: "Pre-payment (%)",
 	providerPrePaymentHint: "Percent customers pay when booking (one-time services).",
+	providerPrePaymentRangeHint: "Enter a value from {min}% to {max}%.",
 	providerAllowCustomPrice: "Allow custom price offers",
 	providerBillingEveryN: "Every N intervals",
 	providerServiceName: "Service name",
 	providerServiceNamePlaceholder: "e.g. Deep house cleaning",
 	providerSelectCategory: "Select category",
 	providerSelectSubcategory: "Select subcategory",
+	providerFreeServiceLimit:
+		"Free plan: {used}/{limit} services used. Upgrade to add more.",
+	providerFreeServiceUpgrade: "Upgrade plan",
+	providerServiceLimitReached:
+		"Service limit reached ({used}/{limit}). Upgrade your plan to add more.",
 	providerServiceImages: "Images",
 	providerServiceActiveListing: "Active listing",
 	providerServiceEditPendingHint:

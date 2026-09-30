@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { ImagePlusIcon, XIcon } from "lucide-react";
 
 import { PlacesAddressField } from "@/components/addresses/places-address-field";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import {
 	type RecurringPaymentSettings,
 	RECURRING_PAYMENT_SETTINGS_DEFAULT,
@@ -40,7 +41,7 @@ const INTERVAL_OPTIONS = [
 ] as const;
 
 const fieldClass =
-	"w-full rounded-xl border-0 bg-[#eef3ea] px-4 py-3.5 text-[15px] text-foreground outline-none transition-[box-shadow,background-color] placeholder:text-muted-foreground/70 focus:bg-white focus:ring-2 focus:ring-primary/25";
+	"w-full rounded-xl border-0 bg-[#eef3ea] px-3.5 py-3 text-[14px] text-foreground outline-none transition-[box-shadow,background-color] placeholder:text-muted-foreground/70 focus:bg-white focus:ring-2 focus:ring-primary/25";
 
 function Section({
 	step,
@@ -54,17 +55,17 @@ function Section({
 	children: ReactNode;
 }) {
 	return (
-		<section className="relative space-y-4 pt-2">
+		<section className="relative space-y-3 pt-1">
 			<div className="flex items-end gap-3">
-				<span className="font-mono text-[11px] font-semibold tracking-[0.14em] text-primary/70">
+				<span className="font-mono text-[10px] font-semibold tracking-[0.14em] text-primary/70">
 					{step}
 				</span>
-				<div className="min-w-0 flex-1 border-b border-primary/10 pb-2">
-					<h2 className="text-[17px] font-semibold tracking-tight text-foreground text-balance">
+				<div className="min-w-0 flex-1 border-b border-primary/10 pb-1.5">
+					<h2 className="text-[15px] font-semibold tracking-tight text-foreground text-balance">
 						{title}
 					</h2>
 					{hint ? (
-						<p className="mt-0.5 text-[13px] text-muted-foreground">{hint}</p>
+						<p className="mt-0.5 text-[12px] text-muted-foreground">{hint}</p>
 					) : null}
 				</div>
 			</div>
@@ -186,8 +187,26 @@ export function ServiceForm({
 	);
 	const isRecurring = pricingType === "RECURRING";
 	const [prePaymentPercent, setPrePaymentPercent] = useState(() => {
-		const pct = initial?.prePaymentPercent;
-		return pct === 10 ? 10 : 100;
+		const pct = Number(initial?.prePaymentPercent);
+		if (
+			Number.isFinite(pct) &&
+			pct >= SERVICE_CONSTRAINTS.minPrePaymentPercent &&
+			pct <= SERVICE_CONSTRAINTS.maxPrePaymentPercent
+		) {
+			return Math.round(pct);
+		}
+		return 100;
+	});
+	const [prePaymentInput, setPrePaymentInput] = useState(() => {
+		const pct = Number(initial?.prePaymentPercent);
+		if (
+			Number.isFinite(pct) &&
+			pct >= SERVICE_CONSTRAINTS.minPrePaymentPercent &&
+			pct <= SERVICE_CONSTRAINTS.maxPrePaymentPercent
+		) {
+			return String(Math.round(pct));
+		}
+		return "100";
 	});
 	const [allowsCustomOffer, setAllowsCustomOffer] = useState(
 		initial?.allowsCustomOffer ?? false,
@@ -366,7 +385,7 @@ export function ServiceForm({
 	const descLen = description.trim().length;
 
 	return (
-		<form onSubmit={(e) => void handleSubmit(e)} className="space-y-10 pb-28">
+		<form onSubmit={(e) => void handleSubmit(e)} className="space-y-6 pb-28">
 			{error ? (
 				<div
 					role="alert"
@@ -392,48 +411,43 @@ export function ServiceForm({
 				title={t("commonCategory")}
 				hint={t("providerSelectCategory")}
 			>
-				<div className="flex flex-wrap gap-2">
-					{loadingMeta ? (
-						<p className="text-[13px] text-muted-foreground">
-							{t("commonLoading")}
-						</p>
-					) : (
-						categories.map((c) => (
-							<Chip
-								key={c.id}
-								selected={categoryId === c.id}
-								onClick={() => {
-									setCategoryId(c.id);
-									setSubCategoryId("");
-								}}
-							>
-								{c.categoryName}
-							</Chip>
-						))
-					)}
-				</div>
-				{categoryId ? (
-					<div className="space-y-2 pt-2">
-						<p className="text-[12px] font-medium tracking-wide text-muted-foreground uppercase">
-							{t("providerSubcategory")}
-						</p>
-						<div className="flex flex-wrap gap-2">
-							{subCategories.length === 0 ? (
-								<p className="text-[13px] text-muted-foreground">…</p>
-							) : (
-								subCategories.map((s) => (
-									<Chip
-										key={s.id}
-										selected={subCategoryId === s.id}
-										onClick={() => setSubCategoryId(s.id)}
-									>
-										{s.subCategoryName}
-									</Chip>
-								))
-							)}
-						</div>
+				{loadingMeta ? (
+					<p className="text-[13px] text-muted-foreground">
+						{t("commonLoading")}
+					</p>
+				) : (
+					<div className="space-y-3">
+						<SearchableSelect
+							options={categories.map((c) => ({
+								id: c.id,
+								label: c.categoryName ?? c.id,
+							}))}
+							value={categoryId}
+							onChange={(id) => {
+								setCategoryId(id);
+								setSubCategoryId("");
+							}}
+							placeholder={t("providerSelectCategory")}
+						/>
+						{categoryId ? (
+							<div className="space-y-1.5">
+								<p className="text-[12px] font-medium text-muted-foreground">
+									{t("providerSubcategory")}
+								</p>
+								<SearchableSelect
+									options={subCategories.map((s) => ({
+										id: s.id,
+										label: s.subCategoryName ?? s.id,
+									}))}
+									value={subCategoryId}
+									onChange={setSubCategoryId}
+									placeholder={t("providerSelectSubcategory")}
+									disabled={subCategories.length === 0}
+								/>
+							</div>
+						) : null}
 					</div>
-				) : null}
+				)}
 			</Section>
 
 			<Section step="03" title={t("bookServicePayment")}>
@@ -516,23 +530,58 @@ export function ServiceForm({
 						</div>
 					</div>
 				) : (
-					<div className="space-y-3">
-						<p className="text-[12px] font-medium tracking-wide text-muted-foreground uppercase">
-							{t("providerPrePaymentPercent")}
-						</p>
-						<div className="flex flex-wrap gap-2">
-							{SERVICE_CONSTRAINTS.prePaymentPercents.map((pct) => (
-								<Chip
-									key={pct}
-									selected={prePaymentPercent === pct}
-									onClick={() => setPrePaymentPercent(pct)}
-								>
-									{pct}%
-								</Chip>
-							))}
-						</div>
+					<div className="space-y-2">
+						<label className="block space-y-1.5">
+							<span className="text-[12px] font-medium text-muted-foreground">
+								{t("providerPrePaymentPercent")}
+							</span>
+							<div className="relative">
+								<input
+									type="number"
+									inputMode="numeric"
+									min={SERVICE_CONSTRAINTS.minPrePaymentPercent}
+									max={SERVICE_CONSTRAINTS.maxPrePaymentPercent}
+									step="1"
+									required
+									value={prePaymentInput}
+									onChange={(e) => {
+										const raw = e.target.value.replace(/[^\d]/g, "");
+										setPrePaymentInput(raw);
+										const n = Number(raw);
+										if (
+											Number.isFinite(n) &&
+											n >= SERVICE_CONSTRAINTS.minPrePaymentPercent &&
+											n <= SERVICE_CONSTRAINTS.maxPrePaymentPercent
+										) {
+											setPrePaymentPercent(n);
+										}
+									}}
+									onBlur={() => {
+										const n = Number(prePaymentInput);
+										const clamped = Number.isFinite(n)
+											? Math.min(
+													SERVICE_CONSTRAINTS.maxPrePaymentPercent,
+													Math.max(
+														SERVICE_CONSTRAINTS.minPrePaymentPercent,
+														Math.round(n),
+													),
+												)
+											: SERVICE_CONSTRAINTS.maxPrePaymentPercent;
+										setPrePaymentPercent(clamped);
+										setPrePaymentInput(String(clamped));
+									}}
+									className={cn(fieldClass, "pr-10")}
+								/>
+								<span className="pointer-events-none absolute top-1/2 right-3.5 -translate-y-1/2 text-sm text-muted-foreground">
+									%
+								</span>
+							</div>
+						</label>
 						<p className="text-[12px] text-muted-foreground">
-							{t("providerPrePaymentHint")}
+							{t("providerPrePaymentRangeHint", {
+								min: SERVICE_CONSTRAINTS.minPrePaymentPercent,
+								max: SERVICE_CONSTRAINTS.maxPrePaymentPercent,
+							})}
 						</p>
 					</div>
 				)}

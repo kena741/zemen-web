@@ -101,6 +101,29 @@ export async function fetchProviderTierMax(
 	);
 }
 
+/** Unpaid providers may create this many listings before buying a plan. */
+export const FREE_SERVICE_LIMIT = 1;
+
+/** Effective create/list cap: paid tier, unlimited (<0), or free allotment when unpaid. */
+export function serviceCreateLimit(tierMax: number): number {
+	const max = Number(tierMax) || 0;
+	if (isUnlimitedTier(max)) return Number.POSITIVE_INFINITY;
+	if (max >= 1) return max;
+	return FREE_SERVICE_LIMIT;
+}
+
+export function canCreateService(
+	tierMax: number,
+	activeServiceCount: number,
+): boolean {
+	return activeServiceCount < serviceCreateLimit(tierMax);
+}
+
+export function isOnFreeServicePlan(tierMax: number): boolean {
+	const max = Number(tierMax) || 0;
+	return max === 0;
+}
+
 /** Mobile ServiceTierUtils.upgradeAmount — charge delta, not full tier price. */
 export function tierUpgradeAmount(
 	tiers: ServiceTier[],

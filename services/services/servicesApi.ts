@@ -221,11 +221,11 @@ function validateServiceForm(input: ServiceFormInput): string | null {
 	if (input.prePayment && input.prePaymentPercent != null) {
 		const pct = Number(input.prePaymentPercent);
 		if (
-			!(SERVICE_CONSTRAINTS.prePaymentPercents as readonly number[]).includes(
-				pct,
-			)
+			Number.isNaN(pct) ||
+			pct < SERVICE_CONSTRAINTS.minPrePaymentPercent ||
+			pct > SERVICE_CONSTRAINTS.maxPrePaymentPercent
 		) {
-			return `Pre-payment must be ${SERVICE_CONSTRAINTS.prePaymentPercents.join(" or ")}%.`;
+			return `Pre-payment must be between ${SERVICE_CONSTRAINTS.minPrePaymentPercent}% and ${SERVICE_CONSTRAINTS.maxPrePaymentPercent}%.`;
 		}
 	}
 

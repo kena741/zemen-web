@@ -2,12 +2,19 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useRef, useState } from "react";
+import { EyeIcon, EyeOffIcon } from "lucide-react";
 
 import { AuthShell } from "@/components/auth/auth-shell";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import {
+	InputGroup,
+	InputGroupAddon,
+	InputGroupButton,
+	InputGroupInput,
+} from "@/components/ui/input-group";
 import { homePathForMode, type AppMode } from "@/lib/brand";
 import { useLocale } from "@/lib/i18n";
 import { syntheticEmailFromPhone } from "@/lib/synthetic-email";
@@ -57,6 +64,9 @@ function VerifyPhoneForm() {
 	const [verificationId, setVerificationId] = useState<string | null>(null);
 	const [code, setCode] = useState("");
 	const [newPassword, setNewPassword] = useState("");
+	const [confirmPassword, setConfirmPassword] = useState("");
+	const [showPassword, setShowPassword] = useState(false);
+	const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const [busy, setBusy] = useState(false);
 	const autoSendStarted = useRef(false);
@@ -118,6 +128,16 @@ function VerifyPhoneForm() {
 		}
 
 		if (isReset) {
+			if (newPassword.length < 6) {
+				setBusy(false);
+				setError(t("passwordMinLength"));
+				return;
+			}
+			if (newPassword !== confirmPassword) {
+				setBusy(false);
+				setError(t("passwordMismatch"));
+				return;
+			}
 			const result = await resetPasswordByPhone({
 				phone,
 				code,
@@ -193,10 +213,68 @@ function VerifyPhoneForm() {
 						<Input value={code} onChange={(e) => setCode(e.target.value)} inputMode="numeric" />
 					</Field>
 					{isReset ? (
-						<Field>
-							<FieldLabel>{t("newPassword")}</FieldLabel>
-							<Input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
-						</Field>
+						<>
+							<Field>
+								<FieldLabel>{t("newPassword")}</FieldLabel>
+								<InputGroup>
+									<InputGroupInput
+										type={showPassword ? "text" : "password"}
+										autoComplete="new-password"
+										required
+										value={newPassword}
+										onChange={(e) => setNewPassword(e.target.value)}
+									/>
+									<InputGroupAddon align="inline-end">
+										<InputGroupButton
+											type="button"
+											size="icon-xs"
+											aria-label={
+												showPassword ? t("hidePassword") : t("showPassword")
+											}
+											aria-pressed={showPassword}
+											onClick={() => setShowPassword((v) => !v)}
+										>
+											{showPassword ? (
+												<EyeOffIcon aria-hidden />
+											) : (
+												<EyeIcon aria-hidden />
+											)}
+										</InputGroupButton>
+									</InputGroupAddon>
+								</InputGroup>
+							</Field>
+							<Field>
+								<FieldLabel>{t("confirmPassword")}</FieldLabel>
+								<InputGroup>
+									<InputGroupInput
+										type={showConfirmPassword ? "text" : "password"}
+										autoComplete="new-password"
+										required
+										value={confirmPassword}
+										onChange={(e) => setConfirmPassword(e.target.value)}
+									/>
+									<InputGroupAddon align="inline-end">
+										<InputGroupButton
+											type="button"
+											size="icon-xs"
+											aria-label={
+												showConfirmPassword
+													? t("hidePassword")
+													: t("showPassword")
+											}
+											aria-pressed={showConfirmPassword}
+											onClick={() => setShowConfirmPassword((v) => !v)}
+										>
+											{showConfirmPassword ? (
+												<EyeOffIcon aria-hidden />
+											) : (
+												<EyeIcon aria-hidden />
+											)}
+										</InputGroupButton>
+									</InputGroupAddon>
+								</InputGroup>
+							</Field>
+						</>
 					) : null}
 				</FieldGroup>
 				<Button type="button" onClick={() => void verify()} disabled={busy || !verificationId}>
