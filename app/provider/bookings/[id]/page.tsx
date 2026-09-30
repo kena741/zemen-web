@@ -423,22 +423,21 @@ export default function BookingDetailPage() {
 										{t("providerAssignWorker")}
 									</Link>
 								) : null}
-								{booking.providerMySelf ? (
-									<Button
-										disabled={busy}
-										onClick={() => void setStatus(BOOKING_STATUS.onTheWay)}
-									>
-										{t("providerStartDrive")}
-									</Button>
-								) : (
+								{!booking.providerMySelf && booking.handymanId ? (
 									<p className="text-sm text-muted-foreground">
 										{t("providerHandymanAssignedHint")}
 									</p>
-								)}
+								) : null}
+								<Button
+									disabled={busy}
+									onClick={() => void setStatus(BOOKING_STATUS.onTheWay)}
+								>
+									{t("providerStartDrive")}
+								</Button>
 							</>
 						) : null}
 
-						{status === BOOKING_STATUS.onTheWay && booking.providerMySelf ? (
+						{status === BOOKING_STATUS.onTheWay ? (
 							<>
 								{!showOtp ? (
 									<Button disabled={busy} onClick={handleStartService}>
@@ -474,7 +473,7 @@ export default function BookingDetailPage() {
 							</>
 						) : null}
 
-						{canManageWork && booking.providerMySelf ? (
+						{canManageWork ? (
 							<>
 								{status === BOOKING_STATUS.inProgress ? (
 									<>

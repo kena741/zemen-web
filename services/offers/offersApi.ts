@@ -8,13 +8,32 @@ export type ServiceOffer = {
 	providerId: string | null;
 	offeredPrice: number | null;
 	message: string | null;
+	serviceDescription: string | null;
 	status: string;
 	bookingId: string | null;
 	serviceName: string | null;
 	serviceImage: string | null;
 	customerName: string | null;
+	customerPhone: string | null;
+	customerEmail: string | null;
 	createdAt: string | null;
 };
+
+function asNullableString(value: unknown): string | null {
+	if (value == null) return null;
+	const s = String(value).trim();
+	return s.length ? s : null;
+}
+
+function customerDisplayName(row: Record<string, unknown>): string | null {
+	const full = asNullableString(row.fullName ?? row.full_name);
+	if (full) return full;
+	const first = asNullableString(row.first_name ?? row.firstName) ?? "";
+	const last = asNullableString(row.last_name ?? row.lastName) ?? "";
+	const joined = [first, last].filter(Boolean).join(" ").trim();
+	if (joined) return joined;
+	return asNullableString(row.user_name ?? row.userName);
+}
 
 export function mapOffer(row: Record<string, unknown>): ServiceOffer {
 	return {
@@ -43,7 +62,10 @@ export function mapOffer(row: Record<string, unknown>): ServiceOffer {
 				: row.offeredPrice != null
 					? Number(row.offeredPrice)
 					: null,
-		message: row.message != null ? String(row.message) : null,
+		message: asNullableString(row.message),
+		serviceDescription: asNullableString(
+			row.service_description ?? row.serviceDescription,
+		),
 		status: String(row.status ?? "pending"),
 		bookingId:
 			row.booking_id != null
@@ -69,6 +91,12 @@ export function mapOffer(row: Record<string, unknown>): ServiceOffer {
 				: row.customer_name != null
 					? String(row.customer_name)
 					: null,
+		customerPhone: asNullableString(
+			row.customerPhone ?? row.customer_phone ?? row.phoneNumber,
+		),
+		customerEmail: asNullableString(
+			row.customerEmail ?? row.customer_email ?? row.email,
+		),
 		createdAt:
 			row.created_at != null
 				? String(row.created_at)
@@ -181,6 +209,39 @@ export async function fetchOfferById(
 			) {
 				offer.serviceImage = String(s.serviceImage[0]);
 			}
+		}
+	}
+	if (offer.customerId) {
+		let customerRow: Record<string, unknown> | null = null;
+		const byId = await getSupabase()
+			.from("customer")
+			.select("*")
+			.eq("id", offer.customerId)
+			.maybeSingle();
+		if (byId.data) {
+			customerRow = byId.data as Record<string, unknown>;
+		} else {
+			const byUser = await getSupabase()
+				.from("customer")
+				.select("*")
+				.eq("user_id", offer.customerId)
+				.maybeSingle();
+			if (byUser.data) customerRow = byUser.data as Record<string, unknown>;
+		}
+		if (customerRow) {
+			offer.customerName =
+				offer.customerName || customerDisplayName(customerRow);
+			const phone = asNullableString(
+				customerRow.phoneNumber ?? customerRow.phone_number,
+			);
+			const code = asNullableString(
+				customerRow.countryCode ?? customerRow.country_code,
+			);
+			offer.customerPhone =
+				offer.customerPhone ||
+				(phone && code ? `${code} ${phone}` : phone);
+			offer.customerEmail =
+				offer.customerEmail || asNullableString(customerRow.email);
 		}
 	}
 	return { offer, error: null };

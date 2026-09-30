@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { ArrowLeftIcon, ImageIcon } from "lucide-react";
@@ -127,11 +126,40 @@ export default function ProviderOfferDetailPage() {
 							)}
 						</div>
 						<dl className="px-4">
-							<div className="flex flex-col gap-0.5 border-b border-border py-3 sm:flex-row sm:items-baseline sm:justify-between sm:gap-4">
-								<dt className="text-sm text-muted-foreground">{t("customer")}</dt>
-								<dd className="text-sm font-medium">
-									{offer.customerName || t("customer")}
-								</dd>
+							<div className="border-b border-border py-3">
+								<p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+									{t("offerCustomerInfo")}
+								</p>
+								<div className="mt-2 space-y-1.5">
+									<div className="flex flex-col gap-0.5 sm:flex-row sm:items-baseline sm:justify-between sm:gap-4">
+										<dt className="text-sm text-muted-foreground">
+											{t("customer")}
+										</dt>
+										<dd className="text-sm font-medium">
+											{offer.customerName || t("customer")}
+										</dd>
+									</div>
+									{offer.customerPhone ? (
+										<div className="flex flex-col gap-0.5 sm:flex-row sm:items-baseline sm:justify-between sm:gap-4">
+											<dt className="text-sm text-muted-foreground">
+												{t("phone")}
+											</dt>
+											<dd className="text-sm font-medium tabular-nums">
+												{offer.customerPhone}
+											</dd>
+										</div>
+									) : null}
+									{offer.customerEmail ? (
+										<div className="flex flex-col gap-0.5 sm:flex-row sm:items-baseline sm:justify-between sm:gap-4">
+											<dt className="text-sm text-muted-foreground">
+												{t("email")}
+											</dt>
+											<dd className="text-sm font-medium break-all">
+												{offer.customerEmail}
+											</dd>
+										</div>
+									) : null}
+								</div>
 							</div>
 							<div className="flex flex-col gap-0.5 border-b border-border py-3 sm:flex-row sm:items-baseline sm:justify-between sm:gap-4">
 								<dt className="text-sm text-muted-foreground">
@@ -151,6 +179,16 @@ export default function ProviderOfferDetailPage() {
 									</dd>
 								</div>
 							) : null}
+							{offer.serviceDescription ? (
+								<div className="flex flex-col gap-0.5 border-b border-border py-3">
+									<dt className="text-sm text-muted-foreground">
+										{t("offerDescription")}
+									</dt>
+									<dd className="mt-0.5 whitespace-pre-wrap text-sm font-medium">
+										{offer.serviceDescription}
+									</dd>
+								</div>
+							) : null}
 							{offer.message ? (
 								<div className="flex flex-col gap-0.5 py-3">
 									<dt className="text-sm text-muted-foreground">
@@ -163,17 +201,6 @@ export default function ProviderOfferDetailPage() {
 							) : null}
 						</dl>
 					</div>
-
-					{offer.bookingId ? (
-						<p className="mt-3 text-sm">
-							<Link
-								href={`/provider/bookings/${offer.bookingId}`}
-								className="text-brand-ink underline-offset-4 hover:underline"
-							>
-								{t("bookingTitle")} #{offer.bookingId.slice(0, 8)}
-							</Link>
-						</p>
-					) : null}
 
 					{offer.status === "pending" ? (
 						<div className="mt-6 flex flex-col gap-2 sm:flex-row">

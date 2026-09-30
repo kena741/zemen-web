@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 import { ProfileBackLink } from "@/components/provider/profile-back-link";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -14,10 +14,18 @@ import {
 	saveBankMethod,
 	setDefaultBankMethod,
 } from "@/services/bank/bankApi";
+import {
+	CHAPA_BANKS,
+	findChapaBank,
+	validateBankAccountNumber,
+} from "@/services/bank/chapaBanks";
 import { useAppDispatch } from "@/store/hooks";
 import { invalidateProviderBank } from "@/store/providerCacheSlice";
 import { useAuth } from "@/store/useAuth";
 import { useCachedProviderBank } from "@/store/useProviderCache";
+
+const selectClassName =
+	"h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
 
 export default function BankDetailsPage() {
 	const { t } = useLocale();
@@ -32,9 +40,33 @@ export default function BankDetailsPage() {
 	const [showForm, setShowForm] = useState(false);
 	const [holderName, setHolderName] = useState("");
 	const [accountNumber, setAccountNumber] = useState("");
-	const [bankName, setBankName] = useState("");
+	const [bankSlug, setBankSlug] = useState("");
 	const [swiftCode, setSwiftCode] = useState("");
 	const [branchCity, setBranchCity] = useState("");
+
+	const selectedBank = useMemo(
+		() => (bankSlug ? findChapaBank(bankSlug) : undefined),
+		[bankSlug],
+	);
+
+	function resetForm() {
+		setHolderName("");
+		setAccountNumber("");
+		setBankSlug("");
+		setSwiftCode("");
+		setBranchCity("");
+	}
+
+	function onSelectBank(slug: string) {
+		setBankSlug(slug);
+		const bank = findChapaBank(slug);
+		setSwiftCode(bank?.swift ?? "");
+		if (bank?.acctLength) {
+			setAccountNumber((prev) =>
+				prev.replace(/\D/g, "").slice(0, bank.acctLength),
+			);
+		}
+	}
 
 	async function afterMutate() {
 		dispatch(invalidateProviderBank());
@@ -43,14 +75,24 @@ export default function BankDetailsPage() {
 
 	async function handleSave(e: React.FormEvent) {
 		e.preventDefault();
+		const bank = selectedBank;
+		if (!bank) {
+			setError(t("providerSelectBank"));
+			return;
+		}
+		const acctErr = validateBankAccountNumber(accountNumber, bank);
+		if (acctErr) {
+			setError(acctErr);
+			return;
+		}
 		setBusy(true);
 		setError(null);
 		const res = await saveBankMethod({
 			authUserId,
 			holderName,
-			accountNumber,
-			bankName,
-			swiftCode,
+			accountNumber: accountNumber.trim(),
+			bankName: bank.name,
+			swiftCode: bank.swift || swiftCode,
 			branchCity,
 		});
 		setBusy(false);
@@ -59,11 +101,7 @@ export default function BankDetailsPage() {
 			return;
 		}
 		setShowForm(false);
-		setHolderName("");
-		setAccountNumber("");
-		setBankName("");
-		setSwiftCode("");
-		setBranchCity("");
+		resetForm();
 		await afterMutate();
 	}
 
@@ -98,7 +136,10 @@ export default function BankDetailsPage() {
 				<Button
 					size="sm"
 					variant={showForm ? "outline" : "default"}
-					onClick={() => setShowForm((v) => !v)}
+					onClick={() => {
+						setShowForm((v) => !v);
+						setError(null);
+					}}
 				>
 					{showForm ? t("commonCancel") : t("providerAddBank")}
 				</Button>
@@ -112,7 +153,7 @@ export default function BankDetailsPage() {
 
 			{showForm ? (
 				<form
-					onSubmit={handleSave}
+					onSubmit={(e) => void handleSave(e)}
 					className="mt-5 space-y-3 rounded-xl border border-border bg-white p-4 shadow-xs"
 				>
 					<div className="space-y-1.5">
@@ -126,20 +167,40 @@ export default function BankDetailsPage() {
 					</div>
 					<div className="space-y-1.5">
 						<Label htmlFor="bank">{t("providerBankName")}</Label>
-						<Input
+						<select
 							id="bank"
 							required
-							value={bankName}
-							onChange={(e) => setBankName(e.target.value)}
-						/>
+							value={bankSlug}
+							onChange={(e) => onSelectBank(e.target.value)}
+							className={selectClassName}
+						>
+							<option value="">{t("providerSelectBank")}</option>
+							{CHAPA_BANKS.map((b) => (
+								<option key={b.slug} value={b.slug}>
+									{b.name}
+								</option>
+							))}
+						</select>
 					</div>
 					<div className="space-y-1.5">
 						<Label htmlFor="account">{t("providerAccountNumber")}</Label>
 						<Input
 							id="account"
 							required
+							inputMode="numeric"
+							autoComplete="off"
 							value={accountNumber}
-							onChange={(e) => setAccountNumber(e.target.value)}
+							maxLength={selectedBank?.acctLength ?? 16}
+							placeholder={
+								selectedBank
+									? t("providerAccountLengthHint", {
+											count: selectedBank.acctLength,
+										})
+									: undefined
+							}
+							onChange={(e) =>
+								setAccountNumber(e.target.value.replace(/\D/g, ""))
+							}
 						/>
 					</div>
 					<div className="grid gap-3 sm:grid-cols-2">
@@ -148,7 +209,8 @@ export default function BankDetailsPage() {
 							<Input
 								id="swift"
 								value={swiftCode}
-								onChange={(e) => setSwiftCode(e.target.value)}
+								readOnly
+								className="bg-muted/40"
 							/>
 						</div>
 						<div className="space-y-1.5">
@@ -160,7 +222,7 @@ export default function BankDetailsPage() {
 							/>
 						</div>
 					</div>
-					<Button type="submit" disabled={busy}>
+					<Button type="submit" disabled={busy || !bankSlug}>
 						{t("providerSaveAsDefault")}
 					</Button>
 				</form>
