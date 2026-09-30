@@ -634,6 +634,7 @@ export const en = {
 	providerWalletAvailable: "Available",
 	providerWalletPendingHold: "On hold",
 	providerWalletRejectionReason: "Reason",
+	providerWalletNoRejectionReason: "No reason provided",
 	providerUpcomingBookings: "Upcoming bookings",
 	providerCompletedThisMonth: "Completed this month",
 	providerSearchBookings: "Search bookings",

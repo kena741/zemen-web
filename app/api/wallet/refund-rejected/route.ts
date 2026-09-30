@@ -28,11 +28,12 @@ function isPending(status: unknown): boolean {
 }
 
 /**
- * Restore wallet funds for withdrawals that older web clients deducted
- * immediately (no ledger row). Mobile never deducted, so we only credit
- * when walletAmount is short vs wallet_transaction net.
- * Covers rejected (money return) and still-pending (avoid double-hold /
- * double-deduct on admin complete).
+ * Restore wallet funds for:
+ * - rejected withdrawals that still have a `withdrawal:{id}` debit (payout failed after deduct)
+ * - legacy premature deducts (wallet short vs ledger; no debit row) on rejected/pending
+ *
+ * Soft-hold rejects (no deduct) are a no-op. Credits are idempotent via
+ * `withdrawal-refund:{id}` / `withdrawal-restore:{id}`.
  */
 export async function POST(req: Request) {
 	const auth = await getAuthUserFromRequest(req);
@@ -74,7 +75,7 @@ export async function POST(req: Request) {
 
 	let ledgerNet = 0;
 	const restoredIds = new Set<string>();
-	const completedIds = new Set<string>();
+	const debitByWithdrawal = new Map<string, number>();
 	for (const row of txs ?? []) {
 		const r = row as {
 			amount?: unknown;
@@ -91,7 +92,7 @@ export async function POST(req: Request) {
 			restoredIds.add(txId.slice("withdrawal-restore:".length));
 		}
 		if (txId.startsWith("withdrawal:") && !r.isCredit) {
-			completedIds.add(txId.slice("withdrawal:".length));
+			debitByWithdrawal.set(txId.slice("withdrawal:".length), amt);
 		}
 	}
 
@@ -99,9 +100,6 @@ export async function POST(req: Request) {
 		(provider as { walletAmount?: unknown }).walletAmount,
 	);
 	let shortfall = Math.round((ledgerNet - balance) * 100) / 100;
-	if (shortfall < 0.01) {
-		return NextResponse.json({ refunded: 0, balance });
-	}
 
 	const { data: withdrawals } = await admin
 		.from("withdrawal_history")
@@ -111,25 +109,39 @@ export async function POST(req: Request) {
 
 	let refunded = 0;
 	for (const row of withdrawals ?? []) {
-		if (shortfall < 0.01) break;
 		const id = String((row as { id?: string }).id ?? "");
 		const amount = parseAmount((row as { amount?: unknown }).amount);
 		const status = (row as { paymentStatus?: unknown }).paymentStatus;
-		if (!id || amount <= 0) continue;
-		if (!isRejected(status) && !isPending(status)) continue;
-		if (restoredIds.has(id) || completedIds.has(id)) continue;
-		if (amount > shortfall + 0.009) continue;
+		if (!id || amount <= 0 || restoredIds.has(id)) continue;
 
-		const refundTxId = isRejected(status)
+		const rejected = isRejected(status);
+		const pending = isPending(status);
+		if (!rejected && !pending) continue;
+
+		const debitAmt = debitByWithdrawal.get(id) ?? 0;
+		let credit = 0;
+
+		if (rejected && debitAmt > 0) {
+			// Deducted on complete, then marked rejected — full restore.
+			credit = debitAmt;
+		} else if (shortfall >= 0.01) {
+			// Legacy premature deduct (no withdrawal: debit row).
+			// ponytail: min() so leftover shortfall isn't stuck behind a larger row
+			credit = Math.min(amount, shortfall);
+		}
+
+		if (credit < 0.01) continue;
+
+		const refundTxId = rejected
 			? `withdrawal-refund:${id}`
 			: `withdrawal-restore:${id}`;
-		const note = isRejected(status)
+		const note = rejected
 			? `Withdrawal rejected — funds restored (${id})`
 			: `Withdrawal hold restored to soft-hold (${id})`;
-		const next = Math.round((balance + amount) * 100) / 100;
+		const next = Math.round((balance + credit) * 100) / 100;
 
 		const { error: txErr } = await admin.from("wallet_transaction").insert({
-			amount: amount.toFixed(2),
+			amount: credit.toFixed(2),
 			createdDate: new Date().toISOString(),
 			isCredit: true,
 			note,
@@ -147,8 +159,9 @@ export async function POST(req: Request) {
 		if (walletErr) continue;
 
 		balance = next;
-		shortfall = Math.round((shortfall - amount) * 100) / 100;
-		refunded += amount;
+		shortfall = Math.round((shortfall - credit) * 100) / 100;
+		refunded += credit;
+		restoredIds.add(id);
 	}
 
 	return NextResponse.json({

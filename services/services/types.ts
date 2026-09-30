@@ -147,7 +147,7 @@ export function mapServiceRow(row: Record<string, unknown>): ProviderService {
 		type: asString(row.type),
 		serviceLocationMode: asString(row.serviceLocationMode),
 		status: asBool(row.status, true),
-		archived: asBool(row.archived ?? row.archive, false),
+		archived: asBool(row.isArchived ?? row.archived ?? row.archive, false),
 		approved: row.approved == null ? null : Boolean(row.approved),
 		price: asString(row.price),
 		discount: asString(row.discount),

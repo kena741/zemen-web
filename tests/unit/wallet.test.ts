@@ -10,6 +10,12 @@ function isPendingStatus(status: string | null | undefined): boolean {
 	return s === "pending" || s === "" || s === "hold";
 }
 
+/** Mirrors refund-rejected shortfall credit (legacy premature deduct). */
+function shortfallCredit(amount: number, shortfall: number): number {
+	if (shortfall < 0.01 || amount <= 0) return 0;
+	return Math.min(amount, shortfall);
+}
+
 describe("wallet soft-hold", () => {
 	it("holds pending withdrawal from available", () => {
 		expect(availableBalance(1000, 200)).toBe(800);
@@ -22,5 +28,14 @@ describe("wallet soft-hold", () => {
 		expect(isPendingStatus("")).toBe(true);
 		expect(isPendingStatus("rejected")).toBe(false);
 		expect(isPendingStatus("completed")).toBe(false);
+	});
+});
+
+describe("rejected withdrawal shortfall refund", () => {
+	it("credits min(amount, shortfall) so leftover shortfall is not stuck", () => {
+		expect(shortfallCredit(200, 25.36)).toBe(25.36);
+		expect(shortfallCredit(10, 25.36)).toBe(10);
+		expect(shortfallCredit(20, 15.36)).toBe(15.36);
+		expect(shortfallCredit(10, 0)).toBe(0);
 	});
 });

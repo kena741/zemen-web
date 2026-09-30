@@ -71,8 +71,8 @@ export async function setServiceActive(params: {
 	active: boolean;
 }): Promise<{ ok: boolean; error: string | null }> {
 	const payload = params.active
-		? { status: true, archived: false }
-		: { status: false, archived: false };
+		? { status: true, isArchived: false }
+		: { status: false, isArchived: false };
 
 	let { data, error } = await getSupabase()
 		.from("service")
@@ -338,7 +338,7 @@ export async function deleteService(
 ): Promise<{ ok: boolean; error: string | null }> {
 	const { data, error } = await getSupabase()
 		.from("service")
-		.update({ status: false, archived: true })
+		.update({ status: false, isArchived: true })
 		.eq("id", serviceId)
 		.select("id")
 		.maybeSingle();
@@ -357,7 +357,7 @@ export async function deleteService(
 				error: fallback.error?.message ?? error.message,
 			};
 		}
-		// ponytail: no archived column yet — match mobile soft-delete via status=false
+		// ponytail: isArchived update failed — soft-delete via status=false
 		return { ok: true, error: null };
 	}
 	if (!data) {

@@ -43,7 +43,11 @@ function isApprovedStatus(status: string | null | undefined): boolean {
 
 function rejectionReason(w: WithdrawRequest): string | null {
 	if (!isRejectedStatus(w.paymentStatus)) return null;
-	return w.rejectionReason?.trim() || w.adminNote?.trim() || null;
+	return (
+		w.rejectionReason?.trim() ||
+		w.adminNote?.trim() ||
+		null
+	);
 }
 
 function matchesDateHour(
@@ -429,12 +433,12 @@ export default function WalletPage() {
 									<p className="mt-1 text-xs text-muted-foreground">
 										{w.bankName} · {formatDateTime(w.createdDate)}
 									</p>
-									{reason ? (
+									{isRejectedStatus(w.paymentStatus) ? (
 										<p className="mt-1.5 text-xs leading-snug text-destructive">
 											<span className="font-semibold">
 												{t("providerWalletRejectionReason")}:
 											</span>{" "}
-											{reason}
+											{reason ?? t("providerWalletNoRejectionReason")}
 										</p>
 									) : null}
 								</div>

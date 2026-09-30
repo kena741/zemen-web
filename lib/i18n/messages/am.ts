@@ -621,6 +621,7 @@ export const am: Record<MessageKey, string> = {
 	providerWalletAvailable: "የሚገኝ",
 	providerWalletPendingHold: "በመጠባበቅ ላይ",
 	providerWalletRejectionReason: "ምክንያት",
+	providerWalletNoRejectionReason: "ምክንያት አልተሰጠም",
 	providerUpcomingBookings: "ቀጣይ ቦታ ማስያዝ",
 	providerCompletedThisMonth: "በዚህ ወር የተጠናቀቁ",
 	providerSearchBookings: "ቦታ ማስያዝ ፈልግ",

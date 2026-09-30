@@ -322,9 +322,10 @@ export async function fetchDashboardSnapshot(providerId: string): Promise<{
 			.from("booked_service")
 			.select("id", { count: "exact", head: true })
 			.eq("provider_id", providerId),
+		// Total Service = active + inactive (same as mobile serviceList.length).
 		getSupabase()
 			.from("service")
-			.select("id, status, archived")
+			.select("id", { count: "exact", head: true })
 			.eq("provider_id", providerId),
 		getSupabase()
 			.from("booked_service")
@@ -334,29 +335,6 @@ export async function fetchDashboardSnapshot(providerId: string): Promise<{
 			.gte("createdAt", monthStart)
 			.lt("createdAt", nextMonth),
 	]);
-
-	let servicesRows: Array<{
-		id?: string;
-		status?: boolean;
-		archived?: boolean;
-	}> = (servicesRes.data ?? []) as Array<{
-		id?: string;
-		status?: boolean;
-		archived?: boolean;
-	}>;
-	let servicesError = servicesRes.error?.message ?? null;
-	if (servicesRes.error) {
-		const fallback = await getSupabase()
-			.from("service")
-			.select("id, status")
-			.eq("provider_id", providerId);
-		servicesRows = (fallback.data ?? []) as Array<{
-			id?: string;
-			status?: boolean;
-			archived?: boolean;
-		}>;
-		servicesError = fallback.error?.message ?? null;
-	}
 
 	if (bookingsRes.error) {
 		console.error("dashboard bookings", bookingsRes.error);
@@ -387,16 +365,8 @@ export async function fetchDashboardSnapshot(providerId: string): Promise<{
 	const upcomingHydrated = attachServices(upcoming, servicesMap);
 
 	const totalBookings = countRes.count ?? bookings.length;
-
-	const activeServices = servicesRows.filter((s) => {
-		const row = s as {
-			status?: boolean;
-			archived?: boolean;
-			archive?: boolean;
-		};
-		const archived = row.archived === true || row.archive === true;
-		return row.status !== false && !archived;
-	}).length;
+	// activeServices field kept for cache shape; value = all services (active + inactive).
+	const activeServices = servicesRes.count ?? 0;
 
 	const completedRows = completedRes.data ?? [];
 	let revenueThisMonth = 0;
@@ -412,7 +382,11 @@ export async function fetchDashboardSnapshot(providerId: string): Promise<{
 		activeServices,
 		completedThisMonth: completedRows.length,
 		revenueThisMonth,
-		error: servicesError ?? completedRes.error?.message ?? countRes.error?.message ?? null,
+		error:
+			servicesRes.error?.message ??
+			completedRes.error?.message ??
+			countRes.error?.message ??
+			null,
 	};
 }
 
