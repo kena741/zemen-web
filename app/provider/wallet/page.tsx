@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { ChapaTopUp } from "@/components/payments/chapa-top-up";
 import { ProfileBackLink } from "@/components/provider/profile-back-link";
@@ -110,16 +110,6 @@ export default function WalletPage() {
 
 	const defaultBank = banks.find((b) => b.isDefault) ?? banks[0] ?? null;
 
-	const pendingTotal = useMemo(
-		() =>
-			wallet.withdrawals
-				.filter((w) => isPendingStatus(w.paymentStatus))
-				.reduce((sum, w) => sum + (Number(w.amount ?? 0) || 0), 0),
-		[wallet.withdrawals],
-	);
-	const availableBalance =
-		Math.round((wallet.balance - pendingTotal) * 100) / 100;
-
 	const filteredWithdrawals = wallet.withdrawals.filter((w) => {
 		if (withdrawFilter === "approved" && !isApprovedStatus(w.paymentStatus))
 			return false;
@@ -194,13 +184,6 @@ export default function WalletPage() {
 				<p className="mt-2 text-3xl font-semibold tracking-tight text-primary-foreground tabular-nums">
 					{loading ? "…" : formatAmount(String(wallet.balance))}
 				</p>
-				{pendingTotal > 0 ? (
-					<p className="mt-1 text-sm text-primary-foreground/85">
-						{t("providerWalletAvailable")}: {formatAmount(String(availableBalance))}
-						{" · "}
-						{t("providerWalletPendingHold")}: {formatAmount(String(pendingTotal))}
-					</p>
-				) : null}
 				<div className="mt-4">
 					<ChapaTopUp
 						email={user?.email}
@@ -259,9 +242,6 @@ export default function WalletPage() {
 							</Link>
 						</p>
 					)}
-					<p className="text-xs text-muted-foreground">
-						{t("providerWalletAvailable")}: {formatAmount(String(availableBalance))}
-					</p>
 					<div className="space-y-1.5">
 						<Label htmlFor="amount">{t("commonAmountEtb")}</Label>
 						<Input
@@ -269,7 +249,7 @@ export default function WalletPage() {
 							type="number"
 							min={1}
 							step="0.01"
-							max={Math.max(0, availableBalance)}
+							max={Math.max(0, wallet.balance)}
 							required
 							value={amount}
 							onChange={(e) => setAmount(e.target.value)}

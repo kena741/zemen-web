@@ -110,31 +110,14 @@ export async function requestWithdrawal(params: {
 	if (balErr) return { ok: false, error: balErr.message };
 	const balance = Number(provider?.walletAmount ?? 0) || 0;
 
-	// Soft-hold pending like mobile — admin deducts only on complete.
-	const { data: pendingRows } = await supabase
-		.from("withdrawal_history")
-		.select("amount, paymentStatus")
-		.eq("providerId", params.providerId);
-
-	let pendingTotal = 0;
-	for (const row of pendingRows ?? []) {
-		const status = String(
-			(row as { paymentStatus?: string }).paymentStatus ?? "pending",
-		)
-			.trim()
-			.toLowerCase();
-		if (status === "pending" || status === "" || status === "hold") {
-			pendingTotal += Number((row as { amount?: string }).amount ?? 0) || 0;
-		}
-	}
-	const available = Math.round((balance - pendingTotal) * 100) / 100;
-	if (params.amount > available) {
+	// ponytail: request is queue-only; admin deducts wallet on approval
+	if (params.amount > balance) {
 		return {
 			ok: false,
 			error:
-				available <= 0
-					? "No available balance (pending withdrawals hold funds)"
-					: `Amount exceeds available balance (${available.toFixed(2)} ETB)`,
+				balance <= 0
+					? "No wallet balance"
+					: `Amount exceeds wallet balance (${balance.toFixed(2)} ETB)`,
 		};
 	}
 
@@ -157,7 +140,7 @@ export async function requestWithdrawal(params: {
 	return { ok: true, error: null };
 }
 
-/** Restore funds for premature web deducts (rejected or still pending). */
+/** Restore funds when admin rejected after deducting (debit row present). */
 export async function restorePrematureWithdrawalDeducts(): Promise<{
 	refunded: number;
 	error: string | null;
