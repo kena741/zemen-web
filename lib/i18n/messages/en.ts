@@ -40,6 +40,8 @@ export const en = {
 	createAccount: "Create account",
 	createAnAccount: "Create an account",
 	alreadyHaveAccount: "Already have an account?",
+	signupPhoneAlreadyRegistered:
+		"An account with this phone number already exists. Please sign in.",
 	needAccount: "Need an account?",
 	firstName: "First name",
 	lastName: "Last name",
@@ -417,6 +419,10 @@ export const en = {
 	notificationsEnable: "Tap Enable to allow notifications",
 	notificationsEnabled: "Notifications are enabled",
 	notificationsBlocked: "Blocked in browser settings",
+	notificationsBlockedHint:
+		"Close floating bubbles or screen-recording overlays from other apps, then open your browser site settings and allow notifications for this site.",
+	notificationsOverlayHint:
+		"Could not show the permission prompt. Close any floating bubbles or overlays from other apps, then tap Enable again.",
 	notificationsUnsupported: "Not supported in this browser",
 	providerServiceArchived: "Archived",
 	providerServiceArchive: "Archive",

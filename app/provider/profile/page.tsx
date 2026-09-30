@@ -27,6 +27,7 @@ import {
 
 import { LocaleThemeToggle } from "@/components/app/locale-theme-toggle";
 import { TelegramLink } from "@/components/app/telegram-link";
+import { NotificationPermissionControl } from "@/components/push/notification-permission-control";
 import { ProviderMobileTabBar } from "@/components/provider/mobile-chrome";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { useLocale } from "@/lib/i18n";
@@ -374,6 +375,8 @@ export default function ProviderProfilePage() {
 						<span className="min-w-0 flex-1 text-sm">{t("theme")}</span>
 						<LocaleThemeToggle mode="theme" />
 					</div>
+					<Divider />
+					<NotificationPermissionControl />
 					<Divider />
 					<MenuItem
 						href="/provider/profile/password"

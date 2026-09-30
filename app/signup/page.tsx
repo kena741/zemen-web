@@ -17,6 +17,7 @@ import {
 	finishSignupLogin,
 	signUpProvider,
 } from "@/services/auth/signupApi";
+import { phoneAlreadyRegistered } from "@/services/auth/authApi";
 import { useAuth } from "@/store/useAuth";
 
 function SignupForm() {
@@ -57,6 +58,16 @@ function SignupForm() {
 		}
 
 		if (mode === "service") {
+			setBusy(true);
+			try {
+				const taken = await phoneAlreadyRegistered(phone, "service");
+				if (taken) {
+					setError(t("signupPhoneAlreadyRegistered"));
+					return;
+				}
+			} finally {
+				setBusy(false);
+			}
 			sessionStorage.setItem(
 				"zemen_signup_draft",
 				JSON.stringify({
@@ -75,6 +86,11 @@ function SignupForm() {
 
 		setBusy(true);
 		try {
+			const phoneTaken = await phoneAlreadyRegistered(phone, "provider");
+			if (phoneTaken) {
+				setError(t("signupPhoneAlreadyRegistered"));
+				return;
+			}
 			const result = await signUpProvider({
 				firstName,
 				lastName,

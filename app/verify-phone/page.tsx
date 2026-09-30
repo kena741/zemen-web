@@ -16,6 +16,7 @@ import {
 	finishSignupLogin,
 	signUpCustomer,
 } from "@/services/auth/signupApi";
+import { phoneAlreadyRegistered } from "@/services/auth/authApi";
 import { resetPasswordByPhone } from "@/services/auth/passwordRecoveryApi";
 import { useAuth } from "@/store/useAuth";
 
@@ -63,6 +64,14 @@ function VerifyPhoneForm() {
 	async function sendCode() {
 		setBusy(true);
 		setError(null);
+		if (isSignup) {
+			const taken = await phoneAlreadyRegistered(phone, mode);
+			if (taken) {
+				setBusy(false);
+				setError(t("signupPhoneAlreadyRegistered"));
+				return;
+			}
+		}
 		const result = await sendPhoneOtp(phone);
 		setBusy(false);
 		if (!result.success) {
@@ -78,6 +87,14 @@ function VerifyPhoneForm() {
 		void (async () => {
 			setBusy(true);
 			setError(null);
+			if (isSignup) {
+				const taken = await phoneAlreadyRegistered(phone, mode);
+				if (taken) {
+					setBusy(false);
+					setError(t("signupPhoneAlreadyRegistered"));
+					return;
+				}
+			}
 			const result = await sendPhoneOtp(phone);
 			setBusy(false);
 			if (!result.success) {
@@ -87,7 +104,7 @@ function VerifyPhoneForm() {
 			}
 			setVerificationId(result.verificationId ?? null);
 		})();
-	}, [isSignup, isReset, phone, t]);
+	}, [isSignup, isReset, phone, mode, t]);
 
 	async function verify() {
 		if (!verificationId) return;

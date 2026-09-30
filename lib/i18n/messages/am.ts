@@ -40,6 +40,8 @@ export const am: Record<MessageKey, string> = {
 	createAccount: "መለያ ፍጠር",
 	createAnAccount: "መለያ ፍጠር",
 	alreadyHaveAccount: "መለያ አለዎት?",
+	signupPhoneAlreadyRegistered:
+		"በዚህ ስልክ ቁጥር መለያ አስቀድሞ አለ። እባክዎ ይግቡ።",
 	needAccount: "መለያ ይፈልጋሉ?",
 	firstName: "ስም",
 	lastName: "የአባት ስም",
@@ -408,6 +410,10 @@ export const am: Record<MessageKey, string> = {
 	notificationsEnable: "ማሳወቂያዎችን ለመፍቀድ አንቃን ይጫኑ",
 	notificationsEnabled: "ማሳወቂያዎች ነቅተዋል",
 	notificationsBlocked: "በአሳሽ ቅንብሮች ታግደዋል",
+	notificationsBlockedHint:
+		"ከሌሎች መተግበሪያዎች ተንሳፋፊ ብልቦች ወይም የማያ ቀረጻ ንጣፎችን ይዝጉ፣ ከዚያ የአሳሽ የጣቢያ ቅንብሮችን በመክፈት ለዚህ ጣቢያ ማሳወቂያዎችን ይፍቀዱ።",
+	notificationsOverlayHint:
+		"የፍቃድ ጥያቄ ማሳየት አልተቻለም። ተንሳፋፊ ብልቦችን ወይም ንጣፎችን ይዝጉ፣ ከዚያ እንደገና አንቃን ይጫኑ።",
 	notificationsUnsupported: "በዚህ አሳሽ አይደገፍም",
 	providerServiceArchived: "ተከማችቷል",
 	providerServiceArchive: "አከማች",

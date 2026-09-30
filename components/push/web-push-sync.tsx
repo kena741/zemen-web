@@ -6,21 +6,20 @@ import { useAuth } from "@/store/useAuth";
 import { saveFcmToken } from "@/services/auth/verificationApi";
 import { getWebFcmToken, isFirebaseConfigured } from "@/lib/firebase";
 
+/**
+ * Sync FCM token when notifications are already granted.
+ * Does not call requestPermission() — browsers (especially Android) block
+ * auto-prompts without a user gesture / when overlays are present.
+ */
 export function WebPushSync() {
 	const { user } = useAuth();
 
 	useEffect(() => {
 		if (!user || typeof window === "undefined") return;
 		if (!("Notification" in window)) return;
+		if (Notification.permission !== "granted") return;
 
 		async function sync() {
-			if (Notification.permission === "denied") return;
-			let permission: NotificationPermission = Notification.permission;
-			if (permission === "default") {
-				permission = await Notification.requestPermission();
-			}
-			if (permission !== "granted") return;
-
 			let token: string | null = null;
 			if (isFirebaseConfigured()) {
 				if ("serviceWorker" in navigator) {

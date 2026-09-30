@@ -87,6 +87,43 @@ async function getCustomerEmailByPhone(phone: string): Promise<string | null> {
 	return email || null;
 }
 
+/** True when a customer/provider row already uses this phone (signup guard). */
+export async function phoneAlreadyRegistered(
+	phone: string,
+	mode: AppMode,
+): Promise<boolean> {
+	const local = normalizeLocalEthiopianPhone(phone);
+	if (local.length !== 9) return false;
+
+	if (mode === "provider") {
+		const { data, error } = await getSupabase()
+			.from("provider")
+			.select("id")
+			.or(
+				`phoneNumber.eq.${local},phoneNumber.eq.0${local},phoneNumber.eq.251${local}`,
+			)
+			.maybeSingle();
+		if (error) {
+			console.error("phoneAlreadyRegistered provider", error);
+			return false;
+		}
+		return Boolean(data?.id);
+	}
+
+	const { data, error } = await getSupabase()
+		.from("customer")
+		.select("id")
+		.or(
+			`phone.eq.${local},phone.eq.0${local},phone.eq.251${local},phoneNumber.eq.${local},phoneNumber.eq.0${local},phoneNumber.eq.251${local}`,
+		)
+		.maybeSingle();
+	if (error) {
+		console.error("phoneAlreadyRegistered customer", error);
+		return false;
+	}
+	return Boolean(data?.id);
+}
+
 async function resolveLoginEmail(
 	identifier: string,
 	mode: AppMode,

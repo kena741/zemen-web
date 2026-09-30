@@ -191,7 +191,7 @@ export default function WalletPage() {
 
 			<div className="admin-brand-band mt-6 px-5 py-6">
 				<p className="admin-brand-band-label">{t("walletBalance")}</p>
-				<p className="mt-2 text-3xl font-semibold tracking-tight tabular-nums">
+				<p className="mt-2 text-3xl font-semibold tracking-tight text-primary-foreground tabular-nums">
 					{loading ? "…" : formatAmount(String(wallet.balance))}
 				</p>
 				{pendingTotal > 0 ? (
@@ -216,7 +216,7 @@ export default function WalletPage() {
 					<Button
 						size="sm"
 						variant="secondary"
-						className="bg-white/15 text-primary-foreground hover:bg-white/25"
+						className="border-white/25 bg-white/15 text-white hover:bg-white/25 hover:text-white"
 						onClick={() => setShowWithdraw((v) => !v)}
 					>
 						{showWithdraw ? t("commonCancel") : t("requestWithdrawal")}
@@ -225,7 +225,7 @@ export default function WalletPage() {
 						href="/provider/bank"
 						className={cn(
 							buttonVariants({ size: "sm", variant: "secondary" }),
-							"bg-white/15 text-primary-foreground hover:bg-white/25",
+							"border-white/25 bg-white/15 text-white hover:bg-white/25 hover:text-white",
 						)}
 					>
 						{t("bankTitle")}
