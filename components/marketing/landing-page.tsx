@@ -54,6 +54,26 @@ const VET_STEPS = [
 	},
 ] as const;
 
+const HOW_IT_WORKS = [
+	{
+		step: "1",
+		title: "Choose a service",
+		desc: "Browse home service categories in Addis Ababa, from cleaning and cooking to repairs and care.",
+	},
+	{
+		step: "2",
+		title: "Book a verified provider",
+		desc: "Pick a listing from a vetted professional and book through the website, app, or call center.",
+	},
+	{
+		step: "3",
+		title: "Get the job done",
+		desc: "Your provider delivers the service, and Zemen stays available if you need support afterward.",
+	},
+] as const;
+
+type LandingCategory = ServiceCategory & { slug?: string };
+
 const WHY_IMAGES: { image: StaticImageData; alt: string }[] = [
 	{ image: marketing1, alt: "Zemen Service cleaning professional" },
 	{ image: marketing2, alt: "Zemen Service cooking and care" },
@@ -97,30 +117,35 @@ const HELP_WITH: {
 	desc: string;
 	image: StaticImageData;
 	alt: string;
+	match: string[];
 }[] = [
 	{
 		title: "Home professionals",
 		desc: "Electricians, plumbers, painters, chefs, and more, booked in minutes.",
 		image: marketing1,
-		alt: "Zemen Service professionals",
+		alt: "Zemen Service professionals in Addis Ababa",
+		match: ["maintenance", "electrical", "plumbing", "art"],
 	},
 	{
 		title: "Care & domestic help",
 		desc: "Trusted caregivers and home support from verified local providers.",
 		image: marketing2,
-		alt: "Caregiver with Zemen Service",
+		alt: "Domestic help and care with Zemen Service",
+		match: ["domestic", "care", "nursing", "babysit"],
 	},
 	{
 		title: "Repairs & maintenance",
 		desc: "The right professional at the right time for plumbing and fixes.",
 		image: marketing3,
-		alt: "Zemen plumber at work",
+		alt: "Home repair and maintenance in Addis Ababa",
+		match: ["maintenance", "repair", "plumb"],
 	},
 	{
 		title: "Cleaning & quality",
-		desc: "Quality and cleanliness with trained experts through Zemen Provider.",
+		desc: "Quality and cleanliness with trained experts through Zemen Service.",
 		image: marketing4,
-		alt: "Zemen cleaning professional",
+		alt: "Cleaning services in Addis Ababa",
+		match: ["cleaning", "domestic"],
 	},
 ];
 
@@ -173,11 +198,16 @@ function ServiceTile({
 	);
 }
 
-export function LandingPage() {
+export function LandingPage({
+	initialCategories = [],
+}: {
+	initialCategories?: LandingCategory[];
+}) {
 	const router = useRouter();
 	const { user, setMode } = useAuth();
 	const [services, setServices] = useState<ProviderService[]>([]);
-	const [categories, setCategories] = useState<ServiceCategory[]>([]);
+	const [categories, setCategories] =
+		useState<LandingCategory[]>(initialCategories);
 	const [loading, setLoading] = useState(true);
 	const [whyIndex, setWhyIndex] = useState(0);
 
@@ -207,13 +237,31 @@ export function LandingPage() {
 				list = more.services;
 			}
 			setServices(list.slice(0, 8));
-			setCategories(cats.categories.slice(0, 8));
+			setCategories(
+				cats.categories.map((c) => ({
+					...c,
+					slug: slugifyCategoryName(c.categoryName),
+				})),
+			);
 			setLoading(false);
 		})();
 		return () => {
 			cancelled = true;
 		};
 	}, []);
+
+	function categoryHref(category: LandingCategory) {
+		return `/services/${category.slug || slugifyCategoryName(category.categoryName)}`;
+	}
+
+	function helpHref(match: string[]) {
+		const found = categories.find((c) => {
+			const slug = (c.slug || slugifyCategoryName(c.categoryName)).toLowerCase();
+			const name = c.categoryName.toLowerCase();
+			return match.some((token) => slug.includes(token) || name.includes(token));
+		});
+		return found ? categoryHref(found) : "/services";
+	}
 
 	function goCustomerLogin() {
 		setMode("service");
@@ -282,13 +330,14 @@ export function LandingPage() {
 							{BRAND_NAME}
 						</p>
 
-						<h1 className="mt-5 max-w-md text-[clamp(1.4rem,3.6vw,1.95rem)] font-semibold leading-snug tracking-tight text-[#142610] animate-[marketing-fade-up_0.85s_ease_0.08s_both]">
-							Book verified home services in minutes.
+						<h1 className="mt-5 max-w-lg text-[clamp(1.4rem,3.6vw,1.95rem)] font-semibold leading-snug tracking-tight text-[#142610] animate-[marketing-fade-up_0.85s_ease_0.08s_both]">
+							Home Services in Addis Ababa
 						</h1>
 
-						<p className="mt-3 max-w-sm text-base leading-relaxed text-[#3d5240] animate-[marketing-fade-up_0.9s_ease_0.14s_both]">
-							Cleaning, plumbing, electrical, and more from trusted local
-							providers across Ethiopia.
+						<p className="mt-3 max-w-md text-base leading-relaxed text-[#3d5240] animate-[marketing-fade-up_0.9s_ease_0.14s_both]">
+							Book trusted professionals for cleaning, cooking, domestic help,
+							repairs, maintenance, moving, beauty, care, and other home
+							services across Addis Ababa.
 						</p>
 
 						<div className="mt-8 flex flex-wrap items-center gap-3 animate-[marketing-fade-up_0.95s_ease_0.2s_both]">
@@ -329,7 +378,7 @@ export function LandingPage() {
 				</div>
 			</section>
 
-			{/* Live services */}
+			{/* Services */}
 			<section
 				id="services"
 				className="relative z-10 scroll-mt-20 border-t border-primary/10 bg-white py-14 sm:py-16"
@@ -338,12 +387,54 @@ export function LandingPage() {
 					<div className="flex flex-wrap items-end justify-between gap-3">
 						<div>
 							<p className="text-xs font-semibold uppercase tracking-[0.14em] text-primary">
-								On Zemen now
+								Home services
 							</p>
 							<h2 className="mt-1 text-2xl font-bold tracking-tight sm:text-3xl">
-								Popular services
+								Services in Addis Ababa
 							</h2>
-							<p className="mt-1.5 max-w-md text-sm text-muted-foreground">
+							<p className="mt-1.5 max-w-xl text-sm text-muted-foreground">
+								Explore cleaning, cooking, domestic help, repairs, maintenance,
+								moving, beauty, care, and more from verified providers.
+							</p>
+						</div>
+						<Link
+							href="/services"
+							className="inline-flex items-center gap-1 text-sm font-semibold text-primary"
+						>
+							View all services
+							<ArrowRightIcon className="size-3.5" />
+						</Link>
+					</div>
+
+					{categories.length > 0 ? (
+						<ul className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+							{categories.map((c) => (
+								<li key={c.id}>
+									<Link
+										href={categoryHref(c)}
+										className="group flex items-center justify-between gap-3 rounded-2xl bg-[#f7faf5] px-4 py-3.5 ring-1 ring-black/5 transition hover:-translate-y-0.5 hover:bg-white hover:shadow-[0_10px_28px_rgba(23,67,9,0.08)]"
+									>
+										<span>
+											<span className="block text-[15px] font-semibold text-[#0f1a0c]">
+												{c.categoryName}
+											</span>
+											<span className="mt-0.5 block text-sm text-[#52634c]">
+												{c.categoryName} services in Addis Ababa
+											</span>
+										</span>
+										<ArrowRightIcon className="size-4 shrink-0 text-primary transition group-hover:translate-x-0.5" />
+									</Link>
+								</li>
+							))}
+						</ul>
+					) : null}
+
+					<div className="mt-10 flex flex-wrap items-end justify-between gap-3">
+						<div>
+							<h3 className="text-lg font-bold tracking-tight text-[#0f1a0c]">
+								Popular listings
+							</h3>
+							<p className="mt-1 text-sm text-muted-foreground">
 								Real listings from verified providers. Sign in to book.
 							</p>
 						</div>
@@ -352,32 +443,12 @@ export function LandingPage() {
 							onClick={browseServices}
 							className="inline-flex items-center gap-1 text-sm font-semibold text-primary"
 						>
-							See all
+							Browse in app
 							<ArrowRightIcon className="size-3.5" />
 						</button>
 					</div>
 
-					{categories.length > 0 ? (
-						<div className="mt-6 flex gap-2 overflow-x-auto pb-1 scrollbar-none">
-							{categories.map((c) => (
-								<Link
-									key={c.id}
-									href={`/services/${slugifyCategoryName(c.categoryName)}`}
-									className="shrink-0 rounded-full bg-[#e8f5e3] px-3.5 py-1.5 text-xs font-medium text-primary transition hover:bg-primary hover:text-primary-foreground"
-								>
-									{c.categoryName}
-								</Link>
-							))}
-							<Link
-								href="/services"
-								className="shrink-0 rounded-full border border-primary/20 bg-white px-3.5 py-1.5 text-xs font-semibold text-primary transition hover:bg-[#e8f5e3]"
-							>
-								All services
-							</Link>
-						</div>
-					) : null}
-
-					<div className="mt-6 -mx-4 flex gap-3 overflow-x-auto px-4 pb-2 scrollbar-none sm:mx-0 sm:px-0">
+					<div className="mt-5 -mx-4 flex gap-3 overflow-x-auto px-4 pb-2 scrollbar-none sm:mx-0 sm:px-0">
 						{loading ? (
 							Array.from({ length: 4 }).map((_, i) => (
 								<div
@@ -417,8 +488,10 @@ export function LandingPage() {
 						</h2>
 						<div className="mt-2 h-0.5 w-16 bg-primary" />
 						<p className="mt-5 text-[15px] leading-relaxed text-[#3d5240]">
-							We carefully vet &amp; upskill trusted, certified professionals
-							for cleaning, cooking, and babysitting in Addis Ababa.
+							{BRAND_NAME} helps households in Addis Ababa book trusted home
+							services with confidence. We carefully vet and upskill certified
+							professionals for cleaning, cooking, domestic help, repairs, and
+							care.
 						</p>
 						<p className="mt-4 text-[15px] leading-relaxed text-[#3d5240]">
 							Easy booking through our app, website, or call center (
@@ -428,8 +501,8 @@ export function LandingPage() {
 							>
 								{SHORT_CODE}
 							</a>
-							), a dedicated account manager, and a satisfaction guarantee on
-							every visit.
+							), with support when you need it and a satisfaction focus on every
+							visit.
 						</p>
 						<ul className="mt-7 space-y-3">
 							{[
@@ -529,6 +602,44 @@ export function LandingPage() {
 				</div>
 			</section>
 
+			{/* How it works */}
+			<section
+				id="how-it-works"
+				className="relative z-10 scroll-mt-20 border-t border-primary/8 bg-[#f4f8f1] py-14 sm:py-16"
+			>
+				<div className="mx-auto max-w-6xl px-4 sm:px-6">
+					<p className="text-xs font-semibold uppercase tracking-[0.14em] text-primary">
+						Simple booking
+					</p>
+					<h2 className="mt-2 text-[clamp(1.65rem,3.5vw,2.15rem)] font-bold tracking-tight text-[#0f1a0c]">
+						How it works
+					</h2>
+					<p className="mt-3 max-w-2xl text-[15px] leading-relaxed text-[#3d5240]">
+						From finding a cleaner, cook, plumber, or caregiver to confirming
+						the booking, {BRAND_NAME} keeps the process clear and local to Addis
+						Ababa.
+					</p>
+					<ol className="mt-8 grid gap-4 md:grid-cols-3">
+						{HOW_IT_WORKS.map((item) => (
+							<li
+								key={item.step}
+								className="rounded-2xl bg-white p-5 shadow-[0_6px_24px_rgba(23,67,9,0.05)] ring-1 ring-black/5"
+							>
+								<span className="flex size-9 items-center justify-center rounded-full bg-primary text-sm font-bold text-primary-foreground">
+									{item.step}
+								</span>
+								<h3 className="mt-4 text-[15px] font-semibold text-[#0f1a0c]">
+									{item.title}
+								</h3>
+								<p className="mt-1.5 text-sm leading-relaxed text-[#52634c]">
+									{item.desc}
+								</p>
+							</li>
+						))}
+					</ol>
+				</div>
+			</section>
+
 			{/* How we vet + what Zemen helps with */}
 			<section
 				id="about"
@@ -541,8 +652,11 @@ export function LandingPage() {
 							How we vet every provider
 						</h2>
 						<div className="mt-2 h-0.5 w-16 bg-primary" />
-						<p className="mt-4 text-[15px] text-[#3d5240]">
-							Before a Zemen provider ever comes to your door:
+						<p className="mt-4 text-[15px] leading-relaxed text-[#3d5240]">
+							Trust matters when someone enters your home. Before a {BRAND_NAME}{" "}
+							provider can take jobs in Addis Ababa, we review identity,
+							documents, skills, and experience, then keep monitoring after
+							placement.
 						</p>
 						<ul className="mt-8 space-y-5">
 							{VET_STEPS.map((step) => (
@@ -574,10 +688,9 @@ export function LandingPage() {
 						<div className="mt-2 h-0.5 w-16 bg-primary" />
 						<div className="mt-8 space-y-3">
 							{HELP_WITH.map((item) => (
-								<button
+								<Link
 									key={item.title}
-									type="button"
-									onClick={browseServices}
+									href={helpHref(item.match)}
 									className="group flex w-full items-center gap-4 rounded-2xl bg-white p-3.5 text-left shadow-[0_6px_24px_rgba(23,67,9,0.07)] ring-1 ring-black/5 transition hover:-translate-y-0.5 hover:shadow-[0_12px_32px_rgba(23,67,9,0.12)]"
 								>
 									<div className="relative size-[72px] shrink-0 overflow-hidden rounded-xl bg-[#e8f5e3] sm:size-[84px]">
@@ -601,7 +714,7 @@ export function LandingPage() {
 											<ArrowRightIcon className="size-3.5 transition group-hover:translate-x-0.5" />
 										</span>
 									</div>
-								</button>
+								</Link>
 							))}
 						</div>
 					</div>

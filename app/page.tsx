@@ -9,6 +9,7 @@ import {
 	SEO_TITLE_DEFAULT,
 	SEO_TWITTER_DESCRIPTION,
 } from "@/lib/seo";
+import { fetchPublicCategories } from "@/services/catalog/publicCatalog";
 
 export const metadata: Metadata = {
 	title: {
@@ -29,6 +30,20 @@ export const metadata: Metadata = {
 	}),
 };
 
-export default function Home() {
-	return <LandingPage />;
+export const revalidate = 3600;
+
+export default async function Home() {
+	const categories = await fetchPublicCategories();
+
+	return (
+		<LandingPage
+			initialCategories={categories.map((c) => ({
+				id: c.id,
+				categoryName: c.categoryName,
+				image: c.image,
+				active: c.active,
+				slug: c.slug,
+			}))}
+		/>
+	);
 }
