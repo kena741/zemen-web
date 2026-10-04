@@ -65,7 +65,7 @@ export async function POST(request: Request) {
 			last_name: lastName,
 			tx_ref: txRef,
 			return_url: `${appBaseUrl}${returnPath}?tx_ref=${encodeURIComponent(txRef)}&purpose=${encodeURIComponent(purpose)}&amount=${amount.toFixed(2)}`,
-			"customization[title]": "Zemen",
+			"customization[title]": "Zemen Service",
 			"customization[description]": `${purpose} ETB ${amount.toFixed(2)}`,
 		};
 		if (phoneNumber) chapaPayload.phone_number = phoneNumber;

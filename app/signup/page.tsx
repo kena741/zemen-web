@@ -125,7 +125,7 @@ function SignupForm() {
 			}
 		>
 			<div
-				className="mt-6 grid grid-cols-2 gap-1 rounded-lg bg-muted p-1"
+				className="mt-6 grid grid-cols-2 gap-1 rounded-lg bg-white/35 p-1 backdrop-blur-sm"
 				role="tablist"
 			>
 				{(["provider", "service"] as const).map((option) => (
@@ -136,7 +136,7 @@ function SignupForm() {
 						className={cn(
 							"rounded-md px-3 py-2 text-[13px] font-medium transition-colors",
 							mode === option
-								? "bg-white text-foreground shadow-sm dark:bg-card"
+								? "bg-white/90 text-foreground shadow-sm"
 								: "text-muted-foreground",
 						)}
 					>

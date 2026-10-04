@@ -7,9 +7,9 @@ import { Suspense, useEffect, useState } from "react";
 import { EyeIcon, EyeOffIcon, Loader2Icon } from "lucide-react";
 
 import appIcon from "@/assets/images/app_icon.png";
+import authPageBg from "@/assets/images/auth_page.png";
 import { LocaleThemeToggle } from "@/components/app/locale-theme-toggle";
 import { TelegramLink } from "@/components/app/telegram-link";
-import { LoginMeshBackground } from "@/components/login/login-mesh-bg";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
@@ -123,35 +123,43 @@ function LoginForm() {
 	}
 
 	return (
-		<main className="relative flex min-h-svh flex-col overflow-hidden bg-[#f6f6f6] pb-[env(safe-area-inset-bottom)]">
-			<LoginMeshBackground />
+		<main className="relative flex min-h-svh flex-col overflow-hidden bg-[#0e2604] pb-[env(safe-area-inset-bottom)]">
+			<div className="pointer-events-none absolute inset-0 z-0">
+				<Image
+					src={authPageBg}
+					alt=""
+					fill
+					priority
+					sizes="100vw"
+					className="object-cover object-center"
+				/>
+			</div>
 
 			<header className="relative z-10 flex items-center justify-between gap-2.5 px-6 py-5 sm:px-8">
-				<div className="flex items-center gap-2.5">
+				<Link href="/" className="flex items-center gap-2.5">
 					<Image
 						src={appIcon}
 						alt=""
-						priority
 						width={28}
 						height={28}
 						className="size-7 rounded-md"
 					/>
-					<span className="text-[15px] font-semibold tracking-tight text-foreground">
+					<span className="text-[15px] font-semibold tracking-tight text-white drop-shadow-sm">
 						{BRAND_NAME}
 					</span>
-				</div>
+				</Link>
 				<LocaleThemeToggle variant="auth" />
 			</header>
 
 			<div className="relative z-10 flex flex-1 items-center justify-center px-4 py-6 sm:px-6 sm:py-8">
-				<div className="w-full max-w-100 overflow-hidden rounded-2xl border border-black/5 bg-white shadow-[0_15px_35px_rgba(23,23,23,0.08),0_5px_15px_rgba(0,0,0,0.04)] sm:rounded-xl">
+				<div className="w-full max-w-100 overflow-hidden rounded-2xl border border-white/45 bg-white/45 shadow-[0_15px_35px_rgba(23,23,23,0.12),0_5px_15px_rgba(0,0,0,0.06)] backdrop-blur-xl sm:rounded-xl">
 					<div className="px-5 py-7 sm:px-8 sm:py-8">
 						<h1 className="text-center text-[20px] font-semibold tracking-tight text-foreground sm:text-[22px]">
 							{t("signInToAccount")}
 						</h1>
 
 						<div
-							className="mt-6 grid grid-cols-2 gap-1 rounded-lg bg-muted p-1"
+							className="mt-6 grid grid-cols-2 gap-1 rounded-lg bg-white/35 p-1 backdrop-blur-sm"
 							role="tablist"
 							aria-label={t("signInAsRole")}
 						>
@@ -167,7 +175,7 @@ function LoginForm() {
 										className={cn(
 											"rounded-md px-3 py-2 text-[13px] font-medium transition-colors",
 											selected
-												? "bg-white text-foreground shadow-sm"
+												? "bg-white/90 text-foreground shadow-sm"
 												: "text-muted-foreground hover:text-foreground",
 										)}
 									>
@@ -230,7 +238,7 @@ function LoginForm() {
 											placeholder={t("emailOrPhonePlaceholder")}
 											value={emailOrPhone}
 											onChange={(e) => setEmailOrPhone(e.target.value)}
-											className="h-10 bg-white shadow-none focus-visible:ring-0"
+											className="h-10 bg-white/80 shadow-none focus-visible:ring-0"
 										/>
 									</InputGroup>
 								</Field>
@@ -252,7 +260,7 @@ function LoginForm() {
 											placeholder={t("passwordPlaceholder")}
 											value={password}
 											onChange={(e) => setPassword(e.target.value)}
-											className="h-10 bg-white shadow-none focus-visible:ring-0"
+											className="h-10 bg-white/80 shadow-none focus-visible:ring-0"
 										/>
 										<InputGroupAddon align="inline-end">
 											<InputGroupButton
@@ -321,7 +329,7 @@ function LoginForm() {
 						</form>
 					</div>
 
-					<div className="border-t border-border bg-muted/60 px-6 py-4 text-center text-[13px] text-muted-foreground sm:px-8">
+					<div className="border-t border-white/30 bg-white/25 px-6 py-4 text-center text-[13px] text-muted-foreground backdrop-blur-sm sm:px-8">
 						<Link
 							href="/signup"
 							className="font-medium text-primary hover:underline"
@@ -332,7 +340,7 @@ function LoginForm() {
 				</div>
 			</div>
 
-			<footer className="relative z-10 flex flex-col items-center gap-3 px-6 py-4 text-[12px] text-muted-foreground sm:px-8">
+			<footer className="relative z-10 flex flex-col items-center gap-3 px-6 py-4 text-[12px] text-white/80 sm:px-8">
 				<TelegramLink />
 				<p>
 					© {new Date().getFullYear()} {BRAND_NAME}
@@ -344,7 +352,7 @@ function LoginForm() {
 
 export default function LoginPage() {
 	return (
-		<Suspense fallback={<main className="min-h-svh bg-[#f6f6f6]" />}>
+		<Suspense fallback={<main className="min-h-svh bg-[#0e2604]" />}>
 			<LoginForm />
 		</Suspense>
 	);

@@ -1,4 +1,4 @@
-export const BRAND_NAME = "Zemen";
+export const BRAND_NAME = "Zemen Service";
 
 export const BRAND_TAGLINE = "Home services marketplace";
 

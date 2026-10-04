@@ -19,8 +19,21 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-	title: `${BRAND_NAME} — ${BRAND_TAGLINE}`,
+	title: `${BRAND_NAME} | ${BRAND_TAGLINE}`,
 	description: BRAND_TAGLINE,
+	applicationName: BRAND_NAME,
+	icons: {
+		icon: [
+			{ url: "/favicon.png", sizes: "32x32", type: "image/png" },
+			{ url: "/app-icon.png", sizes: "1024x1024", type: "image/png" },
+		],
+		apple: [{ url: "/apple-icon.png", sizes: "180x180", type: "image/png" }],
+	},
+	appleWebApp: {
+		capable: true,
+		title: BRAND_NAME,
+		statusBarStyle: "default",
+	},
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
