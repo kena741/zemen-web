@@ -35,7 +35,7 @@ export function MarketingHeader({ active = "home" }: { active?: "home" | "about"
 	}
 
 	return (
-		<header className="sticky top-0 z-50 border-b border-black/5 bg-white/95 pt-[env(safe-area-inset-top)] backdrop-blur-md">
+		<header className="fixed inset-x-0 top-0 z-50 border-b border-black/5 bg-white/95 pt-[env(safe-area-inset-top)] backdrop-blur-md supports-[backdrop-filter]:bg-white/90">
 			<div className="mx-auto flex h-16 max-w-6xl items-center gap-3 px-4 sm:px-6">
 				<Link href="/" className="flex shrink-0 items-center gap-2.5">
 					<Image
@@ -243,8 +243,10 @@ export function MarketingShell({
 	active?: "home" | "about";
 }) {
 	return (
-		<div className="marketing-landing relative min-h-svh overflow-x-hidden bg-[#f4f8f1] text-[#0f1a0c]">
+		<div className="marketing-landing relative min-h-svh overflow-x-clip bg-[#f4f8f1] text-[#0f1a0c]">
 			<MarketingHeader active={active} />
+			{/* Offset for fixed header (h-16 + safe area) */}
+			<div className="h-16 pt-[env(safe-area-inset-top)]" aria-hidden />
 			{children}
 			<MarketingFooter />
 		</div>
