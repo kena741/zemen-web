@@ -2,12 +2,26 @@ import type { Metadata } from "next";
 
 import { BRAND_NAME } from "@/lib/brand";
 
+/** Public marketing domain used in sitemap, robots, canonicals, and OG. */
+export const SEO_SITE_ORIGIN = "https://www.zemenservice.com";
+
 /** Canonical production origin for metadata, sitemap, and robots. */
 export function getMetadataBaseUrl(): URL {
 	const raw =
 		process.env.NEXT_PUBLIC_SITE_URL?.trim() ||
-		"https://www.zemenservice.com";
-	return new URL(raw.replace(/\/$/, ""));
+		SEO_SITE_ORIGIN;
+	const normalized = raw.replace(/\/$/, "");
+
+	// Never publish Vercel preview hosts in SEO artifacts.
+	if (
+		normalized.includes("vercel.app") ||
+		normalized.includes("localhost") ||
+		normalized.includes("127.0.0.1")
+	) {
+		return new URL(SEO_SITE_ORIGIN);
+	}
+
+	return new URL(normalized);
 }
 
 export const SEO_TITLE_DEFAULT =
