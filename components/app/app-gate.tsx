@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { AppLoading } from "@/components/ui/app-loading";
 import { fetchWebAppConfig } from "@/services/config/appConfigApi";
 
+/** Auth/utility routes that skip config checks entirely. */
 const BYPASS = [
 	"/login",
 	"/signup",
@@ -18,17 +19,45 @@ const BYPASS = [
 	"/force-update",
 ];
 
+/** Public marketing/SEO routes: render immediately for crawlers and users. */
+const PUBLIC_SEO = ["/", "/about", "/services", "/locations", "/legal"];
+
+function isBypass(pathname: string | null): boolean {
+	if (!pathname) return false;
+	return BYPASS.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+}
+
+function isPublicSeo(pathname: string | null): boolean {
+	if (!pathname) return false;
+	return PUBLIC_SEO.some((p) =>
+		p === "/" ? pathname === "/" : pathname === p || pathname.startsWith(`${p}/`),
+	);
+}
+
 export function AppGate({ children }: { children: ReactNode }) {
 	const pathname = usePathname();
 	const router = useRouter();
-	const [ready, setReady] = useState(false);
+	const publicSeo = isPublicSeo(pathname);
+	const bypass = isBypass(pathname);
+	const [ready, setReady] = useState(publicSeo || bypass);
 
 	useEffect(() => {
 		let cancelled = false;
 
 		async function run() {
-			if (BYPASS.some((p) => pathname === p || pathname?.startsWith(`${p}/`))) {
+			if (bypass) {
 				if (!cancelled) setReady(true);
+				return;
+			}
+
+			// Public SEO pages render immediately; still honor maintenance mode.
+			if (publicSeo) {
+				if (!cancelled) setReady(true);
+				const config = await fetchWebAppConfig();
+				if (cancelled) return;
+				if (config.maintenanceMode) {
+					router.replace("/maintenance");
+				}
 				return;
 			}
 
@@ -46,7 +75,7 @@ export function AppGate({ children }: { children: ReactNode }) {
 		return () => {
 			cancelled = true;
 		};
-	}, [pathname, router]);
+	}, [pathname, router, publicSeo, bypass]);
 
 	if (!ready) {
 		return (

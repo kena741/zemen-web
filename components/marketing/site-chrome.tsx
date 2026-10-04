@@ -18,7 +18,11 @@ import { enableGuestBrowse } from "@/lib/guest";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/store/useAuth";
 
-export function MarketingHeader({ active = "home" }: { active?: "home" | "about" }) {
+export function MarketingHeader({
+	active = "home",
+}: {
+	active?: "home" | "about" | "services";
+}) {
 	const router = useRouter();
 	const { setMode } = useAuth();
 	const [servicesOpen, setServicesOpen] = useState(false);
@@ -60,7 +64,10 @@ export function MarketingHeader({ active = "home" }: { active?: "home" | "about"
 							type="button"
 							onClick={() => setServicesOpen((v) => !v)}
 							onMouseEnter={() => setServicesOpen(true)}
-							className="inline-flex items-center gap-1 text-sm font-medium text-[#5a6b55] transition hover:text-foreground"
+							className={cn(
+								"inline-flex items-center gap-1 text-sm font-medium transition hover:text-foreground",
+								active === "services" ? "text-primary" : "text-[#5a6b55]",
+							)}
 						>
 							Services
 							<ChevronDownIcon
@@ -71,13 +78,20 @@ export function MarketingHeader({ active = "home" }: { active?: "home" | "about"
 							/>
 						</button>
 						{servicesOpen ? (
-							<div className="absolute top-full left-0 z-50 mt-2 min-w-[200px] rounded-xl bg-white py-2 shadow-lg ring-1 ring-black/8">
+							<div className="absolute top-full left-0 z-50 mt-2 min-w-[220px] rounded-xl bg-white py-2 shadow-lg ring-1 ring-black/8">
+								<Link
+									href="/services"
+									className="block px-4 py-2 text-sm text-[#3d5240] hover:bg-[#e8f5e3] hover:text-primary"
+									onClick={() => setServicesOpen(false)}
+								>
+									All services
+								</Link>
 								<Link
 									href="/#services"
 									className="block px-4 py-2 text-sm text-[#3d5240] hover:bg-[#e8f5e3] hover:text-primary"
 									onClick={() => setServicesOpen(false)}
 								>
-									Popular services
+									Popular on Zemen
 								</Link>
 								<button
 									type="button"
@@ -87,14 +101,14 @@ export function MarketingHeader({ active = "home" }: { active?: "home" | "about"
 										browseServices();
 									}}
 								>
-									Browse all
+									Browse in app
 								</button>
 								<Link
-									href="/#help"
+									href="/locations/addis-ababa"
 									className="block px-4 py-2 text-sm text-[#3d5240] hover:bg-[#e8f5e3] hover:text-primary"
 									onClick={() => setServicesOpen(false)}
 								>
-									What we offer
+									Addis Ababa
 								</Link>
 							</div>
 						) : null}
@@ -204,9 +218,15 @@ export function MarketingFooter() {
 						</p>
 					</div>
 				</div>
-				<div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-white/80">
+					<div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-white/80">
+					<Link href="/services" className="hover:text-white">
+						Services
+					</Link>
 					<Link href="/about" className="hover:text-white">
 						About
+					</Link>
+					<Link href="/locations/addis-ababa" className="hover:text-white">
+						Addis Ababa
 					</Link>
 					<Link href="/legal/privacy" className="hover:text-white">
 						Privacy
@@ -240,7 +260,7 @@ export function MarketingShell({
 	active = "home",
 }: {
 	children: ReactNode;
-	active?: "home" | "about";
+	active?: "home" | "about" | "services";
 }) {
 	return (
 		<div className="marketing-landing relative min-h-svh overflow-x-clip bg-[#f4f8f1] text-[#0f1a0c]">

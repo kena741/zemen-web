@@ -1,11 +1,32 @@
 import type { Metadata } from "next";
 
 import { LandingPage } from "@/components/marketing/landing-page";
-import { BRAND_NAME, BRAND_TAGLINE } from "@/lib/brand";
+import {
+	buildOpenGraph,
+	buildTwitter,
+	SEO_DESCRIPTION,
+	SEO_OG_DESCRIPTION,
+	SEO_TITLE_DEFAULT,
+	SEO_TWITTER_DESCRIPTION,
+} from "@/lib/seo";
 
 export const metadata: Metadata = {
-	title: `${BRAND_NAME} | Trusted local services`,
-	description: `${BRAND_TAGLINE}. Book verified home services in Ethiopia.`,
+	title: {
+		absolute: SEO_TITLE_DEFAULT,
+	},
+	description: SEO_DESCRIPTION,
+	alternates: {
+		canonical: "/",
+	},
+	openGraph: buildOpenGraph({
+		title: SEO_TITLE_DEFAULT,
+		description: SEO_OG_DESCRIPTION,
+		path: "https://www.zemenservice.com",
+	}),
+	twitter: buildTwitter({
+		title: SEO_TITLE_DEFAULT,
+		description: SEO_TWITTER_DESCRIPTION,
+	}),
 };
 
 export default function Home() {

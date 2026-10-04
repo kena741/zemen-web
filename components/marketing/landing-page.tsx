@@ -1,6 +1,7 @@
 "use client";
 
 import Image, { type StaticImageData } from "next/image";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ArrowRightIcon, CheckIcon, PhoneIcon } from "lucide-react";
@@ -16,6 +17,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { BRAND_NAME, homePathForMode } from "@/lib/brand";
 import { enableGuestBrowse } from "@/lib/guest";
 import { SHORT_CODE, SPONSORS } from "@/lib/marketing";
+import { slugifyCategoryName } from "@/lib/seo-services";
 import { cn } from "@/lib/utils";
 import { formatAmount } from "@/services/bookings/types";
 import {
@@ -358,15 +360,20 @@ export function LandingPage() {
 					{categories.length > 0 ? (
 						<div className="mt-6 flex gap-2 overflow-x-auto pb-1 scrollbar-none">
 							{categories.map((c) => (
-								<button
+								<Link
 									key={c.id}
-									type="button"
-									onClick={browseServices}
+									href={`/services/${slugifyCategoryName(c.categoryName)}`}
 									className="shrink-0 rounded-full bg-[#e8f5e3] px-3.5 py-1.5 text-xs font-medium text-primary transition hover:bg-primary hover:text-primary-foreground"
 								>
 									{c.categoryName}
-								</button>
+								</Link>
 							))}
+							<Link
+								href="/services"
+								className="shrink-0 rounded-full border border-primary/20 bg-white px-3.5 py-1.5 text-xs font-semibold text-primary transition hover:bg-[#e8f5e3]"
+							>
+								All services
+							</Link>
 						</div>
 					) : null}
 
