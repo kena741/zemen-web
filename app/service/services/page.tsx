@@ -1,5 +1,7 @@
 "use client";
 
+import { routes } from "@/lib/app-routes";
+
 import { useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 import { SearchIcon } from "lucide-react";
@@ -76,7 +78,7 @@ function ServicesListInner() {
 							key={s.id}
 							service={s}
 							compact
-							href={`/service/services/${s.id}`}
+							href={routes.serviceServiceDetail(s.id)}
 							showFeaturedPending={false}
 						/>
 					))}

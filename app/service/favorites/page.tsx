@@ -1,5 +1,7 @@
 "use client";
 
+import { routes } from "@/lib/app-routes";
+
 import { ServiceCard } from "@/components/provider/service-card";
 import { ProfileBackLink } from "@/components/provider/profile-back-link";
 import { ServiceLoading } from "@/components/service/service-loading";
@@ -44,7 +46,7 @@ export default function FavoritesPage() {
 							key={s.id}
 							service={s}
 							compact
-							href={`/service/services/${s.id}`}
+							href={routes.serviceServiceDetail(s.id)}
 							showFeaturedPending={false}
 						/>
 					))}

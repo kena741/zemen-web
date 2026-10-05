@@ -1,5 +1,7 @@
 "use client";
 
+import { routes } from "@/lib/app-routes";
+
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ImageIcon } from "lucide-react";
@@ -75,7 +77,7 @@ export default function ProviderPaymentsPage() {
 						return (
 							<li key={booking.id}>
 								<Link
-									href={`/provider/bookings/${booking.id}`}
+									href={routes.providerBookingDetail(booking.id)}
 									className="block overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-black/5"
 								>
 									<div className="flex gap-3 p-3">

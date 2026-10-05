@@ -1,5 +1,7 @@
 "use client";
 
+import { routes } from "@/lib/app-routes";
+
 import Link from "next/link";
 import { ChevronRightIcon } from "lucide-react";
 
@@ -33,7 +35,7 @@ export function BookingRow({
 
 	return (
 		<Link
-			href={href ?? `/provider/bookings/${booking.id}`}
+			href={href ?? routes.providerBookingDetail(booking.id)}
 			className={cn(
 				"group -mx-1 flex items-start justify-between gap-3 rounded-lg px-2 py-3.5 transition-colors last:border-b-0 hover:bg-muted/40 sm:py-4",
 				"border-b border-border",

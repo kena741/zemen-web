@@ -1,5 +1,7 @@
 "use client";
 
+import { routes } from "@/lib/app-routes";
+
 import Link from "next/link";
 import { useState } from "react";
 import { ImageIcon } from "lucide-react";
@@ -58,7 +60,7 @@ export function CustomerBookingGridCard({
 
 	return (
 		<Link
-			href={`/service/bookings/${booking.id}`}
+			href={routes.serviceBookingDetail(booking.id)}
 			className={cn(
 				"flex h-full flex-col overflow-hidden rounded-xl bg-white active:scale-[0.99]",
 				className,

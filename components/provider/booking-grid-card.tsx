@@ -1,5 +1,7 @@
 "use client";
 
+import { routes } from "@/lib/app-routes";
+
 import Link from "next/link";
 import { useState } from "react";
 import { ImageIcon, StarIcon } from "lucide-react";
@@ -53,7 +55,7 @@ export function BookingGridCard({
 
 	return (
 		<Link
-			href={`/provider/bookings/${booking.id}`}
+			href={routes.providerBookingDetail(booking.id)}
 			className={cn(
 				"flex h-full flex-col overflow-hidden rounded-[14px] bg-white active:scale-[0.99]",
 				className,
@@ -106,7 +108,7 @@ export function UpcomingBookingCard({ booking }: { booking: Booking }) {
 
 	return (
 		<Link
-			href={`/provider/bookings/${booking.id}`}
+			href={routes.providerBookingDetail(booking.id)}
 			className="relative flex h-50 w-55 shrink-0 flex-col overflow-hidden sm:w-65"
 		>
 			<div className="h-35 w-full overflow-hidden rounded-[10px] bg-muted">
@@ -167,7 +169,7 @@ export function UpcomingListCard({
 
 	return (
 		<Link
-			href={`/provider/bookings/${booking.id}`}
+			href={routes.providerBookingDetail(booking.id)}
 			className="block overflow-hidden rounded-xl bg-white"
 		>
 			<div className="relative">

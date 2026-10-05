@@ -1,5 +1,7 @@
 "use client";
 
+import { routes } from "@/lib/app-routes";
+
 import Link from "next/link";
 import { useState } from "react";
 import { ImageIcon } from "lucide-react";
@@ -89,7 +91,7 @@ export default function ProviderOffersPage() {
 								className="overflow-hidden rounded-xl bg-white"
 							>
 								<Link
-									href={`/provider/offers/${offer.id}`}
+									href={routes.providerOfferDetail(offer.id)}
 									className="flex gap-3 p-3 transition-colors hover:bg-muted/40"
 								>
 									<div className="size-16 shrink-0 overflow-hidden rounded-lg bg-muted">

@@ -1,5 +1,7 @@
 "use client";
 
+import { routes } from "@/lib/app-routes";
+
 import Image, { type StaticImageData } from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -282,7 +284,7 @@ export function LandingPage({
 	function openService(id: string) {
 		enableGuestBrowse();
 		setMode("service");
-		router.push(`/service/services/${id}`);
+		router.push(routes.serviceServiceDetail(id));
 	}
 
 	return (

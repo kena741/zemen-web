@@ -1,5 +1,7 @@
 "use client";
 
+import { routes } from "@/lib/app-routes";
+
 import Link from "next/link";
 import { useState } from "react";
 import { ImageIcon, StarIcon } from "lucide-react";
@@ -88,7 +90,7 @@ export function ServiceCard({
 			)}
 		>
 			<Link
-				href={href ?? `/provider/services/${service.id}`}
+				href={href ?? routes.providerServiceDetail(service.id)}
 				className="flex flex-1 flex-col active:scale-[0.99]"
 			>
 				<div

@@ -1,5 +1,7 @@
 "use client";
 
+import { routes } from "@/lib/app-routes";
+
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -47,7 +49,7 @@ export default function NewRequestPage() {
 			return;
 		}
 		dispatch(invalidateRequests());
-		router.replace(`/service/requests/${res.id}`);
+		router.replace(routes.serviceRequestDetail(res.id));
 	}
 
 	return (

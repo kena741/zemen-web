@@ -1,5 +1,7 @@
 "use client";
 
+import { routes } from "@/lib/app-routes";
+
 import Link from "next/link";
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
@@ -112,7 +114,7 @@ function ProviderJobsContent() {
 						return (
 							<Link
 								key={job.id}
-								href={`/provider/jobs/${job.id}`}
+								href={routes.providerJobDetail(job.id)}
 								className="flex items-center gap-3 border-b border-border px-4 py-3 last:border-b-0 hover:bg-muted/40"
 							>
 								<div className="min-w-0 flex-1">

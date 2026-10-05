@@ -1,5 +1,7 @@
 "use client";
 
+import { routes } from "@/lib/app-routes";
+
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -301,7 +303,7 @@ export default function ServiceHomePage() {
 											<ServiceCard
 												service={s}
 												compact
-												href={`/service/services/${s.id}`}
+												href={routes.serviceServiceDetail(s.id)}
 												showFeaturedPending={false}
 											/>
 										</div>
@@ -379,7 +381,7 @@ export default function ServiceHomePage() {
 											key={s.id}
 											service={s}
 											compact
-											href={`/service/services/${s.id}`}
+											href={routes.serviceServiceDetail(s.id)}
 											showFeaturedPending={false}
 										/>
 									))}

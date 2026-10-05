@@ -1,5 +1,7 @@
 "use client";
 
+import { routes } from "@/lib/app-routes";
+
 import Link from "next/link";
 import { ChevronRightIcon } from "lucide-react";
 
@@ -47,7 +49,7 @@ export default function InboxPage() {
 					threads.map((thread) => (
 						<Link
 							key={thread.id}
-							href={`/provider/inbox/${thread.peerId}`}
+							href={routes.providerInboxChat(thread.peerId)}
 							className="flex items-center gap-3 rounded-lg px-2 py-3 transition-colors hover:bg-muted/40"
 						>
 							<UserAvatar src={thread.peerImage} name={thread.peerName} size="md" />

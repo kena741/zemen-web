@@ -1,5 +1,7 @@
 "use client";
 
+import { routes } from "@/lib/app-routes";
+
 import Link from "next/link";
 import { useState } from "react";
 import { ChevronRightIcon, PlusIcon } from "lucide-react";
@@ -81,7 +83,7 @@ export default function HandymenPage() {
 						return (
 							<Link
 								key={h.id}
-								href={`/provider/handymen/${h.id}`}
+								href={routes.providerHandymanDetail(h.id)}
 								className="flex items-center gap-3 border-b border-border px-4 py-3 last:border-b-0 hover:bg-muted/40"
 							>
 								<UserAvatar

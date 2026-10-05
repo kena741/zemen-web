@@ -1,5 +1,7 @@
 "use client";
 
+import { routes } from "@/lib/app-routes";
+
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
@@ -118,7 +120,7 @@ export default function NewServicePage() {
 					authUserId={authUserId}
 					onSuccess={(id) => {
 						dispatch(invalidateProviderServices());
-						router.replace(`/provider/services/${id}`);
+						router.replace(routes.providerServiceDetail(id));
 					}}
 				/>
 			</div>

@@ -1,5 +1,7 @@
 "use client";
 
+import { routes } from "@/lib/app-routes";
+
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
@@ -91,7 +93,7 @@ export default function CustomerOffersPage() {
 								<div className="flex shrink-0 flex-col gap-1">
 									{o.bookingId ? (
 										<Link
-											href={`/service/bookings/${o.bookingId}`}
+											href={routes.serviceBookingDetail(o.bookingId)}
 											className="text-xs font-medium text-primary"
 										>
 											{t("bookingTitle")}
@@ -109,7 +111,7 @@ export default function CustomerOffersPage() {
 									) : null}
 									{o.status === "accepted" && o.bookingId ? (
 										<Link
-											href={`/service/bookings/${o.bookingId}`}
+											href={routes.serviceBookingDetail(o.bookingId)}
 											className="text-xs font-medium text-primary"
 										>
 											{t("offersPayView")}

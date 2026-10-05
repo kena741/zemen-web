@@ -1,5 +1,7 @@
 "use client";
 
+import { routes } from "@/lib/app-routes";
+
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -30,7 +32,7 @@ export default function NewHandymanPage() {
 			return;
 		}
 		dispatch(invalidateProviderHandymen());
-		router.replace(`/provider/handymen/${res.handyman.id}`);
+		router.replace(routes.providerHandymanDetail(res.handyman.id));
 	}
 
 	return (
