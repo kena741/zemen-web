@@ -312,23 +312,19 @@ export async function cancelCustomerBooking(
 export async function completeCustomerBooking(
 	bookingId: string,
 ): Promise<{ ok: boolean; error: string | null }> {
-	const { data } = await getSupabase().auth.getSession();
-	const token = data.session?.access_token;
-	if (!token) return { ok: false, error: "You must be signed in." };
-
-	const res = await fetch("/api/bookings/complete", {
-		method: "POST",
-		headers: {
-			Authorization: `Bearer ${token}`,
-			"Content-Type": "application/json",
-		},
-		body: JSON.stringify({ bookingId }),
-	});
-	const json = (await res.json()) as { ok?: boolean; error?: string };
-	if (!res.ok || !json.ok) {
-		return { ok: false, error: json.error || "Failed to complete booking." };
+	try {
+		const { completeBooking } = await import("@/lib/api/bookings");
+		const json = await completeBooking(bookingId);
+		if (!json.ok) {
+			return { ok: false, error: "Failed to complete booking." };
+		}
+		return { ok: true, error: null };
+	} catch (e) {
+		return {
+			ok: false,
+			error: e instanceof Error ? e.message : "Failed to complete booking.",
+		};
 	}
-	return { ok: true, error: null };
 }
 
 export async function fetchCustomerJobRequests(

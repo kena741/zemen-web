@@ -86,6 +86,12 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
 			className={`${plusJakarta.variable} ${geistMono.variable}`}
 			suppressHydrationWarning
 		>
+			<head>
+				<meta
+					name="viewport"
+					content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
+				/>
+			</head>
 			<body className="min-h-svh bg-background font-sans text-foreground antialiased">
 				<OrganizationJsonLd />
 				<ReduxProvider>

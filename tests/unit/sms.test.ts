@@ -1,65 +1,78 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
-// Mirror parse helpers by exercising through exported API with mocked fetch.
-import { sendPhoneOtp, verifyPhoneOtp } from "@/services/sms/smsApi";
+vi.mock("@/lib/api/client", () => ({
+	invokeFunction: vi.fn(),
+}));
 
-describe("sendPhoneOtp response parsing", () => {
-	it("treats acknowledge+verificationId as success", async () => {
-		const original = globalThis.fetch;
-		globalThis.fetch = (async () =>
-			new Response(
-				JSON.stringify({
-					acknowledge: "success",
-					response: {
-						verificationId: "vid-123",
-						status: "Send is in progress...",
-					},
-				}),
-				{ status: 200, headers: { "Content-Type": "application/json" } },
-			)) as typeof fetch;
+import { invokeFunction } from "@/lib/api/client";
+import {
+	parseSendOtpResponse,
+	parseVerifyOtpResponse,
+	sendPhoneOtp,
+	verifyPhoneOtp,
+} from "@/services/sms/smsApi";
 
-		const result = await sendPhoneOtp("0991732568");
-		globalThis.fetch = original;
+const mockInvoke = vi.mocked(invokeFunction);
 
+describe("parseSendOtpResponse", () => {
+	it("treats acknowledge+verificationId as success", () => {
+		const result = parseSendOtpResponse({
+			acknowledge: "success",
+			response: {
+				verificationId: "vid-123",
+				status: "Send is in progress...",
+			},
+		});
 		expect(result.success).toBe(true);
 		expect(result.verificationId).toBe("vid-123");
 	});
 
-	it("fails when verificationId missing", async () => {
-		const original = globalThis.fetch;
-		globalThis.fetch = (async () =>
-			new Response(JSON.stringify({ acknowledge: "success", response: {} }), {
-				status: 200,
-				headers: { "Content-Type": "application/json" },
-			})) as typeof fetch;
+	it("fails when verificationId missing", () => {
+		const result = parseSendOtpResponse({
+			acknowledge: "success",
+			response: {},
+		});
+		expect(result.success).toBe(false);
+	});
+});
+
+describe("sendPhoneOtp", () => {
+	it("invokes handle-sms with send-otp action", async () => {
+		mockInvoke.mockResolvedValueOnce({
+			acknowledge: "success",
+			response: { verificationId: "vid-123" },
+		});
 
 		const result = await sendPhoneOtp("0991732568");
-		globalThis.fetch = original;
 
-		expect(result.success).toBe(false);
+		expect(mockInvoke).toHaveBeenCalledWith(
+			"handle-sms",
+			expect.objectContaining({
+				action: "send-otp",
+				recipient: "0991732568",
+			}),
+		);
+		expect(result.success).toBe(true);
+		expect(result.verificationId).toBe("vid-123");
 	});
 });
 
 describe("verifyPhoneOtp", () => {
 	it("sends verification_id like mobile", async () => {
-		const original = globalThis.fetch;
-		let body = "";
-		globalThis.fetch = (async (_url, init) => {
-			body = String(init?.body ?? "");
-			return new Response(JSON.stringify({ success: true }), {
-				status: 200,
-				headers: { "Content-Type": "application/json" },
-			});
-		}) as typeof fetch;
+		mockInvoke.mockResolvedValueOnce({ success: true });
 
 		const result = await verifyPhoneOtp("0991732568", "123456", "vid-1");
-		globalThis.fetch = original;
 
 		expect(result.success).toBe(true);
-		expect(JSON.parse(body)).toMatchObject({
-			verification_id: "vid-1",
-			recipient: "0991732568",
-			code: "123456",
-		});
+		expect(mockInvoke).toHaveBeenCalledWith(
+			"handle-sms",
+			expect.objectContaining({
+				action: "verify-otp",
+				verification_id: "vid-1",
+				recipient: "0991732568",
+				code: "123456",
+			}),
+		);
+		expect(parseVerifyOtpResponse({ success: true }).success).toBe(true);
 	});
 });

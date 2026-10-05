@@ -478,10 +478,9 @@ function BookServiceForm() {
 			bookingId: res.bookingId,
 		});
 		setBusy(false);
-		const chapaRes = await fetch("/api/pay/chapa", {
-			method: "POST",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({
+		try {
+			const { initializeChapaPayment } = await import("@/lib/api/payments");
+			const chapaData = await initializeChapaPayment({
 				amount: dueNow,
 				email: user.email,
 				first_name: firstName,
@@ -490,17 +489,13 @@ function BookServiceForm() {
 				purpose: "booking",
 				return_path: `/pay/done?purpose=booking&amount=${dueNow}`,
 				booking_id: res.bookingId,
-			}),
-		});
-		const chapaData = (await chapaRes.json()) as {
-			checkout_url?: string;
-			error?: string;
-		};
-		if (!chapaRes.ok || !chapaData.checkout_url) {
-			setError(chapaData.error || t("bookServiceChapaFailed"));
-			return;
+			});
+			window.location.href = chapaData.checkout_url;
+		} catch (e) {
+			setError(
+				e instanceof Error ? e.message : t("bookServiceChapaFailed"),
+			);
 		}
-		window.location.href = chapaData.checkout_url;
 	}
 
 	if (loading || !user) return <ServiceLoading />;

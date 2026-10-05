@@ -3,6 +3,8 @@ import type { MetadataRoute } from "next";
 import { getMetadataBaseUrl } from "@/lib/seo";
 import { fetchPublicCategories } from "@/services/catalog/publicCatalog";
 
+export const dynamic = "force-static";
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 	const base = getMetadataBaseUrl().origin;
 	const now = new Date();

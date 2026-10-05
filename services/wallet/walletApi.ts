@@ -146,21 +146,8 @@ export async function restorePrematureWithdrawalDeducts(): Promise<{
 	error: string | null;
 }> {
 	try {
-		const { data } = await getSupabase().auth.getSession();
-		const token = data.session?.access_token;
-		if (!token) return { refunded: 0, error: null };
-
-		const res = await fetch("/api/wallet/refund-rejected", {
-			method: "POST",
-			headers: { Authorization: `Bearer ${token}` },
-		});
-		const json = (await res.json()) as {
-			refunded?: number;
-			error?: string;
-		};
-		if (!res.ok) {
-			return { refunded: 0, error: json.error ?? "Restore failed" };
-		}
+		const { refundRejectedWithdrawals } = await import("@/lib/api/wallet");
+		const json = await refundRejectedWithdrawals();
 		return { refunded: Number(json.refunded ?? 0) || 0, error: null };
 	} catch (e) {
 		return {

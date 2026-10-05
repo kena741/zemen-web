@@ -2,6 +2,8 @@ import type { MetadataRoute } from "next";
 
 import { getMetadataBaseUrl } from "@/lib/seo";
 
+export const dynamic = "force-static";
+
 export default function robots(): MetadataRoute.Robots {
 	const base = getMetadataBaseUrl().origin;
 
@@ -38,8 +40,6 @@ export default function robots(): MetadataRoute.Robots {
 					"/pay/",
 					"/admin",
 					"/admin/",
-					"/api",
-					"/api/",
 					"/maintenance",
 					"/force-update",
 				],

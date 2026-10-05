@@ -12,8 +12,6 @@ import {
 	fetchPublicServicesByCategory,
 } from "@/services/catalog/publicCatalog";
 
-export const revalidate = 3600;
-
 export async function generateStaticParams() {
 	try {
 		const categories = await fetchPublicCategories();

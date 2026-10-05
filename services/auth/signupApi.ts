@@ -1,5 +1,5 @@
 import type { AppMode } from "@/lib/brand";
-import { getEdgeFunctionsBaseUrl } from "@/lib/env";
+import { invokeFunction } from "@/lib/api/client";
 import {
 	normalizeLocalEthiopianPhone,
 	validateEmail,
@@ -51,38 +51,43 @@ export async function signUpCustomer(
 		if (emailErr) return { userId: null, error: emailErr };
 	}
 
-	const edgeBase = getEdgeFunctionsBaseUrl();
-	if (!edgeBase) {
-		return { userId: null, error: "Signup is not configured on this deployment" };
-	}
-
 	try {
-		const res = await fetch(`${edgeBase}/signup-customer`, {
-			method: "POST",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({
-				email,
-				password: input.password,
-				first_name: input.firstName.trim(),
-				last_name: input.lastName.trim(),
-				user_name: input.userName?.trim() || `${input.firstName} ${input.lastName}`.trim(),
-				phone: normalizeLocalEthiopianPhone(input.phone),
-				country_code: input.countryCode || "+251",
-				address: input.address?.trim() || "",
-				login_type: "email",
-				fcmToken: "",
-				profile_pic: "",
-				wallet_amount: "0",
-				active: true,
-			}),
+		const data = await invokeFunction<{
+			success?: boolean;
+			userId?: string;
+			error?: string;
+		}>("signup-customer", {
+			email,
+			password: input.password,
+			first_name: input.firstName.trim(),
+			last_name: input.lastName.trim(),
+			user_name:
+				input.userName?.trim() ||
+				`${input.firstName} ${input.lastName}`.trim(),
+			phone: normalizeLocalEthiopianPhone(input.phone),
+			country_code: input.countryCode || "+251",
+			address: input.address?.trim() || "",
+			login_type: "email",
+			fcmToken: "",
+			profile_pic: "",
+			wallet_amount: "0",
+			active: true,
 		});
-		const data = (await res.json()) as { success?: boolean; userId?: string; error?: string };
-		if (!res.ok || !data.success || !data.userId) {
-			return { userId: null, error: friendlyLoginError(data.error || "Signup failed") };
+		if (!data.success || !data.userId) {
+			return {
+				userId: null,
+				error: friendlyLoginError(data.error || "Signup failed"),
+			};
 		}
 		return { userId: data.userId, error: null };
-	} catch {
-		return { userId: null, error: "No internet connection" };
+	} catch (e) {
+		return {
+			userId: null,
+			error:
+				e instanceof Error
+					? friendlyLoginError(e.message)
+					: "No internet connection",
+		};
 	}
 }
 

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useLocale } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
+import { initializeChapaPayment } from "@/lib/api/payments";
 import {
 	clearPaymentPending,
 	savePaymentPending,
@@ -93,39 +94,25 @@ export function ChapaCheckout({
 			`/pay/done?purpose=${encodeURIComponent(purpose)}&amount=${encodeURIComponent(payAmount)}`;
 
 		try {
-			const res = await fetch("/api/pay/chapa", {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({
-					amount: payAmount,
-					email,
-					first_name: firstName,
-					last_name: lastName,
-					phone_number: phone,
-					purpose,
-					return_path: path,
-					provider_id: providerId,
-					booking_id: bookingId,
-					service_id: serviceId,
-				}),
+			const data = await initializeChapaPayment({
+				amount: payAmount,
+				email,
+				first_name: firstName,
+				last_name: lastName,
+				phone_number: phone,
+				purpose,
+				return_path: path,
+				provider_id: providerId,
+				booking_id: bookingId,
+				service_id: serviceId,
 			});
-			const data = (await res.json()) as {
-				checkout_url?: string;
-				tx_ref?: string;
-				error?: string;
-			};
-			if (!res.ok || !data.checkout_url) {
-				clearPaymentPending();
-				setError(data.error || t("paymentFailed"));
-				return;
-			}
 			if (data.tx_ref) {
 				savePaymentPending({ ...pending, txRef: data.tx_ref });
 			}
 			window.location.href = data.checkout_url;
-		} catch {
+		} catch (e) {
 			clearPaymentPending();
-			setError(t("noInternet"));
+			setError(e instanceof Error ? e.message : t("noInternet"));
 		} finally {
 			setBusy(false);
 		}

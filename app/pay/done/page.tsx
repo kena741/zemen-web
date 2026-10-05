@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 
 import { AuthShell } from "@/components/auth/auth-shell";
+import { verifyPayment } from "@/lib/api/payments";
 import { useLocale } from "@/lib/i18n";
 import { getSupabase } from "@/lib/supabase/client";
 import {
@@ -66,25 +67,17 @@ function PayDoneContent() {
 			};
 
 			try {
-				const res = await fetch("/api/pay/verify", {
-					method: "POST",
-					headers: {
-						"Content-Type": "application/json",
-						Authorization: `Bearer ${token}`,
-					},
-					body: JSON.stringify(body),
-				});
-				const data = (await res.json()) as { status?: string; error?: string };
+				const data = await verifyPayment(body);
 				if (cancelled) return;
 
-				if (res.ok && data.status === "success") {
+				if (data.status === "success") {
 					clearPaymentPending();
 					setStatus("success");
 					setMessage(t("paymentSuccess"));
 					return;
 				}
 
-				setStatus(res.status === 202 ? "pending" : "error");
+				setStatus(data.status === "pending" ? "pending" : "error");
 				setMessage(data.error ?? t("paymentPending"));
 			} catch {
 				if (!cancelled) {

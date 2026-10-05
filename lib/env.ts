@@ -7,13 +7,21 @@ export function getSiteUrl(): string {
 	);
 }
 
+/**
+ * Public Edge Functions base URL (no longer proxies through /api/edge).
+ * Prefer `invokeFunction` / `supabase.functions.invoke` in app code.
+ */
 export function getEdgeFunctionsBaseUrl(): string {
-	// Browser → same-origin proxy (Supabase edge CORS blocks web origins)
-	if (typeof window !== "undefined") return "/api/edge";
 	const raw =
-		process.env.EDGE_FUNCTIONS_BASE_URL?.trim() ||
-		process.env.NEXT_PUBLIC_EDGE_FUNCTIONS_BASE_URL?.trim();
-	return raw ? raw.replace(/\/$/, "") : "";
+		process.env.NEXT_PUBLIC_EDGE_FUNCTIONS_BASE_URL?.trim() ||
+		process.env.EDGE_FUNCTIONS_BASE_URL?.trim();
+	if (raw) return raw.replace(/\/$/, "");
+
+	const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
+	if (supabaseUrl) {
+		return `${supabaseUrl.replace(/\/$/, "")}/functions/v1`;
+	}
+	return "";
 }
 
 export const WEB_APP_VERSION = "0.1.0";

@@ -1,15 +1,10 @@
+import {
+	createHandyman as apiCreateHandyman,
+	deleteHandyman as apiDeleteHandyman,
+	updateHandyman as apiUpdateHandyman,
+} from "@/lib/api/handymen";
 import { getSupabase } from "@/lib/supabase/client";
 import { handymanDisplayName, mapHandymanRow, type Handyman } from "./types";
-
-async function authHeaders(): Promise<HeadersInit> {
-	const { data } = await getSupabase().auth.getSession();
-	const token = data.session?.access_token;
-	if (!token) throw new Error("You must be signed in.");
-	return {
-		Authorization: `Bearer ${token}`,
-		"Content-Type": "application/json",
-	};
-}
 
 export async function fetchProviderHandymen(
 	providerId: string,
@@ -81,23 +76,9 @@ export async function createHandyman(body: Record<string, unknown>): Promise<{
 	error: string | null;
 }> {
 	try {
-		const headers = await authHeaders();
-		const res = await fetch("/api/provider/handymen", {
-			method: "POST",
-			headers,
-			body: JSON.stringify(body),
-		});
-		const json = (await res.json()) as {
-			handyman?: Record<string, unknown>;
-			error?: string;
-		};
-		if (!res.ok) {
-			return { handyman: null, error: json.error ?? "Create failed" };
-		}
+		const json = await apiCreateHandyman(body);
 		return {
-			handyman: json.handyman
-				? mapHandymanRow(json.handyman)
-				: null,
+			handyman: json.handyman ? mapHandymanRow(json.handyman) : null,
 			error: null,
 		};
 	} catch (e) {
@@ -113,23 +94,9 @@ export async function updateHandyman(
 	body: Record<string, unknown>,
 ): Promise<{ handyman: Handyman | null; error: string | null }> {
 	try {
-		const headers = await authHeaders();
-		const res = await fetch(`/api/provider/handymen/${id}`, {
-			method: "PATCH",
-			headers,
-			body: JSON.stringify(body),
-		});
-		const json = (await res.json()) as {
-			handyman?: Record<string, unknown>;
-			error?: string;
-		};
-		if (!res.ok) {
-			return { handyman: null, error: json.error ?? "Update failed" };
-		}
+		const json = await apiUpdateHandyman(id, body);
 		return {
-			handyman: json.handyman
-				? mapHandymanRow(json.handyman)
-				: null,
+			handyman: json.handyman ? mapHandymanRow(json.handyman) : null,
 			error: null,
 		};
 	} catch (e) {
@@ -144,15 +111,7 @@ export async function deleteHandyman(
 	id: string,
 ): Promise<{ ok: boolean; error: string | null }> {
 	try {
-		const headers = await authHeaders();
-		const res = await fetch(`/api/provider/handymen/${id}`, {
-			method: "DELETE",
-			headers,
-		});
-		const json = (await res.json()) as { error?: string };
-		if (!res.ok) {
-			return { ok: false, error: json.error ?? "Delete failed" };
-		}
+		await apiDeleteHandyman(id);
 		return { ok: true, error: null };
 	} catch (e) {
 		return {

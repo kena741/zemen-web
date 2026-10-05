@@ -258,10 +258,9 @@ export default function CustomerBookingDetailPage() {
 		});
 		setBusy(true);
 		setShowNextCycleConfirm(false);
-		const res = await fetch("/api/pay/chapa", {
-			method: "POST",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({
+		try {
+			const { initializeChapaPayment } = await import("@/lib/api/payments");
+			const data = await initializeChapaPayment({
 				amount,
 				email: user.email,
 				first_name: booking.firstName,
@@ -270,15 +269,14 @@ export default function CustomerBookingDetailPage() {
 				purpose: "booking",
 				return_path: `/pay/done?purpose=booking&amount=${amount}`,
 				booking_id: booking.id,
-			}),
-		});
-		const data = (await res.json()) as { checkout_url?: string; error?: string };
-		setBusy(false);
-		if (!res.ok || !data.checkout_url) {
-			setActionError(data.error || t("bookServiceChapaFailed"));
-			return;
+			});
+			window.location.href = data.checkout_url;
+		} catch (e) {
+			setBusy(false);
+			setActionError(
+				e instanceof Error ? e.message : t("bookServiceChapaFailed"),
+			);
 		}
-		window.location.href = data.checkout_url;
 	}
 
 	async function onReview() {

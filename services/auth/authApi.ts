@@ -1,5 +1,4 @@
 import type { AppMode } from "@/lib/brand";
-import { getEdgeFunctionsBaseUrl } from "@/lib/env";
 import {
 	looksLikePhoneIdentifier,
 	normalizeLocalEthiopianPhone,
@@ -151,25 +150,19 @@ async function resolveLoginEmail(
 async function loginCustomerViaEdge(
 	email: string,
 	password: string,
-): Promise<{ session: { access_token: string; refresh_token: string } | null; error: string | null }> {
-	const base = getEdgeFunctionsBaseUrl();
-	if (!base) {
-		return { session: null, error: "Login service unavailable" };
-	}
-
+): Promise<{
+	session: { access_token: string; refresh_token: string } | null;
+	error: string | null;
+}> {
 	try {
-		const res = await fetch(`${base}/login-customer`, {
-			method: "POST",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({ email, password }),
-		});
-		const data = (await res.json()) as {
+		const { invokeFunction } = await import("@/lib/api/client");
+		const data = await invokeFunction<{
 			success?: boolean;
 			error?: string;
 			access_token?: string;
 			refresh_token?: string;
-		};
-		if (!res.ok || !data.success || !data.access_token || !data.refresh_token) {
+		}>("login-customer", { email, password });
+		if (!data.success || !data.access_token || !data.refresh_token) {
 			return { session: null, error: data.error ?? "Login failed" };
 		}
 		return {
@@ -179,8 +172,11 @@ async function loginCustomerViaEdge(
 			},
 			error: null,
 		};
-	} catch {
-		return { session: null, error: "No internet connection" };
+	} catch (e) {
+		return {
+			session: null,
+			error: e instanceof Error ? e.message : "No internet connection",
+		};
 	}
 }
 
