@@ -1,0 +1,8 @@
+{
+  "buildType": 1,
+  "buildCmd": "npm run build",
+  "buildDist": "out",
+  "entryPagePath": "out/index.html",
+  "appID": "REPLACE_WITH_APPCUBE_APP_ID",
+  "isCompile": false
+}

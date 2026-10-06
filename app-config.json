@@ -1,0 +1,15 @@
+{
+  "pages": ["out/index.html"],
+  "entryPagePath": "out/index.html",
+  "page": {},
+  "global": {
+    "window": {
+      "backgroundTextStyle": "light",
+      "navigationBarBackgroundColor": "#fff",
+      "navigationBarTitleText": "Zemen Service",
+      "navigationBarTextStyle": "black",
+      "capsuleTheme": "light"
+    }
+  },
+  "type": "legacy"
+}

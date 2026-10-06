@@ -1,0 +1,9 @@
+{
+  "description": "Project Config File",
+  "compileType": "miniprogram",
+  "appid": "REPLACE_WITH_APPCUBE_APP_ID",
+  "projectname": "zemen-web",
+  "setting": {
+    "es5": true
+  }
+}

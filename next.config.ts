@@ -6,8 +6,8 @@ const nextConfig: NextConfig = {
 	images: {
 		unoptimized: true, // Native Next.js Image Optimization requires a Node.js server; disable it for H5
 	},
-	// If your H5 app will live in a sub-folder (e.g., ://example.com), uncomment the line below:
-	// basePath: '/h5',
+	// Relative asset URLs so the static export works inside Telebirr/Macle WebView
+	assetPrefix: "./",
 };
 
 export default nextConfig;
