@@ -44,6 +44,8 @@ export async function saveBankMethod(params: {
 	swiftCode?: string;
 	branchCity?: string;
 	branchCountry?: string;
+	/** When omitted: true for create, false for update (preserves current default). */
+	setAsDefault?: boolean;
 }): Promise<{ ok: boolean; error: string | null }> {
 	const providerID = params.authUserId;
 	const bankName = params.bankName.trim();
@@ -55,13 +57,16 @@ export async function saveBankMethod(params: {
 	}
 
 	const supabase = getSupabase();
+	const setAsDefault = params.setAsDefault ?? !params.id;
 
-	await supabase
-		.from("provider_payment_methods")
-		.update({ is_default: false })
-		.eq("providerID", providerID);
+	if (setAsDefault) {
+		await supabase
+			.from("provider_payment_methods")
+			.update({ is_default: false })
+			.eq("providerID", providerID);
+	}
 
-	const payload = {
+	const payload: Record<string, unknown> = {
 		providerID,
 		method_type: "bank",
 		method_code: methodCode,
@@ -73,9 +78,9 @@ export async function saveBankMethod(params: {
 		branchCity: params.branchCity?.trim() || null,
 		branchCountry: params.branchCountry?.trim() || null,
 		is_active: true,
-		is_default: true,
 		metadata: {},
 	};
+	if (setAsDefault) payload.is_default = true;
 
 	if (params.id) {
 		const { error } = await supabase
@@ -105,7 +110,7 @@ export async function saveBankMethod(params: {
 
 	const { error } = await supabase
 		.from("provider_payment_methods")
-		.insert(payload);
+		.insert({ ...payload, is_default: true });
 	if (error) return { ok: false, error: error.message };
 	return { ok: true, error: null };
 }

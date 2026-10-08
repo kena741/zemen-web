@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { PencilIcon } from "lucide-react";
 
 import { ProfileBackLink } from "@/components/provider/profile-back-link";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -19,6 +20,7 @@ import {
 	findChapaBank,
 	validateBankAccountNumber,
 } from "@/services/bank/chapaBanks";
+import type { BankMethod } from "@/services/bank/types";
 import { useAppDispatch } from "@/store/hooks";
 import { invalidateProviderBank } from "@/store/providerCacheSlice";
 import { useAuth } from "@/store/useAuth";
@@ -26,6 +28,12 @@ import { useCachedProviderBank } from "@/store/useProviderCache";
 
 const selectClassName =
 	"h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
+
+function bankSlugFromMethod(bank: BankMethod): string {
+	const key =
+		bank.bankName ?? bank.methodName ?? bank.methodCode ?? bank.swiftCode ?? "";
+	return findChapaBank(key)?.slug ?? "";
+}
 
 export default function BankDetailsPage() {
 	const { t } = useLocale();
@@ -38,6 +46,7 @@ export default function BankDetailsPage() {
 	const [error, setError] = useState<string | null>(null);
 	const [busy, setBusy] = useState(false);
 	const [showForm, setShowForm] = useState(false);
+	const [editingId, setEditingId] = useState<string | null>(null);
 	const [holderName, setHolderName] = useState("");
 	const [accountNumber, setAccountNumber] = useState("");
 	const [bankSlug, setBankSlug] = useState("");
@@ -48,13 +57,40 @@ export default function BankDetailsPage() {
 		() => (bankSlug ? findChapaBank(bankSlug) : undefined),
 		[bankSlug],
 	);
+	const isEditing = Boolean(editingId);
 
 	function resetForm() {
+		setEditingId(null);
 		setHolderName("");
 		setAccountNumber("");
 		setBankSlug("");
 		setSwiftCode("");
 		setBranchCity("");
+	}
+
+	function closeForm() {
+		setShowForm(false);
+		resetForm();
+		setError(null);
+	}
+
+	function openAddForm() {
+		resetForm();
+		setError(null);
+		setShowForm(true);
+	}
+
+	function startEdit(bank: BankMethod) {
+		const slug = bankSlugFromMethod(bank);
+		const matched = slug ? findChapaBank(slug) : undefined;
+		setEditingId(bank.id);
+		setHolderName(bank.holderName ?? "");
+		setAccountNumber((bank.accountNumber ?? "").replace(/\D/g, ""));
+		setBankSlug(slug);
+		setSwiftCode(matched?.swift ?? bank.swiftCode ?? "");
+		setBranchCity(bank.branchCity ?? "");
+		setError(null);
+		setShowForm(true);
 	}
 
 	function onSelectBank(slug: string) {
@@ -89,19 +125,20 @@ export default function BankDetailsPage() {
 		setError(null);
 		const res = await saveBankMethod({
 			authUserId,
+			id: editingId,
 			holderName,
 			accountNumber: accountNumber.trim(),
 			bankName: bank.name,
 			swiftCode: bank.swift || swiftCode,
 			branchCity,
+			setAsDefault: !editingId,
 		});
 		setBusy(false);
 		if (!res.ok) {
 			setError(res.error);
 			return;
 		}
-		setShowForm(false);
-		resetForm();
+		closeForm();
 		await afterMutate();
 	}
 
@@ -119,7 +156,10 @@ export default function BankDetailsPage() {
 		const res = await deleteBankMethod(id);
 		setBusy(false);
 		if (!res.ok) setError(res.error);
-		else await afterMutate();
+		else {
+			if (editingId === id) closeForm();
+			await afterMutate();
+		}
 	}
 
 	return (
@@ -137,8 +177,8 @@ export default function BankDetailsPage() {
 					size="sm"
 					variant={showForm ? "outline" : "default"}
 					onClick={() => {
-						setShowForm((v) => !v);
-						setError(null);
+						if (showForm) closeForm();
+						else openAddForm();
 					}}
 				>
 					{showForm ? t("commonCancel") : t("providerAddBank")}
@@ -156,6 +196,9 @@ export default function BankDetailsPage() {
 					onSubmit={(e) => void handleSave(e)}
 					className="mt-5 space-y-3 rounded-xl border border-border bg-white p-4 shadow-xs"
 				>
+					<p className="text-sm font-medium text-foreground">
+						{isEditing ? t("commonEdit") : t("providerAddBank")}
+					</p>
 					<div className="space-y-1.5">
 						<Label htmlFor="holder">{t("providerAccountHolder")}</Label>
 						<Input
@@ -223,7 +266,7 @@ export default function BankDetailsPage() {
 						</div>
 					</div>
 					<Button type="submit" disabled={busy || !bankSlug}>
-						{t("providerSaveAsDefault")}
+						{isEditing ? t("providerSaveChanges") : t("providerSaveAsDefault")}
 					</Button>
 				</form>
 			) : null}
@@ -260,6 +303,16 @@ export default function BankDetailsPage() {
 								) : null}
 							</div>
 							<div className="mt-3 flex flex-wrap gap-2">
+								<Button
+									size="sm"
+									variant="outline"
+									disabled={busy}
+									className="gap-1.5"
+									onClick={() => startEdit(b)}
+								>
+									<PencilIcon className="size-3.5" />
+									{t("commonEdit")}
+								</Button>
 								{!b.isDefault ? (
 									<Button
 										size="sm"
