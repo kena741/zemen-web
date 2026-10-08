@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { ChapaTopUp } from "@/components/payments/chapa-top-up";
 import { ProfileBackLink } from "@/components/provider/profile-back-link";
@@ -25,6 +25,9 @@ import {
 	useCachedProviderBank,
 	useCachedProviderWallet,
 } from "@/store/useProviderCache";
+
+const selectClassName =
+	"h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
 
 function isPendingStatus(status: string | null | undefined): boolean {
 	const s = (status ?? "pending").trim().toLowerCase();
@@ -86,9 +89,11 @@ export default function WalletPage() {
 	const { data: banks } = useCachedProviderBank({ authUserId, providerId });
 	const [busy, setBusy] = useState(false);
 	const [error, setError] = useState<string | null>(null);
+	const [info, setInfo] = useState<string | null>(null);
 	const [showWithdraw, setShowWithdraw] = useState(false);
 	const [amount, setAmount] = useState("");
 	const [note, setNote] = useState("");
+	const [selectedBankId, setSelectedBankId] = useState("");
 	const [tab, setTab] = useState<"tx" | "withdraw">("tx");
 	const [withdrawFilter, setWithdrawFilter] = useState<
 		"all" | "pending" | "approved" | "rejected"
@@ -108,7 +113,20 @@ export default function WalletPage() {
 		});
 	}, [providerId, dispatch, refresh]);
 
-	const defaultBank = banks.find((b) => b.isDefault) ?? banks[0] ?? null;
+	const defaultBank = useMemo(
+		() => banks.find((b) => b.isDefault) ?? banks[0] ?? null,
+		[banks],
+	);
+	const selectedBank = useMemo(
+		() => banks.find((b) => b.id === selectedBankId) ?? defaultBank,
+		[banks, selectedBankId, defaultBank],
+	);
+
+	useEffect(() => {
+		if (!selectedBankId && defaultBank) {
+			setSelectedBankId(defaultBank.id);
+		}
+	}, [defaultBank, selectedBankId]);
 
 	const filteredWithdrawals = wallet.withdrawals.filter((w) => {
 		if (withdrawFilter === "approved" && !isApprovedStatus(w.paymentStatus))
@@ -140,7 +158,7 @@ export default function WalletPage() {
 
 	async function submitWithdraw(e: React.FormEvent) {
 		e.preventDefault();
-		if (!defaultBank) {
+		if (!selectedBank) {
 			setError(t("providerWalletAddBankFirst"));
 			return;
 		}
@@ -151,15 +169,16 @@ export default function WalletPage() {
 		}
 		setBusy(true);
 		setError(null);
+		setInfo(null);
 		const res = await requestWithdrawal({
 			providerId,
 			amount: value,
 			note,
-			paymentMethodId: defaultBank.id,
-			holderName: defaultBank.holderName ?? "",
-			bankName: defaultBank.bankName ?? defaultBank.methodName ?? t("navBank"),
-			accountNumber: defaultBank.accountNumber ?? "",
-			swiftCode: defaultBank.swiftCode,
+			paymentMethodId: selectedBank.id,
+			holderName: selectedBank.holderName ?? "",
+			bankName: selectedBank.bankName ?? selectedBank.methodName ?? t("navBank"),
+			accountNumber: selectedBank.accountNumber ?? "",
+			swiftCode: selectedBank.swiftCode,
 		});
 		setBusy(false);
 		if (!res.ok) {
@@ -169,6 +188,11 @@ export default function WalletPage() {
 		setShowWithdraw(false);
 		setAmount("");
 		setNote("");
+		if (res.updatedPending) {
+			setInfo(t("providerWalletPendingUpdated"));
+			setTab("withdraw");
+			setWithdrawFilter("pending");
+		}
 		dispatch(invalidateProviderWallet());
 		refresh();
 	}
@@ -200,7 +224,16 @@ export default function WalletPage() {
 						size="sm"
 						variant="secondary"
 						className="border-white/25 bg-white/15 text-white hover:bg-white/25 hover:text-white"
-						onClick={() => setShowWithdraw((v) => !v)}
+						onClick={() => {
+							setShowWithdraw((v) => {
+								if (!v) {
+									setSelectedBankId(defaultBank?.id ?? "");
+									setError(null);
+									setInfo(null);
+								}
+								return !v;
+							});
+						}}
 					>
 						{showWithdraw ? t("commonCancel") : t("requestWithdrawal")}
 					</Button>
@@ -221,19 +254,37 @@ export default function WalletPage() {
 					<AlertDescription>{error || loadError}</AlertDescription>
 				</Alert>
 			) : null}
+			{info ? (
+				<Alert className="mt-4">
+					<AlertDescription>{info}</AlertDescription>
+				</Alert>
+			) : null}
 
 			{showWithdraw ? (
 				<form
 					onSubmit={(e) => void submitWithdraw(e)}
 					className="mt-4 space-y-3 rounded-xl border border-border bg-white p-4 shadow-xs"
 				>
-					{defaultBank ? (
-						<p className="text-sm text-muted-foreground">
-							{t("providerWalletPayoutTo", {
-								bank: defaultBank.bankName ?? "",
-								account: defaultBank.accountNumber ?? "",
-							})}
-						</p>
+					{banks.length > 0 ? (
+						<div className="space-y-1.5">
+							<Label htmlFor="payout-bank">{t("providerWalletPayoutBank")}</Label>
+							<select
+								id="payout-bank"
+								required
+								value={selectedBank?.id ?? ""}
+								onChange={(e) => setSelectedBankId(e.target.value)}
+								className={selectClassName}
+							>
+								{banks.map((b) => (
+									<option key={b.id} value={b.id}>
+										{(b.bankName || b.methodName || t("navBank")) +
+											" · " +
+											(b.accountNumber ?? "") +
+											(b.isDefault ? ` (${t("commonDefault")})` : "")}
+									</option>
+								))}
+							</select>
+						</div>
 					) : (
 						<p className="text-sm text-destructive">
 							{t("providerWalletNoBank")}{" "}
@@ -263,12 +314,11 @@ export default function WalletPage() {
 							onChange={(e) => setNote(e.target.value)}
 						/>
 					</div>
-					<Button type="submit" disabled={busy || !defaultBank}>
+					<Button type="submit" disabled={busy || !selectedBank}>
 						{t("providerWalletSubmitRequest")}
 					</Button>
 				</form>
 			) : null}
-
 			<div className="mt-6 flex gap-1.5">
 				<Button
 					size="sm"

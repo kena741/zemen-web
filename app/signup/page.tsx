@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { type AppMode } from "@/lib/brand";
 import { useLocale } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
+import { sanitizeSignupRef } from "@/lib/signup-ref";
 import {
 	finishSignupLogin,
 	signUpProvider,
@@ -26,6 +27,7 @@ function SignupForm() {
 	const { t } = useLocale();
 	const { setMode, login } = useAuth();
 	const initialMode = search.get("mode") === "provider" ? "provider" : "service";
+	const signupSource = sanitizeSignupRef(search.get("ref"));
 	const [mode, setLocalMode] = useState<AppMode>(initialMode);
 	const [firstName, setFirstName] = useState("");
 	const [lastName, setLastName] = useState("");
@@ -76,6 +78,7 @@ function SignupForm() {
 					email: email.trim(),
 					phone,
 					password,
+					signupSource,
 				}),
 			);
 			router.push(
@@ -97,6 +100,7 @@ function SignupForm() {
 				email,
 				phone,
 				password,
+				signupSource,
 			});
 			if (!result.userId) {
 				setError(result.error);

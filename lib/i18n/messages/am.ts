@@ -787,10 +787,13 @@ export const am: Record<MessageKey, string> = {
 	providerSetDefault: "ነባሪ አድርግ",
 	providerWalletAddBankFirst: "ከመውጣት በፊት የባንክ መለያ ያክሉ።",
 	providerWalletValidAmount: "ትክክለኛ መጠን ያስገቡ",
+	providerWalletPayoutBank: "የክፍያ ባንክ መለያ",
 	providerWalletPayoutTo: "ክፍያ ወደ {bank} · {account}",
 	providerWalletNoBank: "የባንክ መለያ የለም።",
 	providerWalletAddOne: "አንዱን ያክሉ",
 	providerWalletSubmitRequest: "ጥያቄ አስገባ",
+	providerWalletPendingUpdated:
+		"ወደ ያለው በመጠባበቅ ላይ ያለ የገንዘብ ማውጣት ጥያቄ ተጨምሯል።",
 	providerWalletTransactions: "ግብይቶች",
 	providerWalletWithdrawals: "ገንዘብ ማውጣት",
 	providerWalletNoTransactions: "የዋሌት ግብይት የለም።",

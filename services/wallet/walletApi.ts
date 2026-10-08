@@ -86,6 +86,11 @@ export async function fetchWithdrawals(params: {
 	};
 }
 
+function isPendingWithdrawalStatus(status: unknown): boolean {
+	const s = String(status ?? "pending").trim().toLowerCase();
+	return s === "pending" || s === "" || s === "hold";
+}
+
 export async function requestWithdrawal(params: {
 	providerId: string;
 	amount: number;
@@ -95,7 +100,7 @@ export async function requestWithdrawal(params: {
 	bankName: string;
 	accountNumber: string;
 	swiftCode?: string | null;
-}): Promise<{ ok: boolean; error: string | null }> {
+}): Promise<{ ok: boolean; error: string | null; updatedPending?: boolean }> {
 	if (params.amount <= 0) {
 		return { ok: false, error: "Enter a valid amount" };
 	}
@@ -110,8 +115,26 @@ export async function requestWithdrawal(params: {
 	if (balErr) return { ok: false, error: balErr.message };
 	const balance = Number(provider?.walletAmount ?? 0) || 0;
 
+	const { data: recentRows, error: pendingErr } = await supabase
+		.from("withdrawal_history")
+		.select("id, amount, note, paymentStatus")
+		.eq("providerId", params.providerId)
+		.order("createdDate", { ascending: false })
+		.limit(20);
+
+	if (pendingErr) return { ok: false, error: pendingErr.message };
+
+	const pending = (recentRows ?? []).find((row) =>
+		isPendingWithdrawalStatus(
+			(row as Record<string, unknown>).paymentStatus,
+		),
+	) as { id: string; amount?: unknown; note?: unknown } | undefined;
+
+	const pendingAmount = Number(pending?.amount ?? 0) || 0;
+	const totalAmount = pending ? pendingAmount + params.amount : params.amount;
+
 	// ponytail: request is queue-only; admin deducts wallet on approval
-	if (params.amount > balance) {
+	if (totalAmount > balance) {
 		return {
 			ok: false,
 			error:
@@ -121,23 +144,49 @@ export async function requestWithdrawal(params: {
 		};
 	}
 
-	const id = crypto.randomUUID();
-	const { error } = await supabase.from("withdrawal_history").insert({
-		id,
-		providerId: params.providerId,
-		amount: String(params.amount),
-		note: params.note?.trim() || null,
-		paymentStatus: "pending",
+	const noteTrimmed = params.note?.trim() || "";
+	const existingNote = String(pending?.note ?? "").trim();
+	const nextNote = noteTrimmed
+		? existingNote
+			? `${existingNote} · ${noteTrimmed}`
+			: noteTrimmed
+		: existingNote || null;
+
+	const bankFields = {
 		paymentMethodId: params.paymentMethodId,
 		holderName: params.holderName,
 		bankName: params.bankName,
 		accountNumber: params.accountNumber,
 		swiftCode: params.swiftCode ?? null,
+	};
+
+	if (pending?.id) {
+		const { error } = await supabase
+			.from("withdrawal_history")
+			.update({
+				amount: String(totalAmount),
+				note: nextNote,
+				paymentStatus: "pending",
+				...bankFields,
+			})
+			.eq("id", pending.id);
+		if (error) return { ok: false, error: error.message };
+		return { ok: true, error: null, updatedPending: true };
+	}
+
+	const id = crypto.randomUUID();
+	const { error } = await supabase.from("withdrawal_history").insert({
+		id,
+		providerId: params.providerId,
+		amount: String(params.amount),
+		note: noteTrimmed || null,
+		paymentStatus: "pending",
+		...bankFields,
 		createdDate: new Date().toISOString(),
 	});
 
 	if (error) return { ok: false, error: error.message };
-	return { ok: true, error: null };
+	return { ok: true, error: null, updatedPending: false };
 }
 
 /** Restore funds when admin rejected after deducting (debit row present). */

@@ -3,7 +3,7 @@ export function getSiteUrl(): string {
 	return (
 		process.env.NEXT_PUBLIC_SITE_URL?.trim() ||
 		process.env.NEXT_PUBLIC_APP_URL?.trim() ||
-		"https://zemen-web-ivory.vercel.app"
+		"https://www.zemenservice.com"
 	);
 }
 

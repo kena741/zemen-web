@@ -5,6 +5,15 @@ function canRequest(balance: number, amount: number): boolean {
 	return amount > 0 && amount <= balance;
 }
 
+/** Pending + new request must still fit within wallet balance. */
+function canRequestWithPending(
+	balance: number,
+	pendingAmount: number,
+	newAmount: number,
+): boolean {
+	return newAmount > 0 && pendingAmount + newAmount <= balance;
+}
+
 /** Rejected payout refund: only when a withdrawal:{id} debit exists. */
 function rejectedRefundCredit(debitAmt: number): number {
 	return debitAmt >= 0.01 ? debitAmt : 0;
@@ -16,6 +25,13 @@ describe("wallet withdrawal request", () => {
 		expect(canRequest(1000, 1000)).toBe(true);
 		expect(canRequest(1000, 1000.01)).toBe(false);
 		expect(canRequest(0, 10)).toBe(false);
+	});
+
+	it("sums into pending and rejects when total exceeds balance", () => {
+		expect(canRequestWithPending(1000, 400, 200)).toBe(true);
+		expect(canRequestWithPending(1000, 400, 600)).toBe(true);
+		expect(canRequestWithPending(1000, 400, 601)).toBe(false);
+		expect(canRequestWithPending(1000, 0, 1000)).toBe(true);
 	});
 });
 
