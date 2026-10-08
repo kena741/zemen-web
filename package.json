@@ -5,6 +5,7 @@
 	"scripts": {
 		"dev": "next dev",
 		"build": "next build && node scripts/copy-macle-config.mjs",
+		"build:macle-package": "MACLE_PACKAGE=1 next build && node scripts/copy-macle-config.mjs",
 		"start": "next start",
 		"lint": "eslint",
 		"test": "vitest run",

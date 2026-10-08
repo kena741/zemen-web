@@ -1,6 +1,6 @@
 {
-  "pages": ["out/index.html"],
-  "entryPagePath": "out/index.html",
+  "pages": ["index.html"],
+  "entryPagePath": "index.html",
   "page": {},
   "global": {
     "window": {

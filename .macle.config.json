@@ -1,8 +1,8 @@
 {
   "buildType": 1,
-  "buildCmd": "npm run build",
-  "buildDist": "out",
-  "entryPagePath": "out/index.html",
+  "buildCmd": "npm run build:macle-package",
+  "buildDist": "/Users/admasgirma/Desktop/projects/zemen-web/out",
+  "entryPagePath": "index.html",
   "appID": "REPLACE_WITH_APPCUBE_APP_ID",
   "isCompile": false
 }
