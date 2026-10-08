@@ -19,6 +19,7 @@ export interface CustomerSignupInput {
 	password: string;
 	address?: string;
 	phoneVerified?: boolean;
+	signupSource?: string | null;
 }
 
 export interface ProviderSignupInput {
@@ -29,6 +30,7 @@ export interface ProviderSignupInput {
 	countryCode?: string;
 	password: string;
 	address?: string;
+	signupSource?: string | null;
 }
 
 function slugFromName(first: string, last: string): string {
@@ -74,6 +76,7 @@ export async function signUpCustomer(
 				profile_pic: "",
 				wallet_amount: "0",
 				active: true,
+				signup_source: input.signupSource || undefined,
 			}),
 		});
 		const data = (await res.json()) as { success?: boolean; userId?: string; error?: string };
@@ -112,6 +115,7 @@ export async function signUpProvider(
 				address: input.address?.trim() || "",
 				slug: slugFromName(input.firstName, input.lastName),
 				profile_image: "",
+				signup_source: input.signupSource || undefined,
 			},
 		},
 	});
@@ -128,7 +132,7 @@ export async function signUpProvider(
 		.maybeSingle();
 
 	if (!existing) {
-		const { error: upsertErr } = await supabase.from("provider").upsert({
+		const base = {
 			id: uid,
 			user_id: uid,
 			email: input.email.trim().toLowerCase(),
@@ -141,7 +145,15 @@ export async function signUpProvider(
 			active: true,
 			slug: slugFromName(input.firstName, input.lastName),
 			walletAmount: "0",
+		};
+		let { error: upsertErr } = await supabase.from("provider").upsert({
+			...base,
+			...(input.signupSource ? { signupSource: input.signupSource } : {}),
 		});
+		// ponytail: column may not exist until SQL migration runs
+		if (upsertErr && input.signupSource) {
+			({ error: upsertErr } = await supabase.from("provider").upsert(base));
+		}
 		if (upsertErr) {
 			return { userId: null, error: friendlyLoginError(upsertErr.message) };
 		}
@@ -162,4 +174,15 @@ export async function finishSignupLogin(
 	if (error) return { error: friendlyLoginError(error.message) };
 	if (mode === "provider") return { error: null };
 	return { error: null };
+}
+
+/** Stamp attribution after the user is authenticated (customer path). */
+export async function stampCustomerSignupSource(
+	userId: string,
+	signupSource: string,
+): Promise<void> {
+	await getSupabase()
+		.from("customer")
+		.update({ signup_source: signupSource })
+		.eq("id", userId);
 }

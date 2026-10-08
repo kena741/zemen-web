@@ -22,6 +22,7 @@ import { sendPhoneOtp, verifyPhoneOtp } from "@/services/sms/smsApi";
 import {
 	finishSignupLogin,
 	signUpCustomer,
+	stampCustomerSignupSource,
 } from "@/services/auth/signupApi";
 import { phoneAlreadyRegistered } from "@/services/auth/authApi";
 import { resetPasswordByPhone } from "@/services/auth/passwordRecoveryApi";
@@ -33,6 +34,7 @@ interface SignupDraft {
 	email: string;
 	phone: string;
 	password: string;
+	signupSource?: string | null;
 }
 
 function readSignupDraft(phoneFromQuery: string): SignupDraft | null {
@@ -172,6 +174,7 @@ function VerifyPhoneForm() {
 				phone,
 				password: signupPassword,
 				phoneVerified: true,
+				signupSource: draft?.signupSource,
 			});
 			if (!signup.userId) {
 				setBusy(false);
@@ -186,6 +189,9 @@ function VerifyPhoneForm() {
 			}
 			sessionStorage.removeItem("zemen_signup_draft");
 			await finishSignupLogin(email, signupPassword, "service");
+			if (draft?.signupSource) {
+				await stampCustomerSignupSource(signup.userId, draft.signupSource);
+			}
 			const ok = await login(email, signupPassword, "service");
 			setBusy(false);
 			router.replace(ok ? homePathForMode("service") : "/login");
