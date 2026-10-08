@@ -304,6 +304,8 @@ export const en = {
 	providerServiceDelete: "Delete",
 	providerServiceDeleteConfirm:
 		"Delete this service? This cannot be undone.",
+	providerServiceDeleteActiveBooking:
+		"Unable to delete. This service has an active booking.",
 	providerServiceReviews: "Reviews",
 	providerServiceTierTitle: "Service Listing Plans",
 	providerServiceTierSubtitle: "Upgrade how many services you can list.",
