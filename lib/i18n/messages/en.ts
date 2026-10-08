@@ -803,10 +803,13 @@ export const en = {
 	providerSetDefault: "Set default",
 	providerWalletAddBankFirst: "Add a bank account before withdrawing.",
 	providerWalletValidAmount: "Enter a valid amount",
+	providerWalletPayoutBank: "Payout bank account",
 	providerWalletPayoutTo: "Payout to {bank} · {account}",
 	providerWalletNoBank: "No bank account.",
 	providerWalletAddOne: "Add one",
 	providerWalletSubmitRequest: "Submit request",
+	providerWalletPendingUpdated:
+		"Added to your existing pending withdrawal request.",
 	providerWalletTransactions: "Transactions",
 	providerWalletWithdrawals: "Withdrawals",
 	providerWalletNoTransactions: "No wallet transactions yet.",
