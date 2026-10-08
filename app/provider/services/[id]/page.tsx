@@ -7,6 +7,17 @@ import { useEffect, useState } from "react";
 import { ArrowLeftIcon, PencilIcon, StarIcon, Trash2Icon } from "lucide-react";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogMedia,
+	AlertDialogTitle,
+	AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { AppLoading } from "@/components/ui/app-loading";
 import { ChapaCheckout } from "@/components/payments/chapa-checkout";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -14,7 +25,7 @@ import { useLocale } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { formatAmount } from "@/services/bookings/types";
 import {
-	deleteService,
+	hardDeleteService,
 	requestServiceFeatured,
 	setServiceActive,
 } from "@/services/services/servicesApi";
@@ -50,6 +61,7 @@ export default function ServiceDetailPage() {
 	const [error, setError] = useState<string | null>(null);
 	const [info, setInfo] = useState<string | null>(null);
 	const [featuredFee, setFeaturedFee] = useState<number | null>(null);
+	const [deleteOpen, setDeleteOpen] = useState(false);
 
 	useEffect(() => {
 		if (!service || !user?.provider?.id) return;
@@ -105,25 +117,23 @@ export default function ServiceDetailPage() {
 		refresh();
 	}
 
-	async function handleDelete() {
+	async function handleHardDelete() {
 		if (!service) return;
-		if (
-			!window.confirm(
-				t("providerArchiveServiceConfirm", {
-					name: service.serviceName ?? t("serviceTitle"),
-				}),
-			)
-		) {
-			return;
-		}
 		setBusy(true);
 		setError(null);
-		const res = await deleteService(service.id);
+		setInfo(null);
+		const res = await hardDeleteService(service.id);
 		setBusy(false);
 		if (!res.ok) {
-			setError(res.error);
+			setDeleteOpen(false);
+			setError(
+				res.hasActiveBooking
+					? t("providerServiceDeleteActiveBooking")
+					: (res.error ?? "Delete failed"),
+			);
 			return;
 		}
+		setDeleteOpen(false);
 		dispatch(invalidateProviderServices());
 		router.replace("/provider/services");
 	}
@@ -372,17 +382,44 @@ export default function ServiceDetailPage() {
 							</span>
 						) : null}
 
-						{!service.archived ? (
-							<Button
-								variant="destructive"
-								disabled={busy}
-								className="gap-1.5 sm:ml-auto"
-								onClick={() => void handleDelete()}
+						<AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+							<AlertDialogTrigger
+								render={
+									<Button
+										variant="destructive"
+										disabled={busy}
+										className="gap-1.5 sm:ml-auto"
+									/>
+								}
 							>
 								<Trash2Icon className="size-3.5" />
-								{t("providerServiceArchive")}
-							</Button>
-						) : null}
+								{t("providerServiceDelete")}
+							</AlertDialogTrigger>
+							<AlertDialogContent size="sm">
+								<AlertDialogHeader>
+									<AlertDialogMedia className="bg-destructive/10 text-destructive dark:bg-destructive/20 dark:text-destructive">
+										<Trash2Icon />
+									</AlertDialogMedia>
+									<AlertDialogTitle>
+										{t("providerDeleteServiceConfirm", {
+											name: service.serviceName ?? t("serviceTitle"),
+										})}
+									</AlertDialogTitle>
+								</AlertDialogHeader>
+								<AlertDialogFooter>
+									<AlertDialogCancel disabled={busy}>
+										{t("commonCancel")}
+									</AlertDialogCancel>
+									<AlertDialogAction
+										variant="destructive"
+										disabled={busy}
+										onClick={() => void handleHardDelete()}
+									>
+										{t("providerServiceDelete")}
+									</AlertDialogAction>
+								</AlertDialogFooter>
+							</AlertDialogContent>
+						</AlertDialog>
 					</div>
 				</>
 			)}

@@ -301,6 +301,8 @@ export const am: Record<MessageKey, string> = {
 	providerServiceDeactivate: "አቦዝን",
 	providerServiceDelete: "ሰርዝ",
 	providerServiceDeleteConfirm: "ይህንን አገልግሎት ሰርዝ? ሊመለስ አይችልም።",
+	providerServiceDeleteActiveBooking:
+		"መሰረዝ አልተቻለም። ይህ አገልግሎት በደንበኛ ተይዟል።",
 	providerServiceReviews: "ግምገማዎች",
 	providerServiceTierTitle: "የአገልግሎት ዝርዝር እቅዶች",
 	providerServiceTierSubtitle: "ማስቀመጥ የሚችሉትን አገልግሎቶች ብዛት ያሳድጉ።",

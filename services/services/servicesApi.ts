@@ -1,3 +1,4 @@
+import { BOOKING_STATUS } from "@/lib/booking-status";
 import { getSupabase } from "@/lib/supabase/client";
 import {
 	SERVICE_CONSTRAINTS,
@@ -8,6 +9,17 @@ import {
 	type ServiceFormInput,
 	type ServiceSubCategory,
 } from "./types";
+
+/** Bookings that block permanent service deletion. */
+const ACTIVE_BOOKING_STATUSES = [
+	BOOKING_STATUS.pending,
+	BOOKING_STATUS.accepted,
+	BOOKING_STATUS.onTheWay,
+	BOOKING_STATUS.inProgress,
+	BOOKING_STATUS.hold,
+	BOOKING_STATUS.pendingExtraPayment,
+	BOOKING_STATUS.pendingApproval,
+] as const;
 
 export async function fetchProviderServices(
 	providerId: string,
@@ -364,6 +376,78 @@ export async function deleteService(
 		return {
 			ok: false,
 			error: "Archive failed. You may not have permission to change this service.",
+		};
+	}
+	return { ok: true, error: null };
+}
+
+export async function serviceHasActiveBookings(
+	serviceId: string,
+): Promise<{ hasActive: boolean; error: string | null }> {
+	if (!serviceId) return { hasActive: false, error: "Missing service id" };
+
+	const supabase = getSupabase();
+	let { count, error } = await supabase
+		.from("booked_service")
+		.select("id", { count: "exact", head: true })
+		.eq("service_id", serviceId)
+		.in("status", [...ACTIVE_BOOKING_STATUSES]);
+
+	if (error) {
+		({ count, error } = await supabase
+			.from("booked_service")
+			.select("id", { count: "exact", head: true })
+			.eq("serviceId", serviceId)
+			.in("status", [...ACTIVE_BOOKING_STATUSES]));
+	}
+
+	if (error) {
+		console.error("serviceHasActiveBookings", error);
+		return { hasActive: false, error: error.message };
+	}
+
+	return { hasActive: (count ?? 0) > 0, error: null };
+}
+
+export async function hardDeleteService(
+	serviceId: string,
+): Promise<{
+	ok: boolean;
+	error: string | null;
+	hasActiveBooking?: boolean;
+}> {
+	if (!serviceId) {
+		return { ok: false, error: "Missing service id" };
+	}
+
+	const active = await serviceHasActiveBookings(serviceId);
+	if (active.error) {
+		return { ok: false, error: active.error };
+	}
+	if (active.hasActive) {
+		return {
+			ok: false,
+			error: "Unable to delete. There is an active booking.",
+			hasActiveBooking: true,
+		};
+	}
+
+	const { data, error } = await getSupabase()
+		.from("service")
+		.delete()
+		.eq("id", serviceId)
+		.select("id")
+		.maybeSingle();
+
+	if (error) {
+		console.error("hardDeleteService", error);
+		return { ok: false, error: error.message };
+	}
+	if (!data) {
+		return {
+			ok: false,
+			error:
+				"Delete failed. You may not have permission to remove this service.",
 		};
 	}
 	return { ok: true, error: null };
