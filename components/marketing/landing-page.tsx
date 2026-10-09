@@ -3,7 +3,7 @@
 import Image, { type StaticImageData } from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { ArrowRightIcon, CheckIcon, PhoneIcon } from "lucide-react";
 
 import marketing1 from "@/assets/images/1.png";
@@ -11,12 +11,23 @@ import marketing2 from "@/assets/images/2.png";
 import marketing3 from "@/assets/images/3.png";
 import marketing4 from "@/assets/images/4.png";
 import appIcon from "@/assets/images/app_icon.png";
-import authHero from "@/assets/images/auth_page.png";
+import appIconSm from "@/assets/images/optimized/app_icon_sm.png";
+import authHero from "@/assets/images/optimized/auth_page_hero.jpg";
+import why1 from "@/assets/images/optimized/why_1.jpg";
+import why2 from "@/assets/images/optimized/why_2.jpg";
+import why3 from "@/assets/images/optimized/why_3.jpg";
+import why4 from "@/assets/images/optimized/why_4.jpg";
 import { MarketingShell } from "@/components/marketing/site-chrome";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { BRAND_NAME, homePathForMode } from "@/lib/brand";
 import { enableGuestBrowse } from "@/lib/guest";
-import { SHORT_CODE, SPONSORS } from "@/lib/marketing";
+import {
+	PRIORITY_SERVICE_LINKS,
+	SHORT_CODE,
+	SPONSORS,
+	TRUST_STATS,
+	WHATSAPP_URL,
+} from "@/lib/marketing";
 import { slugifyCategoryName } from "@/lib/seo-services";
 import { cn } from "@/lib/utils";
 import { formatAmount } from "@/services/bookings/types";
@@ -75,10 +86,10 @@ const HOW_IT_WORKS = [
 type LandingCategory = ServiceCategory & { slug?: string };
 
 const WHY_IMAGES: { image: StaticImageData; alt: string }[] = [
-	{ image: marketing1, alt: "Zemen Service cleaning professional" },
-	{ image: marketing2, alt: "Zemen Service cooking and care" },
-	{ image: marketing3, alt: "Zemen Service babysitting support" },
-	{ image: marketing4, alt: "Zemen Service home help in Addis Ababa" },
+	{ image: why1, alt: "Zemen Service cleaning professional" },
+	{ image: why2, alt: "Zemen Service cooking and care" },
+	{ image: why3, alt: "Zemen Service babysitting support" },
+	{ image: why4, alt: "Zemen Service home help in Addis Ababa" },
 ];
 
 function SponsorsCarousel({
@@ -98,12 +109,16 @@ function SponsorsCarousel({
 						className="flex h-14 w-[132px] shrink-0 items-center justify-center rounded-xl border border-primary/10 bg-[#f7faf5] px-3 shadow-[0_1px_2px_rgba(23,67,9,0.04)] sm:h-[3.75rem] sm:w-[148px]"
 						aria-hidden={index >= sponsors.length}
 					>
-						{/* eslint-disable-next-line @next/next/no-img-element */}
-						<img
+						<Image
 							src={p.src}
 							alt={index >= sponsors.length ? "" : p.alt}
+							width={120}
+							height={32}
 							draggable={false}
-							className="max-h-7 w-auto max-w-full object-contain opacity-80 sm:max-h-8"
+							loading="lazy"
+							sizes="120px"
+							className="h-7 max-w-full object-contain opacity-80 sm:h-8"
+							style={{ width: "auto" }}
 						/>
 					</div>
 				))}
@@ -165,11 +180,14 @@ function ServiceTile({
 		>
 			<div className="relative aspect-[4/3] overflow-hidden bg-[#e8f5e3]">
 				{image ? (
-					// eslint-disable-next-line @next/next/no-img-element
-					<img
+					<Image
 						src={image}
 						alt=""
-						className="size-full object-cover transition duration-500 group-hover:scale-[1.04]"
+						fill
+						sizes="220px"
+						loading="lazy"
+						quality={65}
+						className="object-cover transition duration-500 group-hover:scale-[1.04]"
 					/>
 				) : (
 					<div className="flex size-full items-center justify-center">
@@ -200,8 +218,11 @@ function ServiceTile({
 
 export function LandingPage({
 	initialCategories = [],
+	heroImage,
 }: {
 	initialCategories?: LandingCategory[];
+	/** Server-rendered LCP image (preload + fetchPriority). */
+	heroImage: ReactNode;
 }) {
 	const router = useRouter();
 	const { user, setMode } = useAuth();
@@ -289,16 +310,9 @@ export function LandingPage({
 		<MarketingShell active="home">
 			{/* ── Hero: full-bleed auth visual ── */}
 			<section className="relative min-h-[calc(100svh-4rem)] overflow-hidden">
-				{/* Edge-to-edge hero image */}
+				{/* Edge-to-edge hero image — LCP from server for early discovery */}
 				<div className="absolute inset-0">
-					<Image
-						src={authHero}
-						alt="Zemen Service professionals: electrician, plumber, cleaning, painting, catering"
-						fill
-						priority
-						sizes="100vw"
-						className="object-cover object-[center_35%] md:object-center"
-					/>
+					{heroImage}
 					{/* Readability plane — left fade, not a floating card */}
 					<div
 						aria-hidden
@@ -308,17 +322,19 @@ export function LandingPage({
 						aria-hidden
 						className="absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-[#f4f8f1] to-transparent"
 					/>
-					{/* Soft brand watermark */}
+					{/* Soft brand watermark — desktop only, tiny asset */}
 					<div
 						aria-hidden
-						className="pointer-events-none absolute -right-16 bottom-8 opacity-[0.06] md:right-8 md:opacity-[0.08]"
+						className="pointer-events-none absolute -right-16 bottom-8 hidden opacity-[0.08] md:right-8 md:block"
 					>
 						<Image
-							src={appIcon}
+							src={appIconSm}
 							alt=""
-							width={420}
-							height={420}
-							className="size-[280px] md:size-[360px] animate-[marketing-float_14s_ease-in-out_infinite]"
+							width={96}
+							height={96}
+							loading="lazy"
+							sizes="96px"
+							className="size-24 animate-[marketing-float_14s_ease-in-out_infinite]"
 						/>
 					</div>
 				</div>
@@ -406,6 +422,19 @@ export function LandingPage({
 						</Link>
 					</div>
 
+					<ul className="mt-5 flex flex-wrap gap-2">
+						{PRIORITY_SERVICE_LINKS.map((item) => (
+							<li key={item.href}>
+								<Link
+									href={item.href}
+									className="inline-flex rounded-full bg-[#f7faf5] px-3.5 py-1.5 text-sm font-medium text-primary ring-1 ring-primary/15 transition hover:bg-white"
+								>
+									{item.label}
+								</Link>
+							</li>
+						))}
+					</ul>
+
 					{categories.length > 0 ? (
 						<ul className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
 							{categories.map((c) => (
@@ -489,25 +518,51 @@ export function LandingPage({
 						<div className="mt-2 h-0.5 w-16 bg-primary" />
 						<p className="mt-5 text-[15px] leading-relaxed text-[#3d5240]">
 							{BRAND_NAME} helps households in Addis Ababa book trusted home
-							services with confidence. We carefully vet and upskill certified
-							professionals for cleaning, cooking, domestic help, repairs, and
-							care.
+							services with confidence. With {TRUST_STATS[0].value} years of
+							experience, {TRUST_STATS[1].value} providers, and{" "}
+							{TRUST_STATS[2].value} services delivered, we carefully vet and
+							upskill certified professionals for cleaning, cooking, domestic
+							help, repairs, and care.
 						</p>
 						<p className="mt-4 text-[15px] leading-relaxed text-[#3d5240]">
-							Easy booking through our app, website, or call center (
+							Easy booking through our app, website, call center (
 							<a
 								href={`tel:${SHORT_CODE}`}
 								className="font-semibold text-primary underline-offset-4 hover:underline"
 							>
 								{SHORT_CODE}
 							</a>
-							), with support when you need it and a satisfaction focus on every
+							), or{" "}
+							<a
+								href={WHATSAPP_URL}
+								target="_blank"
+								rel="noreferrer"
+								className="font-semibold text-primary underline-offset-4 hover:underline"
+							>
+								WhatsApp
+							</a>
+							, with support when you need it and a satisfaction focus on every
 							visit.
 						</p>
+						<dl className="mt-7 grid grid-cols-3 gap-3">
+							{TRUST_STATS.map((stat) => (
+								<div
+									key={stat.label}
+									className="rounded-2xl bg-[#f7faf5] px-3 py-3 text-center ring-1 ring-black/5"
+								>
+									<dt className="text-lg font-bold tabular-nums text-primary sm:text-xl">
+										{stat.value}
+									</dt>
+									<dd className="mt-0.5 text-[11px] leading-snug text-[#52634c] sm:text-xs">
+										{stat.label}
+									</dd>
+								</div>
+							))}
+						</dl>
 						<ul className="mt-7 space-y-3">
 							{[
-								"Vetted & upskilled professionals",
-								"Book via app, web, or call center",
+								"Identity, documents, skills & experience checked",
+								"Book via app, web, call center, or WhatsApp",
 								"Dedicated account manager",
 								"Satisfaction guarantee every visit",
 							].map((item) => (
@@ -562,13 +617,14 @@ export function LandingPage({
 										src={slide.image}
 										alt={slide.alt}
 										fill
-										sizes="(max-width: 1024px) 100vw, 520px"
+										loading="lazy"
+										quality={65}
+										sizes="(max-width: 1024px) 90vw, 520px"
 										className={cn(
 											"object-cover",
 											i === whyIndex &&
 												"animate-[marketing-why-ken_2s_ease-out_forwards]",
 										)}
-										priority={i === 0}
 									/>
 								</div>
 							))}
@@ -580,20 +636,25 @@ export function LandingPage({
 								<p className="text-sm font-medium text-white drop-shadow">
 									Cleaning · Cooking · Babysitting
 								</p>
-								<div className="flex gap-1.5">
+								<div className="flex items-center">
 									{WHY_IMAGES.map((slide, i) => (
 										<button
 											key={slide.alt}
 											type="button"
 											aria-label={`Show image ${i + 1}`}
+											aria-current={i === whyIndex ? "true" : undefined}
 											onClick={() => setWhyIndex(i)}
-											className={cn(
-												"h-1.5 rounded-full transition-all duration-300",
-												i === whyIndex
-													? "w-6 bg-white"
-													: "w-1.5 bg-white/45 hover:bg-white/70",
-											)}
-										/>
+											className="flex size-11 items-center justify-center"
+										>
+											<span
+												className={cn(
+													"block h-1.5 rounded-full transition-all duration-300",
+													i === whyIndex
+														? "w-6 bg-white"
+														: "w-1.5 bg-white/45",
+												)}
+											/>
+										</button>
 									))}
 								</div>
 							</div>
@@ -731,10 +792,10 @@ export function LandingPage({
 								className="pointer-events-none absolute -left-6 -top-6 opacity-20"
 							>
 								<Image
-									src={appIcon}
+									src={appIconSm}
 									alt=""
-									width={160}
-									height={160}
+									width={112}
+									height={112}
 									className="size-28 brightness-0 invert"
 								/>
 							</div>
@@ -773,7 +834,9 @@ export function LandingPage({
 								src={authHero}
 								alt=""
 								fill
-								sizes="50vw"
+								loading="lazy"
+								quality={65}
+								sizes="(max-width: 1280px) 50vw, 640px"
 								className="object-cover object-center opacity-95"
 							/>
 							<div

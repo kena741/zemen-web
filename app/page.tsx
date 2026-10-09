@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 
+import { LandingHeroImage } from "@/components/marketing/landing-hero-image";
 import { LandingPage } from "@/components/marketing/landing-page";
 import {
 	buildOpenGraph,
@@ -37,6 +38,7 @@ export default async function Home() {
 
 	return (
 		<LandingPage
+			heroImage={<LandingHeroImage />}
 			initialCategories={categories.map((c) => ({
 				id: c.id,
 				categoryName: c.categoryName,

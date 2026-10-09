@@ -122,7 +122,10 @@ export async function uploadCustomerServiceImage(params: {
 	const path = `customer-services/${params.customerId}/${Date.now()}.${ext}`;
 	const { error } = await getSupabase()
 		.storage.from("betegnabucket")
-		.upload(path, params.file, { upsert: true });
+		.upload(path, params.file, {
+			upsert: true,
+			cacheControl: "31536000",
+		});
 	if (error) return { url: null, error: error.message };
 
 	const { data } = getSupabase().storage.from("betegnabucket").getPublicUrl(path);

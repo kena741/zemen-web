@@ -64,7 +64,10 @@ export async function uploadVerifyDocument(params: {
 
 	const { error: uploadErr } = await supabase.storage
 		.from(VERIFY_STORAGE_BUCKET)
-		.upload(path, params.file, { upsert: true });
+		.upload(path, params.file, {
+			upsert: true,
+			cacheControl: "31536000",
+		});
 	if (uploadErr) return { error: uploadErr.message };
 
 	const imageUrl = publicUrlForPath(path);

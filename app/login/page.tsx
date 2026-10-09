@@ -1,15 +1,13 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import { EyeIcon, EyeOffIcon, Loader2Icon } from "lucide-react";
 
-import appIcon from "@/assets/images/app_icon.png";
-import authPageBg from "@/assets/images/auth_page.png";
-import { LocaleThemeToggle } from "@/components/app/locale-theme-toggle";
+import { AuthShell } from "@/components/auth/auth-shell";
 import { TelegramLink } from "@/components/app/telegram-link";
+import { WhatsAppLink } from "@/components/app/whatsapp-link";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
@@ -19,11 +17,7 @@ import {
 	InputGroupButton,
 	InputGroupInput,
 } from "@/components/ui/input-group";
-import {
-	BRAND_NAME,
-	homePathForMode,
-	type AppMode,
-} from "@/lib/brand";
+import { BRAND_NAME, homePathForMode, type AppMode } from "@/lib/brand";
 import { clearGuestBrowse, enableGuestBrowse } from "@/lib/guest";
 import { useLocale } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
@@ -123,230 +117,202 @@ function LoginForm() {
 	}
 
 	return (
-		<main className="relative flex min-h-svh flex-col overflow-hidden bg-[#0e2604] pb-[env(safe-area-inset-bottom)]">
-			<div className="pointer-events-none absolute inset-0 z-0">
-				<Image
-					src={authPageBg}
-					alt=""
-					fill
-					priority
-					sizes="100vw"
-					className="object-cover object-center"
-				/>
-			</div>
-
-			<header className="relative z-10 flex items-center justify-between gap-2.5 px-6 py-5 sm:px-8">
-				<Link href="/" className="flex items-center gap-2.5">
-					<Image
-						src={appIcon}
-						alt=""
-						width={28}
-						height={28}
-						className="size-7 rounded-md"
-					/>
-					<span className="text-[15px] font-semibold tracking-tight text-white drop-shadow-sm">
-						{BRAND_NAME}
-					</span>
+		<AuthShell
+			title={t("signInToAccount")}
+			className="max-w-100"
+			footer={
+				<Link
+					href="/signup"
+					className="font-medium text-primary hover:underline"
+				>
+					{t("createAnAccount")}
 				</Link>
-				<LocaleThemeToggle variant="auth" />
-			</header>
-
-			<div className="relative z-10 flex flex-1 items-center justify-center px-4 py-6 sm:px-6 sm:py-8">
-				<div className="w-full max-w-100 overflow-hidden rounded-2xl border border-white/45 bg-white/45 shadow-[0_15px_35px_rgba(23,23,23,0.12),0_5px_15px_rgba(0,0,0,0.06)] backdrop-blur-xl sm:rounded-xl">
-					<div className="px-5 py-7 sm:px-8 sm:py-8">
-						<h1 className="text-center text-[20px] font-semibold tracking-tight text-foreground sm:text-[22px]">
-							{t("signInToAccount")}
-						</h1>
-
-						<div
-							className="mt-6 grid grid-cols-2 gap-1 rounded-lg bg-white/35 p-1 backdrop-blur-sm"
-							role="tablist"
-							aria-label={t("signInAsRole")}
-						>
-							{(["provider", "service"] as const).map((option) => {
-								const selected = mode === option;
-								return (
-									<button
-										key={option}
-										type="button"
-										role="tab"
-										aria-selected={selected}
-										onClick={() => selectMode(option)}
-										className={cn(
-											"rounded-md px-3 py-2 text-[13px] font-medium transition-colors",
-											selected
-												? "bg-white/90 text-foreground shadow-sm"
-												: "text-muted-foreground hover:text-foreground",
-										)}
-									>
-										{modeLabel(option)}
-									</button>
-								);
-							})}
-						</div>
-						<p className="mt-2 text-center text-[12px] text-muted-foreground">
-							{mode === "provider"
-								? t("signInProviderHint")
-								: t("signInCustomerHint")}
-						</p>
-
-						{uiError ? (
-							<Alert variant="destructive" className="mt-6" aria-live="polite">
-								<AlertTitle>{t("signInFailed")}</AlertTitle>
-								<AlertDescription>
-									<div className="flex flex-col gap-2">
-										<div>{uiError}</div>
-										{uiError.toLowerCase().includes("switch to customer") ? (
-											<button
-												type="button"
-												className="text-left text-sm font-medium underline underline-offset-2"
-												onClick={() => selectMode("service")}
-											>
-												{t("switchToCustomer")}
-											</button>
-										) : null}
-										{uiError.toLowerCase().includes("confirm") ||
-										uiError.toLowerCase().includes("verify your email") ? (
-											<p className="text-sm">{t("signInConfirmEmailHint")}</p>
-										) : null}
-									</div>
-								</AlertDescription>
-							</Alert>
-						) : null}
-
-						<form
-							onSubmit={(e) => void handleLogin(e)}
-							className="mt-7 flex flex-col gap-5"
-						>
-							<FieldGroup>
-								<Field>
-									<FieldLabel
-										htmlFor="emailOrPhone"
-										className="text-[13px] font-medium text-muted-foreground"
-									>
-										{t("emailOrPhone")}
-									</FieldLabel>
-									<InputGroup className="rounded-md border-[#d7e3d2] shadow-none has-[[data-slot=input-group-control]:focus-visible]:border-[#d7e3d2] has-[[data-slot=input-group-control]:focus-visible]:ring-0">
-										<InputGroupInput
-											id="emailOrPhone"
-											name="username"
-											type="text"
-											inputMode="email"
-											autoComplete="username"
-											spellCheck={false}
-											required
-											placeholder={t("emailOrPhonePlaceholder")}
-											value={emailOrPhone}
-											onChange={(e) => setEmailOrPhone(e.target.value)}
-											className="h-10 bg-white/80 shadow-none focus-visible:ring-0"
-										/>
-									</InputGroup>
-								</Field>
-
-								<Field>
-									<FieldLabel
-										htmlFor="password"
-										className="text-[13px] font-medium text-muted-foreground"
-									>
-										{t("password")}
-									</FieldLabel>
-									<InputGroup className="rounded-md border-[#d7e3d2] shadow-none has-[[data-slot=input-group-control]:focus-visible]:border-[#d7e3d2] has-[[data-slot=input-group-control]:focus-visible]:ring-0">
-										<InputGroupInput
-											id="password"
-											name="password"
-											type={showPassword ? "text" : "password"}
-											autoComplete="current-password"
-											required
-											placeholder={t("passwordPlaceholder")}
-											value={password}
-											onChange={(e) => setPassword(e.target.value)}
-											className="h-10 bg-white/80 shadow-none focus-visible:ring-0"
-										/>
-										<InputGroupAddon align="inline-end">
-											<InputGroupButton
-												type="button"
-												size="icon-xs"
-												aria-label={
-													showPassword ? t("hidePassword") : t("showPassword")
-												}
-												aria-pressed={showPassword}
-												onClick={() => setShowPassword((v) => !v)}
-											>
-												{showPassword ? (
-													<EyeOffIcon aria-hidden />
-												) : (
-													<EyeIcon aria-hidden />
-												)}
-											</InputGroupButton>
-										</InputGroupAddon>
-									</InputGroup>
-								</Field>
-							</FieldGroup>
-
-							<label className="flex items-center gap-2 text-[13px] text-muted-foreground">
-								<input
-									type="checkbox"
-									checked={rememberMe}
-									onChange={(e) => setRememberMe(e.target.checked)}
-									className="size-4 rounded border-border"
-								/>
-								{t("rememberMe")}
-							</label>
-
-							<Button
-								type="submit"
-								className="h-10 w-full rounded-md text-[15px] font-medium"
-								disabled={loginPending}
+			}
+			belowCard={
+				<footer className="flex flex-col items-center gap-3 text-[12px]">
+					<div className="flex flex-wrap items-center justify-center gap-2">
+						<WhatsAppLink className="border-white/70 bg-white/90 text-[#0f1a0c] shadow-sm hover:bg-white" />
+						<TelegramLink className="border-white/70 bg-white/90 text-[#0f1a0c] shadow-sm hover:bg-white" />
+					</div>
+					<p className="rounded-full bg-black/35 px-3 py-1 text-white/95">
+						© {new Date().getFullYear()} {BRAND_NAME}
+					</p>
+				</footer>
+			}
+		>
+				<div
+					className="mt-6 grid grid-cols-2 gap-1 rounded-lg bg-muted/80 p-1 dark:bg-white/10"
+					role="tablist"
+					aria-label={t("signInAsRole")}
+				>
+					{(["provider", "service"] as const).map((option) => {
+						const selected = mode === option;
+						return (
+							<button
+								key={option}
+								type="button"
+								role="tab"
+								aria-selected={selected}
+								onClick={() => selectMode(option)}
+								className={cn(
+									"rounded-md px-3 py-2 text-[13px] font-medium transition-colors",
+									selected
+										? "bg-white text-[#0f1a0c] shadow-sm dark:bg-white dark:text-[#0f1a0c]"
+										: "text-muted-foreground hover:text-foreground dark:text-[#c5d6bc] dark:hover:text-white",
+								)}
 							>
-								{loginPending ? (
-									<Loader2Icon
-										data-icon="inline-start"
-										className="animate-spin"
-										aria-hidden
-									/>
-								) : null}
-								{loginPending
-									? t("signingIn")
-									: t("signInAs", { mode: modeLabel(mode) })}
-							</Button>
-							<p className="text-center text-sm text-muted-foreground">
-								<Link
-									href="/forgot-password"
-									className="text-primary hover:underline"
-								>
-									{t("forgotPassword")}
-								</Link>
-							</p>
-							{mode === "service" ? (
-								<button
-									type="button"
-									onClick={continueAsGuest}
-									className="text-center text-sm font-medium text-primary hover:underline"
-								>
-									{t("loginAsGuest")}
-								</button>
-							) : null}
-						</form>
-					</div>
-
-					<div className="border-t border-white/30 bg-white/25 px-6 py-4 text-center text-[13px] text-muted-foreground backdrop-blur-sm sm:px-8">
-						<Link
-							href="/signup"
-							className="font-medium text-primary hover:underline"
-						>
-							{t("createAnAccount")}
-						</Link>
-					</div>
+								{modeLabel(option)}
+							</button>
+						);
+					})}
 				</div>
-			</div>
-
-			<footer className="relative z-10 flex flex-col items-center gap-3 px-6 py-4 text-[12px] text-white/80 sm:px-8">
-				<TelegramLink />
-				<p>
-					© {new Date().getFullYear()} {BRAND_NAME}
+				<p className="mt-2 min-h-8 text-center text-[12px] text-muted-foreground dark:text-[#c5d6bc]">
+					{mode === "provider"
+						? t("signInProviderHint")
+						: t("signInCustomerHint")}
 				</p>
-			</footer>
-		</main>
+
+				{uiError ? (
+					<Alert variant="destructive" className="mt-6" aria-live="polite">
+						<AlertTitle>{t("signInFailed")}</AlertTitle>
+						<AlertDescription>
+							<div className="flex flex-col gap-2">
+								<div>{uiError}</div>
+								{uiError.toLowerCase().includes("switch to customer") ? (
+									<button
+										type="button"
+										className="text-left text-sm font-medium underline underline-offset-2"
+										onClick={() => selectMode("service")}
+									>
+										{t("switchToCustomer")}
+									</button>
+								) : null}
+								{uiError.toLowerCase().includes("confirm") ||
+								uiError.toLowerCase().includes("verify your email") ? (
+									<p className="text-sm">{t("signInConfirmEmailHint")}</p>
+								) : null}
+							</div>
+						</AlertDescription>
+					</Alert>
+				) : null}
+
+				<form
+					onSubmit={(e) => void handleLogin(e)}
+					className="mt-7 flex flex-col gap-5"
+				>
+					<FieldGroup>
+						<Field>
+							<FieldLabel
+								htmlFor="emailOrPhone"
+								className="text-[13px] font-medium text-muted-foreground dark:text-[#c5d6bc]"
+							>
+								{t("emailOrPhone")}
+							</FieldLabel>
+							<InputGroup className="h-10 rounded-md border-[#d7e3d2] bg-transparent shadow-none has-[[data-slot=input-group-control]:focus-visible]:border-[#d7e3d2] has-[[data-slot=input-group-control]:focus-visible]:ring-0 dark:border-white/25 dark:bg-white/5 dark:has-[[data-slot=input-group-control]:focus-visible]:border-white/40">
+								<InputGroupInput
+									id="emailOrPhone"
+									name="username"
+									type="text"
+									inputMode="email"
+									autoComplete="username"
+									spellCheck={false}
+									required
+									placeholder={t("emailOrPhonePlaceholder")}
+									value={emailOrPhone}
+									onChange={(e) => setEmailOrPhone(e.target.value)}
+									className="h-10 bg-transparent shadow-none focus-visible:ring-0 dark:text-white dark:placeholder:text-white/45"
+								/>
+							</InputGroup>
+						</Field>
+
+						<Field>
+							<FieldLabel
+								htmlFor="password"
+								className="text-[13px] font-medium text-muted-foreground dark:text-[#c5d6bc]"
+							>
+								{t("password")}
+							</FieldLabel>
+							<InputGroup className="h-10 rounded-md border-[#d7e3d2] bg-transparent shadow-none has-[[data-slot=input-group-control]:focus-visible]:border-[#d7e3d2] has-[[data-slot=input-group-control]:focus-visible]:ring-0 dark:border-white/25 dark:bg-white/5 dark:has-[[data-slot=input-group-control]:focus-visible]:border-white/40">
+								<InputGroupInput
+									id="password"
+									name="password"
+									type={showPassword ? "text" : "password"}
+									autoComplete="current-password"
+									required
+									placeholder={t("passwordPlaceholder")}
+									value={password}
+									onChange={(e) => setPassword(e.target.value)}
+									className="h-10 bg-transparent shadow-none focus-visible:ring-0 dark:text-white dark:placeholder:text-white/45"
+								/>
+								<InputGroupAddon align="inline-end">
+									<InputGroupButton
+										type="button"
+										size="icon-xs"
+										aria-label={
+											showPassword ? t("hidePassword") : t("showPassword")
+										}
+										aria-pressed={showPassword}
+										onClick={() => setShowPassword((v) => !v)}
+									>
+										{showPassword ? (
+											<EyeOffIcon aria-hidden />
+										) : (
+											<EyeIcon aria-hidden />
+										)}
+									</InputGroupButton>
+								</InputGroupAddon>
+							</InputGroup>
+						</Field>
+					</FieldGroup>
+
+					<label className="flex items-center gap-2 text-[13px] text-muted-foreground dark:text-[#c5d6bc]">
+						<input
+							type="checkbox"
+							checked={rememberMe}
+							onChange={(e) => setRememberMe(e.target.checked)}
+							className="size-4 rounded border-border"
+						/>
+						{t("rememberMe")}
+					</label>
+
+					<Button
+						type="submit"
+						className="h-10 w-full rounded-md text-[15px] font-medium"
+						disabled={loginPending}
+					>
+						{loginPending ? (
+							<Loader2Icon
+								data-icon="inline-start"
+								className="animate-spin"
+								aria-hidden
+							/>
+						) : null}
+						{loginPending
+							? t("signingIn")
+							: t("signInAs", { mode: modeLabel(mode) })}
+					</Button>
+					<p className="text-center text-sm text-muted-foreground">
+						<Link
+							href="/forgot-password"
+							className="text-primary hover:underline"
+						>
+							{t("forgotPassword")}
+						</Link>
+					</p>
+					{/* Reserve height so guest link does not shift layout */}
+					<div className="min-h-5 text-center">
+						{mode === "service" ? (
+							<button
+								type="button"
+								onClick={continueAsGuest}
+								className="text-sm font-medium text-primary hover:underline"
+							>
+								{t("loginAsGuest")}
+							</button>
+						) : null}
+					</div>
+				</form>
+		</AuthShell>
 	);
 }
 

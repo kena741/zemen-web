@@ -87,6 +87,12 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
 			suppressHydrationWarning
 		>
 			<body className="min-h-svh bg-background font-sans text-foreground antialiased">
+				<script
+					dangerouslySetInnerHTML={{
+						__html:
+							"document.documentElement.classList.remove('dark');try{localStorage.setItem('zemen.theme','light')}catch(e){}",
+					}}
+				/>
 				<OrganizationJsonLd />
 				<ReduxProvider>
 					<AppProviders>{children}</AppProviders>

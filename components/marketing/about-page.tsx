@@ -12,7 +12,7 @@ import marketing4 from "@/assets/images/4.png";
 import { buttonVariants } from "@/components/ui/button";
 import { MarketingShell } from "@/components/marketing/site-chrome";
 import { BRAND_NAME } from "@/lib/brand";
-import { SHORT_CODE } from "@/lib/marketing";
+import { SHORT_CODE, TRUST_STATS, WHATSAPP_URL } from "@/lib/marketing";
 import { enableGuestBrowse } from "@/lib/guest";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/store/useAuth";
@@ -82,7 +82,7 @@ const STORY = [
 	{
 		title: "Focusing the promise",
 		question: "Where are we today?",
-		body: "We carefully vet and upskill trusted professionals for cleaning, cooking, babysitting, and skilled home services across Addis Ababa, with satisfaction support on every visit.",
+		body: "With 1.5+ years of experience, 5k+ providers, and over 10k services delivered, we carefully vet and upskill trusted professionals for cleaning, cooking, babysitting, housemaid support, and skilled home services across Addis Ababa—with satisfaction support on every visit.",
 	},
 ] as const;
 
@@ -123,8 +123,26 @@ export function AboutPage() {
 					<p className="mt-5 max-w-2xl text-[16px] leading-relaxed text-[#3d5240]">
 						At {BRAND_NAME}, good service is more than getting the job done. It
 						is about feeling confident in who you welcome into your home,
-						knowing what to expect, and having support when you need it.
+						knowing what to expect, and having support when you need it. With{" "}
+						{TRUST_STATS[0].value} years of experience, {TRUST_STATS[1].value}{" "}
+						providers, and {TRUST_STATS[2].value} services delivered across Addis
+						Ababa, we keep that promise practical.
 					</p>
+					<dl className="mt-8 grid max-w-xl grid-cols-3 gap-3">
+						{TRUST_STATS.map((stat) => (
+							<div
+								key={stat.label}
+								className="rounded-2xl bg-white/80 px-3 py-3 text-center ring-1 ring-black/5"
+							>
+								<dt className="text-lg font-bold tabular-nums text-primary sm:text-xl">
+									{stat.value}
+								</dt>
+								<dd className="mt-0.5 text-[11px] leading-snug text-[#52634c] sm:text-xs">
+									{stat.label}
+								</dd>
+							</div>
+						))}
+					</dl>
 					<div className="mt-8 flex flex-wrap gap-3">
 						<a
 							href="#mission"
@@ -375,6 +393,15 @@ export function AboutPage() {
 								className="font-semibold text-white underline-offset-4 hover:underline"
 							>
 								{SHORT_CODE}
+							</a>{" "}
+							or{" "}
+							<a
+								href={WHATSAPP_URL}
+								target="_blank"
+								rel="noreferrer"
+								className="font-semibold text-white underline-offset-4 hover:underline"
+							>
+								WhatsApp
 							</a>
 							.
 						</p>

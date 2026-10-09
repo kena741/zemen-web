@@ -14,7 +14,6 @@ import {
 	KeyRoundIcon,
 	LogOutIcon,
 	MailIcon,
-	PaletteIcon,
 	PercentIcon,
 	TagIcon,
 	Trash2Icon,
@@ -27,6 +26,7 @@ import {
 
 import { LocaleThemeToggle } from "@/components/app/locale-theme-toggle";
 import { TelegramLink } from "@/components/app/telegram-link";
+import { WhatsAppLink } from "@/components/app/whatsapp-link";
 import { NotificationPermissionControl } from "@/components/push/notification-permission-control";
 import { ProviderMobileTabBar } from "@/components/provider/mobile-chrome";
 import { UserAvatar } from "@/components/ui/user-avatar";
@@ -367,15 +367,6 @@ export default function ProviderProfilePage() {
 				</MenuGroup>
 
 				<MenuGroup title={t("profileAppSettings")}>
-					<div className="flex items-center gap-3 px-4 py-3.5">
-						<PaletteIcon
-							className="size-5.5 shrink-0 text-foreground"
-							strokeWidth={1.75}
-						/>
-						<span className="min-w-0 flex-1 text-sm">{t("theme")}</span>
-						<LocaleThemeToggle mode="theme" />
-					</div>
-					<Divider />
 					<NotificationPermissionControl />
 					<Divider />
 					<MenuItem
@@ -398,7 +389,8 @@ export default function ProviderProfilePage() {
 						label={t("contactUs")}
 					/>
 					<Divider />
-					<div className="px-4 py-3">
+					<div className="space-y-2 px-4 py-3">
+						<WhatsAppLink className="w-full justify-start" />
 						<TelegramLink className="w-full justify-start" />
 					</div>
 				</MenuGroup>

@@ -18,6 +18,7 @@ import {
 
 import { LocaleThemeToggle } from "@/components/app/locale-theme-toggle";
 import { TelegramLink } from "@/components/app/telegram-link";
+import { WhatsAppLink } from "@/components/app/whatsapp-link";
 import { NotificationPermissionControl } from "@/components/push/notification-permission-control";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { UserAvatar } from "@/components/ui/user-avatar";
@@ -205,6 +206,7 @@ export default function CustomerProfilePage() {
 			</section>
 
 			<div className="mt-6 space-y-2">
+				<WhatsAppLink className="w-full justify-center" />
 				<TelegramLink className="w-full justify-center" />
 				<div className="flex justify-center gap-4 text-xs text-muted-foreground">
 					<Link href="/legal/privacy" className="hover:text-primary">

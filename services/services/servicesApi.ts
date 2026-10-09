@@ -187,7 +187,11 @@ export async function uploadServiceImages(params: {
 		const path = `serviceImages/${params.authUserId}/${Date.now()}_${safeName}`;
 		const { error } = await supabase.storage
 			.from(SERVICE_CONSTRAINTS.storageBucket)
-			.upload(path, file, { upsert: true, contentType: file.type });
+			.upload(path, file, {
+				upsert: true,
+				contentType: file.type,
+				cacheControl: "31536000",
+			});
 
 		if (error) {
 			console.error("uploadServiceImages", error);

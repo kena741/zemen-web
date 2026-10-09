@@ -23,28 +23,43 @@ export type CategorySeoCopy = {
 	intro: string;
 	offered: string[];
 	faqs: { question: string; answer: string }[];
+	/** Optional scope / pricing for SEO depth (Gooday-style clarity). */
+	includes?: string[];
+	excludes?: string[];
+	pricingNote?: string;
 };
 
 /** Enrichment keyed by slug tokens. Used only when matching category exists in DB. */
 const CATEGORY_COPY: Record<string, CategorySeoCopy> = {
 	cleaning: {
-		title: "Cleaning Services in Addis Ababa",
-		h1: "Trusted Cleaning Services in Addis Ababa",
+		title: "Home Cleaning & Maid Services in Addis Ababa",
+		h1: "Trusted Home Cleaning Services in Addis Ababa",
 		description:
-			"Find and book trusted cleaning professionals in Addis Ababa for homes, offices, and other spaces with Zemen Service.",
+			"Book trusted home cleaning and maid services in Addis Ababa for apartments, houses, and offices with Zemen Service.",
 		intro:
-			"Book verified cleaning professionals in Addis Ababa for regular home cleaning, deep cleans, and other spaces. Providers on Zemen Service are reviewed before they can take jobs.",
+			"Book verified cleaning and maid professionals in Addis Ababa for regular home cleaning, deep cleans, and office spaces. Providers on Zemen Service are reviewed before they can take jobs.",
 		offered: [
 			"Home and apartment cleaning",
 			"Deep cleaning support",
 			"Office and shared-space cleaning",
 			"Flexible booking through app, web, or call center",
 		],
+		includes: [
+			"Sweeping, mopping, and surface cleaning",
+			"Kitchen and bathroom cleaning",
+			"Tidying living areas",
+		],
+		excludes: [
+			"Specialist carpet or curtain deep cleans unless listed",
+			"Materials not included in the provider price unless stated",
+		],
+		pricingNote:
+			"Prices vary by home size and package. Browse listings for “from” rates, then confirm details when you book.",
 		faqs: [
 			{
-				question: "How do I book a cleaner in Addis Ababa?",
+				question: "How do I book a cleaner or maid in Addis Ababa?",
 				answer:
-					"Browse cleaning listings on Zemen Service, choose a provider, and book through the website or app. You can also call our short code for help.",
+					"Browse cleaning listings on Zemen Service, choose a provider, and book through the website or app. You can also call our short code or WhatsApp for help.",
 			},
 			{
 				question: "Are cleaning providers verified?",
@@ -54,18 +69,28 @@ const CATEGORY_COPY: Record<string, CategorySeoCopy> = {
 		],
 	},
 	cooking: {
-		title: "Cooking Services in Addis Ababa",
+		title: "Cooking & Home Cook Services in Addis Ababa",
 		h1: "Trusted Cooking Services in Addis Ababa",
 		description:
-			"Book trusted cooking professionals in Addis Ababa for home meals and catering support through Zemen Service.",
+			"Book trusted cooking and home cook professionals in Addis Ababa for everyday meals and catering support through Zemen Service.",
 		intro:
-			"Find verified cooking professionals for home meals and related kitchen help in Addis Ababa. Book with clear pricing and support through Zemen Service.",
+			"Find verified cooking professionals for home meals and kitchen help in Addis Ababa. See listing prices before you book, with support through Zemen Service.",
 		offered: [
 			"Home cooking support",
 			"Meal preparation help",
 			"Vetted local professionals",
 			"Booking via app, website, or call center",
 		],
+		includes: [
+			"Cooking in your home on the booked day",
+			"Meal prep based on the provider listing",
+		],
+		excludes: [
+			"Grocery cost unless the listing says otherwise",
+			"Catering for large events unless offered by the provider",
+		],
+		pricingNote:
+			"Listing prices show what providers charge for the service. Confirm menu, portions, and grocery arrangements before booking.",
 		faqs: [
 			{
 				question: "Can I book a cook for my home in Addis Ababa?",
@@ -78,7 +103,7 @@ const CATEGORY_COPY: Record<string, CategorySeoCopy> = {
 		title: "Babysitting Services in Addis Ababa",
 		h1: "Trusted Babysitting Services in Addis Ababa",
 		description:
-			"Find trusted babysitting professionals in Addis Ababa. Book verified childcare support through Zemen Service.",
+			"Find trusted babysitting and childcare professionals in Addis Ababa. Book verified support through Zemen Service.",
 		intro:
 			"Book babysitting support from vetted providers in Addis Ababa. Childcare-related providers may require additional checks such as documented experience and medical clearance where applicable.",
 		offered: [
@@ -87,11 +112,21 @@ const CATEGORY_COPY: Record<string, CategorySeoCopy> = {
 			"Training and experience checks where available",
 			"Ongoing supervision after placement",
 		],
+		includes: [
+			"Childcare during the booked hours",
+			"Providers reviewed for identity and documents",
+		],
+		excludes: [
+			"Medical care beyond normal childcare",
+			"Overnight care unless the listing offers it",
+		],
+		pricingNote:
+			"Rates depend on hours and number of children. Check each listing’s price and confirm details when you book.",
 		faqs: [
 			{
 				question: "How does Zemen Service vet babysitters?",
 				answer:
-					"We verify identity and documents, review training or work history where available, and continue monitoring after placement.",
+					"We verify identity and documents, review training or work history where available, require medical checkup for childcare where applicable, and continue monitoring after placement.",
 			},
 		],
 	},
@@ -244,6 +279,124 @@ const CATEGORY_COPY: Record<string, CategorySeoCopy> = {
 		],
 		faqs: [],
 	},
+	housemaid: {
+		title: "Housemaid & Maid Services in Addis Ababa",
+		h1: "Trusted Housemaid & Domestic Help in Addis Ababa",
+		description:
+			"Book trusted housemaid, maid, and domestic help professionals in Addis Ababa through Zemen Service.",
+		intro:
+			"Find verified housemaid and domestic help support for your home in Addis Ababa—everyday cleaning, home care, and reliable in-home help. Providers are reviewed before they can take jobs.",
+		offered: [
+			"Housemaid and domestic help",
+			"Home support from verified providers",
+			"Clear booking through app, web, or call center",
+		],
+		includes: [
+			"In-home domestic help for the booked hours",
+			"Tasks agreed in the provider listing",
+		],
+		excludes: [
+			"Specialist trades (plumbing, electrical) unless listed separately",
+			"Live-in arrangements unless the listing offers them",
+		],
+		pricingNote:
+			"Compare listing prices for daily or hourly housemaid support, then confirm scope when you book.",
+		faqs: [
+			{
+				question: "How do I book a housemaid in Addis Ababa?",
+				answer:
+					"Browse domestic help listings on Zemen Service, choose a housemaid or home-support provider, and book through the website or app. You can also call or WhatsApp us for help.",
+			},
+		],
+	},
+	"office-cleaning": {
+		title: "Office Cleaning in Addis Ababa",
+		h1: "Trusted Office Cleaning Services in Addis Ababa",
+		description:
+			"Book trusted office cleaning and recurring workplace cleaning in Addis Ababa through Zemen Service.",
+		intro:
+			"Find verified office cleaning professionals in Addis Ababa for one-time or recurring workplace cleans. Book through Zemen Service with clear support.",
+		offered: [
+			"Office and workplace cleaning",
+			"Recurring cleaning options where available",
+			"Verified local cleaners",
+		],
+		includes: [
+			"Desk areas, floors, and shared spaces as listed",
+			"Recurring schedules when the provider offers them",
+		],
+		excludes: [
+			"Industrial or specialized sanitation unless listed",
+			"Supplies unless included in the listing price",
+		],
+		pricingNote:
+			"Workplace size and frequency drive price. Check each listing’s rate before you book.",
+		faqs: [
+			{
+				question: "Can I book recurring office cleaning?",
+				answer:
+					"Yes. Browse office cleaning listings on Zemen Service and choose a schedule that fits your workplace when the provider offers recurring options.",
+			},
+		],
+	},
+	maid: {
+		title: "Maid Services in Addis Ababa",
+		h1: "Trusted Maid Services in Addis Ababa",
+		description:
+			"Book trusted maid services and domestic help in Addis Ababa through Zemen Service.",
+		intro:
+			"Find verified maid and domestic help professionals for your home in Addis Ababa. Book with clear pricing on each listing.",
+		offered: [
+			"Maid and domestic help",
+			"Home cleaning support",
+			"Verified local providers",
+		],
+		pricingNote:
+			"Listing prices vary by hours and duties. Confirm details when you book.",
+		faqs: [],
+	},
+	painting: {
+		title: "House Painting in Addis Ababa",
+		h1: "Trusted House Painters in Addis Ababa",
+		description:
+			"Book trusted house painting professionals in Addis Ababa through Zemen Service.",
+		intro:
+			"Find verified painters for home interiors and exteriors in Addis Ababa. Book through Zemen Service with vetted local professionals.",
+		offered: [
+			"Interior and exterior house painting",
+			"Verified local painters",
+			"Clear booking and follow-up",
+		],
+		faqs: [],
+	},
+	"mural-art": {
+		title: "Mural Artists in Addis Ababa",
+		h1: "Trusted Mural Artists in Addis Ababa",
+		description:
+			"Book trusted mural artists in Addis Ababa for walls, daycare spaces, and custom art through Zemen Service.",
+		intro:
+			"Find verified mural and wall-painting professionals in Addis Ababa for homes, daycare rooms, and custom projects.",
+		offered: [
+			"Mural and wall art",
+			"Daycare and room wall painting",
+			"Verified local artists",
+		],
+		faqs: [],
+	},
+	domestic: {
+		title: "Domestic Help in Addis Ababa",
+		h1: "Trusted Domestic Help in Addis Ababa",
+		description:
+			"Book trusted domestic help and housemaid services in Addis Ababa through Zemen Service.",
+		intro:
+			"Find verified domestic help professionals for your home in Addis Ababa through Zemen Service.",
+		offered: [
+			"Domestic help and home support",
+			"Verified local providers",
+			"Flexible booking options",
+		],
+		faqs: [],
+	},
 };
 
 function matchCategoryCopy(slug: string, categoryName: string): CategorySeoCopy | null {
@@ -279,6 +432,42 @@ export function getCategorySeoCopy(
 			{
 				question: `How do I book ${categoryName.toLowerCase()} services?`,
 				answer: `Open ${BRAND_NAME}, choose a ${categoryName.toLowerCase()} listing, and book through the website or app. You can also call our short code for assistance.`,
+			},
+		],
+	};
+}
+
+/** SEO copy for subcategory pages nested under a category. */
+export function getSubCategorySeoCopy(
+	subCategoryName: string,
+	subSlug: string,
+	parentCategoryName: string,
+): CategorySeoCopy {
+	const matched = matchCategoryCopy(subSlug, subCategoryName);
+	if (matched) return matched;
+
+	const label = subCategoryName.trim() || parentCategoryName;
+	const parent = parentCategoryName.trim() || "home services";
+
+	return {
+		title: `${label} Services in Addis Ababa`,
+		h1: `Trusted ${label} Services in Addis Ababa`,
+		description: `Find and book trusted ${label.toLowerCase()} professionals in Addis Ababa under ${parent} through ${BRAND_NAME}.`,
+		intro: `Browse verified ${label.toLowerCase()} professionals in Addis Ababa on ${BRAND_NAME}. This is part of our ${parent.toLowerCase()} offering. Book through the website, app, or call center.`,
+		offered: [
+			`${label} professionals in Addis Ababa`,
+			`Part of ${parent} on ${BRAND_NAME}`,
+			"Verified provider profiles",
+			"Booking via app, website, or call center",
+		],
+		faqs: [
+			{
+				question: `How do I book ${label.toLowerCase()} in Addis Ababa?`,
+				answer: `Open ${BRAND_NAME}, choose a ${label.toLowerCase()} listing under ${parent.toLowerCase()}, and book through the website or app. You can also call our short code for assistance.`,
+			},
+			{
+				question: `Is ${label.toLowerCase()} different from other ${parent.toLowerCase()} services?`,
+				answer: `Yes. ${label} is a focused subcategory within ${parent}, so you can narrow listings to the exact service you need.`,
 			},
 		],
 	};

@@ -3,9 +3,8 @@
 import { MessageCircleIcon } from "lucide-react";
 
 import { useLocale } from "@/lib/i18n";
+import { TELEGRAM_URL } from "@/lib/marketing";
 import { cn } from "@/lib/utils";
-
-const TELEGRAM_URL = "https://t.me/zemenservicediscussion";
 
 export function TelegramLink({ className }: { className?: string }) {
 	const { t } = useLocale();

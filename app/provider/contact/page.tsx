@@ -10,6 +10,7 @@ import {
 
 import { ProfileBackLink } from "@/components/provider/profile-back-link";
 import { TelegramLink } from "@/components/app/telegram-link";
+import { WhatsAppLink } from "@/components/app/whatsapp-link";
 import { ServiceLoading } from "@/components/service/service-loading";
 import { useLocale } from "@/lib/i18n";
 import {
@@ -104,7 +105,8 @@ export default function ProviderContactPage() {
 					</div>
 				</a>
 				<div className="mx-4 border-t border-black/5" />
-				<div className="px-4 py-3">
+				<div className="space-y-2 px-4 py-3">
+					<WhatsAppLink className="w-full justify-start" />
 					<TelegramLink className="w-full justify-start" />
 				</div>
 			</div>
