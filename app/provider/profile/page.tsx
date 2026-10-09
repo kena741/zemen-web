@@ -27,6 +27,7 @@ import {
 
 import { LocaleThemeToggle } from "@/components/app/locale-theme-toggle";
 import { TelegramLink } from "@/components/app/telegram-link";
+import { WhatsAppLink } from "@/components/app/whatsapp-link";
 import { NotificationPermissionControl } from "@/components/push/notification-permission-control";
 import { ProviderMobileTabBar } from "@/components/provider/mobile-chrome";
 import { UserAvatar } from "@/components/ui/user-avatar";
@@ -398,7 +399,8 @@ export default function ProviderProfilePage() {
 						label={t("contactUs")}
 					/>
 					<Divider />
-					<div className="px-4 py-3">
+					<div className="space-y-2 px-4 py-3">
+						<WhatsAppLink className="w-full justify-start" />
 						<TelegramLink className="w-full justify-start" />
 					</div>
 				</MenuGroup>

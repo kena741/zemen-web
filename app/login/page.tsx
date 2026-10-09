@@ -7,6 +7,7 @@ import { EyeIcon, EyeOffIcon, Loader2Icon } from "lucide-react";
 
 import { AuthShell } from "@/components/auth/auth-shell";
 import { TelegramLink } from "@/components/app/telegram-link";
+import { WhatsAppLink } from "@/components/app/whatsapp-link";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
@@ -129,7 +130,10 @@ function LoginForm() {
 			}
 			belowCard={
 				<footer className="flex flex-col items-center gap-3 text-[12px]">
-					<TelegramLink className="border-white/70 bg-white/90 text-[#0f1a0c] shadow-sm hover:bg-white" />
+					<div className="flex flex-wrap items-center justify-center gap-2">
+						<WhatsAppLink className="border-white/70 bg-white/90 text-[#0f1a0c] shadow-sm hover:bg-white" />
+						<TelegramLink className="border-white/70 bg-white/90 text-[#0f1a0c] shadow-sm hover:bg-white" />
+					</div>
 					<p className="rounded-full bg-black/35 px-3 py-1 text-white/95">
 						© {new Date().getFullYear()} {BRAND_NAME}
 					</p>

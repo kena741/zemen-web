@@ -1,5 +1,5 @@
 import { BRAND_NAME } from "@/lib/brand";
-import { SHORT_CODE } from "@/lib/marketing";
+import { SHORT_CODE, WHATSAPP_DISPLAY } from "@/lib/marketing";
 import {
 	getMetadataBaseUrl,
 	SEO_DESCRIPTION,
@@ -33,6 +33,13 @@ export function OrganizationJsonLd() {
 					{
 						"@type": "ContactPoint",
 						telephone: SHORT_CODE,
+						contactType: "customer service",
+						areaServed: "ET",
+						availableLanguage: ["en", "am"],
+					},
+					{
+						"@type": "ContactPoint",
+						telephone: WHATSAPP_DISPLAY,
 						contactType: "customer service",
 						areaServed: "ET",
 						availableLanguage: ["en", "am"],

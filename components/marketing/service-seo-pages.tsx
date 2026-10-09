@@ -12,10 +12,13 @@ import {
 } from "@/components/marketing/seo-json-ld";
 import { buttonVariants } from "@/components/ui/button";
 import { BRAND_NAME } from "@/lib/brand";
-import { SHORT_CODE } from "@/lib/marketing";
+import { SHORT_CODE, WHATSAPP_URL } from "@/lib/marketing";
 import type { CategorySeoCopy } from "@/lib/seo-services";
 import { cn } from "@/lib/utils";
-import type { PublicCategory } from "@/services/catalog/publicCatalog";
+import type {
+	PublicCategory,
+	PublicSubCategory,
+} from "@/services/catalog/publicCatalog";
 import type { ProviderService } from "@/services/services/types";
 import { formatAmount } from "@/services/bookings/types";
 
@@ -37,6 +40,17 @@ function BookingCta({ className }: { className?: string }) {
 				)}
 			>
 				Call {SHORT_CODE}
+			</a>
+			<a
+				href={WHATSAPP_URL}
+				target="_blank"
+				rel="noopener noreferrer"
+				className={cn(
+					buttonVariants({ variant: "outline", size: "lg" }),
+					"h-11 rounded-full border-[#25D366]/40 px-5 text-[#128C7E]",
+				)}
+			>
+				WhatsApp
 			</a>
 		</div>
 	);
@@ -156,11 +170,13 @@ export function ServiceCategoryView({
 	copy,
 	services,
 	related,
+	subcategories = [],
 }: {
 	category: PublicCategory;
 	copy: CategorySeoCopy;
 	services: ProviderService[];
 	related: PublicCategory[];
+	subcategories?: PublicSubCategory[];
 }) {
 	const path = `/services/${category.slug}`;
 	const crumbs = [
@@ -218,6 +234,33 @@ export function ServiceCategoryView({
 				</div>
 			</section>
 
+			{subcategories.length > 0 ? (
+				<section className="border-b border-primary/8 bg-white py-10 sm:py-12">
+					<div className="mx-auto max-w-6xl px-4 sm:px-6">
+						<h2 className="text-2xl font-bold tracking-tight text-[#0f1a0c]">
+							{category.categoryName} specialties
+						</h2>
+						<p className="mt-2 max-w-2xl text-sm text-[#52634c]">
+							Narrow your search with focused {category.categoryName.toLowerCase()}{" "}
+							services in Addis Ababa.
+						</p>
+						<ul className="mt-6 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+							{subcategories.map((sub) => (
+								<li key={sub.id}>
+									<Link
+										href={`/services/${category.slug}/${sub.slug}`}
+										className="flex items-center justify-between rounded-2xl bg-[#f7faf5] px-4 py-3 text-sm font-semibold text-[#0f1a0c] ring-1 ring-black/5 transition hover:bg-white hover:shadow-[0_8px_24px_rgba(23,67,9,0.08)]"
+									>
+										{sub.subCategoryName}
+										<ArrowRightIcon className="size-4 text-primary" />
+									</Link>
+								</li>
+							))}
+						</ul>
+					</div>
+				</section>
+			) : null}
+
 			<section className="bg-white py-12 sm:py-14">
 				<div className="mx-auto grid max-w-6xl gap-10 px-4 sm:px-6 lg:grid-cols-2">
 					<div>
@@ -272,6 +315,55 @@ export function ServiceCategoryView({
 					</div>
 				</div>
 			</section>
+
+			{(copy.includes?.length ||
+				copy.excludes?.length ||
+				copy.pricingNote) && (
+				<section className="border-t border-primary/8 bg-[#f7faf5] py-10 sm:py-12">
+					<div className="mx-auto grid max-w-6xl gap-8 px-4 sm:px-6 lg:grid-cols-3">
+						{copy.includes?.length ? (
+							<div>
+								<h2 className="text-lg font-bold tracking-tight text-[#0f1a0c]">
+									What’s included
+								</h2>
+								<ul className="mt-3 space-y-2 text-sm text-[#3d5240]">
+									{copy.includes.map((item) => (
+										<li key={item} className="flex gap-2">
+											<span className="text-primary">✓</span>
+											{item}
+										</li>
+									))}
+								</ul>
+							</div>
+						) : null}
+						{copy.excludes?.length ? (
+							<div>
+								<h2 className="text-lg font-bold tracking-tight text-[#0f1a0c]">
+									What’s not included
+								</h2>
+								<ul className="mt-3 space-y-2 text-sm text-[#3d5240]">
+									{copy.excludes.map((item) => (
+										<li key={item} className="flex gap-2">
+											<span className="text-[#8a6a4a]">✕</span>
+											{item}
+										</li>
+									))}
+								</ul>
+							</div>
+						) : null}
+						{copy.pricingNote ? (
+							<div>
+								<h2 className="text-lg font-bold tracking-tight text-[#0f1a0c]">
+									Pricing
+								</h2>
+								<p className="mt-3 text-sm leading-relaxed text-[#3d5240]">
+									{copy.pricingNote}
+								</p>
+							</div>
+						) : null}
+					</div>
+				</section>
+			)}
 
 			<section className="border-y border-primary/8 bg-[#f4f8f1] py-12 sm:py-14">
 				<div className="mx-auto max-w-6xl px-4 sm:px-6">
@@ -387,6 +479,312 @@ export function ServiceCategoryView({
 								</li>
 							))}
 						</ul>
+					</div>
+				</section>
+			) : null}
+		</MarketingShell>
+	);
+}
+
+export function ServiceSubCategoryView({
+	category,
+	subcategory,
+	copy,
+	services,
+	relatedSubs,
+}: {
+	category: PublicCategory;
+	subcategory: PublicSubCategory;
+	copy: CategorySeoCopy;
+	services: ProviderService[];
+	relatedSubs: PublicSubCategory[];
+}) {
+	const path = `/services/${category.slug}/${subcategory.slug}`;
+	const crumbs = [
+		{ label: "Home", href: "/" },
+		{ label: "Services", href: "/services" },
+		{ label: category.categoryName, href: `/services/${category.slug}` },
+		{ label: subcategory.subCategoryName },
+	];
+	const faqSchema = faqJsonLd(copy.faqs);
+
+	return (
+		<MarketingShell active="services">
+			<JsonLd
+				data={breadcrumbJsonLd([
+					{ name: "Home", path: "/" },
+					{ name: "Services", path: "/services" },
+					{ name: category.categoryName, path: `/services/${category.slug}` },
+					{ name: subcategory.subCategoryName, path },
+				])}
+			/>
+			<JsonLd
+				data={serviceJsonLd({
+					name: copy.h1,
+					description: copy.description,
+					path,
+				})}
+			/>
+			{faqSchema ? <JsonLd data={faqSchema} /> : null}
+
+			<section className="bg-[#eef5ea] py-12 sm:py-14">
+				<div className="mx-auto max-w-6xl px-4 sm:px-6">
+					<MarketingBreadcrumbs items={crumbs} />
+					<div className="mt-5 max-w-3xl">
+						<p className="text-xs font-semibold uppercase tracking-[0.14em] text-primary">
+							{category.categoryName}
+						</p>
+						<h1 className="mt-2 text-[clamp(1.75rem,4vw,2.6rem)] font-bold tracking-tight text-[#0f1a0c]">
+							{copy.h1}
+						</h1>
+						<p className="mt-4 text-[15px] leading-relaxed text-[#3d5240]">
+							{copy.intro}
+						</p>
+						<BookingCta className="mt-7" />
+					</div>
+				</div>
+			</section>
+
+			<section className="bg-white py-12 sm:py-14">
+				<div className="mx-auto grid max-w-6xl gap-10 px-4 sm:px-6 lg:grid-cols-2">
+					<div>
+						<h2 className="text-2xl font-bold tracking-tight text-[#0f1a0c]">
+							What you can book
+						</h2>
+						<ul className="mt-5 space-y-3">
+							{copy.offered.map((item) => (
+								<li
+									key={item}
+									className="flex items-start gap-3 text-[15px] text-[#142610]"
+								>
+									<span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-[#e8f5e3]">
+										<CheckIcon
+											className="size-3.5 text-primary"
+											strokeWidth={2.75}
+										/>
+									</span>
+									{item}
+								</li>
+							))}
+						</ul>
+					</div>
+					<div>
+						<h2 className="text-2xl font-bold tracking-tight text-[#0f1a0c]">
+							How booking works
+						</h2>
+						<ol className="mt-5 space-y-4 text-[15px] text-[#3d5240]">
+							<li>
+								<span className="font-semibold text-[#0f1a0c]">1. Choose</span>{" "}
+								a verified {subcategory.subCategoryName.toLowerCase()} listing.
+							</li>
+							<li>
+								<span className="font-semibold text-[#0f1a0c]">2. Book</span> on
+								the website or app, or call {SHORT_CODE}.
+							</li>
+							<li>
+								<span className="font-semibold text-[#0f1a0c]">3. Confirm</span>{" "}
+								details with support when you need help.
+							</li>
+						</ol>
+						<p className="mt-5 text-sm text-[#52634c]">
+							Part of{" "}
+							<Link
+								href={`/services/${category.slug}`}
+								className="font-semibold text-primary underline-offset-4 hover:underline"
+							>
+								{category.categoryName}
+							</Link>{" "}
+							in{" "}
+							<Link
+								href="/locations/addis-ababa"
+								className="font-semibold text-primary underline-offset-4 hover:underline"
+							>
+								Addis Ababa
+							</Link>
+							.
+						</p>
+					</div>
+				</div>
+			</section>
+
+			{(copy.includes?.length ||
+				copy.excludes?.length ||
+				copy.pricingNote) && (
+				<section className="border-t border-primary/8 bg-[#f7faf5] py-10 sm:py-12">
+					<div className="mx-auto grid max-w-6xl gap-8 px-4 sm:px-6 lg:grid-cols-3">
+						{copy.includes?.length ? (
+							<div>
+								<h2 className="text-lg font-bold tracking-tight text-[#0f1a0c]">
+									What’s included
+								</h2>
+								<ul className="mt-3 space-y-2 text-sm text-[#3d5240]">
+									{copy.includes.map((item) => (
+										<li key={item} className="flex gap-2">
+											<span className="text-primary">✓</span>
+											{item}
+										</li>
+									))}
+								</ul>
+							</div>
+						) : null}
+						{copy.excludes?.length ? (
+							<div>
+								<h2 className="text-lg font-bold tracking-tight text-[#0f1a0c]">
+									What’s not included
+								</h2>
+								<ul className="mt-3 space-y-2 text-sm text-[#3d5240]">
+									{copy.excludes.map((item) => (
+										<li key={item} className="flex gap-2">
+											<span className="text-[#8a6a4a]">✕</span>
+											{item}
+										</li>
+									))}
+								</ul>
+							</div>
+						) : null}
+						{copy.pricingNote ? (
+							<div>
+								<h2 className="text-lg font-bold tracking-tight text-[#0f1a0c]">
+									Pricing
+								</h2>
+								<p className="mt-3 text-sm leading-relaxed text-[#3d5240]">
+									{copy.pricingNote}
+								</p>
+							</div>
+						) : null}
+					</div>
+				</section>
+			)}
+
+			<section className="border-y border-primary/8 bg-[#f4f8f1] py-12 sm:py-14">
+				<div className="mx-auto max-w-6xl px-4 sm:px-6">
+					<h2 className="text-2xl font-bold tracking-tight text-[#0f1a0c]">
+						Public {subcategory.subCategoryName.toLowerCase()} listings
+					</h2>
+					<p className="mt-2 max-w-2xl text-sm text-[#52634c]">
+						Approved, active listings in this specialty. Sign in to book.
+					</p>
+					{services.length === 0 ? (
+						<p className="mt-6 text-sm text-muted-foreground">
+							No public listings are available in this specialty right now.
+							Browse the parent{" "}
+							<Link
+								href={`/services/${category.slug}`}
+								className="font-semibold text-primary underline-offset-4 hover:underline"
+							>
+								{category.categoryName}
+							</Link>{" "}
+							category or other{" "}
+							<Link
+								href="/services"
+								className="font-semibold text-primary underline-offset-4 hover:underline"
+							>
+								services
+							</Link>
+							.
+						</p>
+					) : (
+						<ul className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+							{services.map((service) => (
+								<li
+									key={service.id}
+									className="overflow-hidden rounded-2xl bg-white ring-1 ring-black/5"
+								>
+									<div className="relative aspect-[4/3] bg-[#e8f5e3]">
+										{service.serviceImage[0] ? (
+											<Image
+												src={service.serviceImage[0]}
+												alt={
+													service.serviceName
+														? `${service.serviceName} in Addis Ababa`
+														: `${subcategory.subCategoryName} service`
+												}
+												fill
+												sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+												loading="lazy"
+												quality={65}
+												className="object-cover"
+											/>
+										) : null}
+									</div>
+									<div className="p-4">
+										<p className="font-semibold text-[#0f1a0c]">
+											{service.serviceName || subcategory.subCategoryName}
+										</p>
+										<p className="mt-0.5 text-xs text-[#52634c]">
+											{category.categoryName}
+										</p>
+										<p className="mt-2 text-sm font-bold tabular-nums text-primary">
+											{formatAmount(service.price)}
+										</p>
+										<Link
+											href="/login?mode=service"
+											className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-primary"
+										>
+											Sign in to book
+											<ArrowRightIcon className="size-3.5" />
+										</Link>
+									</div>
+								</li>
+							))}
+						</ul>
+					)}
+				</div>
+			</section>
+
+			{copy.faqs.length > 0 ? (
+				<section className="bg-white py-12 sm:py-14">
+					<div className="mx-auto max-w-6xl px-4 sm:px-6">
+						<h2 className="text-2xl font-bold tracking-tight text-[#0f1a0c]">
+							Frequently asked questions
+						</h2>
+						<ul className="mt-6 space-y-4">
+							{copy.faqs.map((faq) => (
+								<li
+									key={faq.question}
+									className="rounded-2xl bg-[#f7faf5] p-5 ring-1 ring-black/5"
+								>
+									<h3 className="text-[15px] font-semibold text-[#0f1a0c]">
+										{faq.question}
+									</h3>
+									<p className="mt-2 text-sm leading-relaxed text-[#3d5240]">
+										{faq.answer}
+									</p>
+								</li>
+							))}
+						</ul>
+					</div>
+				</section>
+			) : null}
+
+			{relatedSubs.length > 0 ? (
+				<section className="border-t border-primary/8 bg-[#eef5ea] py-12 sm:py-14">
+					<div className="mx-auto max-w-6xl px-4 sm:px-6">
+						<h2 className="text-2xl font-bold tracking-tight text-[#0f1a0c]">
+							More {category.categoryName.toLowerCase()} specialties
+						</h2>
+						<ul className="mt-6 flex flex-wrap gap-2">
+							{relatedSubs.map((item) => (
+								<li key={item.id}>
+									<Link
+										href={`/services/${category.slug}/${item.slug}`}
+										className="inline-flex rounded-full bg-white px-4 py-2 text-sm font-medium text-primary ring-1 ring-primary/15 transition hover:bg-[#e8f5e3]"
+									>
+										{item.subCategoryName}
+									</Link>
+								</li>
+							))}
+						</ul>
+						<p className="mt-6 text-sm text-[#52634c]">
+							Back to{" "}
+							<Link
+								href={`/services/${category.slug}`}
+								className="font-semibold text-primary underline-offset-4 hover:underline"
+							>
+								{category.categoryName}
+							</Link>
+							.
+						</p>
 					</div>
 				</section>
 			) : null}

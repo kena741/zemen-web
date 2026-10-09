@@ -21,7 +21,13 @@ import { MarketingShell } from "@/components/marketing/site-chrome";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { BRAND_NAME, homePathForMode } from "@/lib/brand";
 import { enableGuestBrowse } from "@/lib/guest";
-import { SHORT_CODE, SPONSORS } from "@/lib/marketing";
+import {
+	PRIORITY_SERVICE_LINKS,
+	SHORT_CODE,
+	SPONSORS,
+	TRUST_STATS,
+	WHATSAPP_URL,
+} from "@/lib/marketing";
 import { slugifyCategoryName } from "@/lib/seo-services";
 import { cn } from "@/lib/utils";
 import { formatAmount } from "@/services/bookings/types";
@@ -111,7 +117,8 @@ function SponsorsCarousel({
 							draggable={false}
 							loading="lazy"
 							sizes="120px"
-							className="h-7 w-auto max-w-full object-contain opacity-80 sm:h-8"
+							className="h-7 max-w-full object-contain opacity-80 sm:h-8"
+							style={{ width: "auto" }}
 						/>
 					</div>
 				))}
@@ -415,6 +422,19 @@ export function LandingPage({
 						</Link>
 					</div>
 
+					<ul className="mt-5 flex flex-wrap gap-2">
+						{PRIORITY_SERVICE_LINKS.map((item) => (
+							<li key={item.href}>
+								<Link
+									href={item.href}
+									className="inline-flex rounded-full bg-[#f7faf5] px-3.5 py-1.5 text-sm font-medium text-primary ring-1 ring-primary/15 transition hover:bg-white"
+								>
+									{item.label}
+								</Link>
+							</li>
+						))}
+					</ul>
+
 					{categories.length > 0 ? (
 						<ul className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
 							{categories.map((c) => (
@@ -498,25 +518,51 @@ export function LandingPage({
 						<div className="mt-2 h-0.5 w-16 bg-primary" />
 						<p className="mt-5 text-[15px] leading-relaxed text-[#3d5240]">
 							{BRAND_NAME} helps households in Addis Ababa book trusted home
-							services with confidence. We carefully vet and upskill certified
-							professionals for cleaning, cooking, domestic help, repairs, and
-							care.
+							services with confidence. With {TRUST_STATS[0].value} years of
+							experience, {TRUST_STATS[1].value} providers, and{" "}
+							{TRUST_STATS[2].value} services delivered, we carefully vet and
+							upskill certified professionals for cleaning, cooking, domestic
+							help, repairs, and care.
 						</p>
 						<p className="mt-4 text-[15px] leading-relaxed text-[#3d5240]">
-							Easy booking through our app, website, or call center (
+							Easy booking through our app, website, call center (
 							<a
 								href={`tel:${SHORT_CODE}`}
 								className="font-semibold text-primary underline-offset-4 hover:underline"
 							>
 								{SHORT_CODE}
 							</a>
-							), with support when you need it and a satisfaction focus on every
+							), or{" "}
+							<a
+								href={WHATSAPP_URL}
+								target="_blank"
+								rel="noreferrer"
+								className="font-semibold text-primary underline-offset-4 hover:underline"
+							>
+								WhatsApp
+							</a>
+							, with support when you need it and a satisfaction focus on every
 							visit.
 						</p>
+						<dl className="mt-7 grid grid-cols-3 gap-3">
+							{TRUST_STATS.map((stat) => (
+								<div
+									key={stat.label}
+									className="rounded-2xl bg-[#f7faf5] px-3 py-3 text-center ring-1 ring-black/5"
+								>
+									<dt className="text-lg font-bold tabular-nums text-primary sm:text-xl">
+										{stat.value}
+									</dt>
+									<dd className="mt-0.5 text-[11px] leading-snug text-[#52634c] sm:text-xs">
+										{stat.label}
+									</dd>
+								</div>
+							))}
+						</dl>
 						<ul className="mt-7 space-y-3">
 							{[
-								"Vetted & upskilled professionals",
-								"Book via app, web, or call center",
+								"Identity, documents, skills & experience checked",
+								"Book via app, web, call center, or WhatsApp",
 								"Dedicated account manager",
 								"Satisfaction guarantee every visit",
 							].map((item) => (

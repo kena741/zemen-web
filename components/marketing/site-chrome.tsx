@@ -11,8 +11,12 @@ import { BRAND_NAME } from "@/lib/brand";
 import {
 	APP_STORE_URL,
 	PLAY_STORE_URL,
+	PRIORITY_SERVICE_LINKS,
 	SHORT_CODE,
 	TELEGRAM_URL,
+	TRUST_STATS,
+	WHATSAPP_DISPLAY,
+	WHATSAPP_URL,
 } from "@/lib/marketing";
 import { enableGuestBrowse } from "@/lib/guest";
 import { cn } from "@/lib/utils";
@@ -132,6 +136,18 @@ export function MarketingHeader({
 
 				<div className="ml-auto flex items-center gap-2 md:ml-4">
 					<a
+						href={WHATSAPP_URL}
+						target="_blank"
+						rel="noreferrer"
+						aria-label="WhatsApp"
+						className="hidden size-9 items-center justify-center rounded-full border border-black/10 bg-white text-[#25D366] transition hover:border-primary/30 hover:bg-[#e8f5e3] sm:inline-flex"
+						title="WhatsApp"
+					>
+						<svg viewBox="0 0 24 24" className="size-4 fill-current" aria-hidden>
+							<path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.435 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
+						</svg>
+					</a>
+					<a
 						href={TELEGRAM_URL}
 						target="_blank"
 						rel="noreferrer"
@@ -191,63 +207,168 @@ export function MarketingHeader({
 }
 
 export function MarketingFooter() {
-	const router = useRouter();
-	const { setMode } = useAuth();
-
-	function goCustomerLogin() {
-		setMode("service");
-		router.push("/login?mode=service");
-	}
+	const year = new Date().getFullYear();
 
 	return (
-		<footer className="relative z-10 bg-[#0e2604] text-white">
-			<div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-8 sm:flex-row sm:items-center sm:justify-between sm:px-6">
-				<div className="flex items-center gap-3">
-					<Image
-						src={appIcon}
-						alt=""
-						width={44}
-						height={44}
-						className="size-11 rounded-xl bg-white p-1"
-					/>
-					<div>
-						<p className="font-semibold">{BRAND_NAME}</p>
-						<p className="text-sm text-white/65">
-							© {new Date().getFullYear()} {BRAND_NAME}
-						</p>
+		<footer className="relative z-10 border-t-2 border-[#4a9a2a] bg-[#0e2604] text-white">
+			<div className="mx-auto grid max-w-6xl gap-10 px-4 py-12 sm:px-6 md:grid-cols-2 lg:grid-cols-4">
+				<div className="space-y-5 lg:col-span-1">
+					<div className="flex items-center gap-3">
+						<Image
+							src={appIcon}
+							alt=""
+							width={44}
+							height={44}
+							className="size-11 rounded-xl bg-white p-1"
+						/>
+						<p className="text-lg font-semibold tracking-tight">{BRAND_NAME}</p>
 					</div>
+					<p className="max-w-xs text-sm leading-relaxed text-white/70">
+						Trusted home services in Addis Ababa — cleaning, cooking, babysitting,
+						and skilled pros, fully managed for your peace of mind.
+					</p>
+					<div className="flex flex-wrap gap-6 text-sm">
+						{TRUST_STATS.map((stat) => (
+							<div key={stat.label}>
+								<p className="text-lg font-semibold text-white">{stat.value}</p>
+								<p className="text-xs text-white/55">{stat.label}</p>
+							</div>
+						))}
+					</div>
+					<div className="flex items-center gap-3">
+						<a
+							href={TELEGRAM_URL}
+							target="_blank"
+							rel="noreferrer"
+							aria-label="Telegram"
+							className="text-white/70 transition hover:text-white"
+						>
+							<svg viewBox="0 0 24 24" className="size-5 fill-current" aria-hidden>
+								<path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z" />
+							</svg>
+						</a>
+					</div>
+					<div className="flex flex-wrap gap-2">
+						<a href={PLAY_STORE_URL} target="_blank" rel="noreferrer">
+							<Image
+								src="/marketing/google-play-badge.svg"
+								alt="Get it on Google Play"
+								width={135}
+								height={40}
+								className="h-10 w-auto"
+							/>
+						</a>
+						<a href={APP_STORE_URL} target="_blank" rel="noreferrer">
+							<Image
+								src="/marketing/app-store-badge.svg"
+								alt="Download on the App Store"
+								width={120}
+								height={40}
+								className="h-10 w-auto"
+							/>
+						</a>
+					</div>
+					<div className="flex flex-wrap gap-2">
+						<a
+							href={`tel:${SHORT_CODE}`}
+							className="inline-flex items-center gap-2 rounded-lg bg-[#4a9a2a] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#3d8222]"
+						>
+							<PhoneIcon className="size-4" aria-hidden />
+							{SHORT_CODE}
+						</a>
+						<a
+							href={WHATSAPP_URL}
+							target="_blank"
+							rel="noreferrer"
+							className="inline-flex items-center gap-2 rounded-lg bg-white px-4 py-2.5 text-sm font-semibold text-[#0e2604] transition hover:bg-white/90"
+						>
+							<svg viewBox="0 0 24 24" className="size-4 fill-[#25D366]" aria-hidden>
+								<path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.435 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
+							</svg>
+							WhatsApp
+						</a>
+					</div>
+					<p className="text-xs text-white/45">{WHATSAPP_DISPLAY}</p>
 				</div>
-					<div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-white/80">
-					<Link href="/services" className="hover:text-white">
+
+				<div>
+					<p className="mb-4 text-xs font-semibold tracking-[0.14em] text-white/90 uppercase">
 						Services
-					</Link>
-					<Link href="/about" className="hover:text-white">
-						About
-					</Link>
-					<Link href="/locations/addis-ababa" className="hover:text-white">
-						Addis Ababa
-					</Link>
-					<Link href="/legal/privacy" className="hover:text-white">
-						Privacy
-					</Link>
-					<Link href="/legal/terms" className="hover:text-white">
-						Terms
-					</Link>
-					<a
-						href={TELEGRAM_URL}
-						target="_blank"
-						rel="noreferrer"
-						className="hover:text-white"
-					>
-						Telegram
-					</a>
-					<button
-						type="button"
-						onClick={goCustomerLogin}
-						className="font-medium text-white hover:underline"
-					>
-						Sign in
-					</button>
+					</p>
+					<ul className="space-y-2.5 text-sm text-white/70">
+						{PRIORITY_SERVICE_LINKS.map((item) => (
+							<li key={item.href}>
+								<Link href={item.href} className="transition hover:text-white">
+									{item.label}
+								</Link>
+							</li>
+						))}
+					</ul>
+				</div>
+
+				<div>
+					<p className="mb-4 text-xs font-semibold tracking-[0.14em] text-white/90 uppercase">
+						Resources
+					</p>
+					<ul className="space-y-2.5 text-sm text-white/70">
+						<li>
+							<Link href="/blog" className="transition hover:text-white">
+								Blog
+							</Link>
+						</li>
+						<li>
+							<Link href="/about" className="transition hover:text-white">
+								About
+							</Link>
+						</li>
+						<li>
+							<Link
+								href="/locations/addis-ababa"
+								className="transition hover:text-white"
+							>
+								Addis Ababa
+							</Link>
+						</li>
+						<li>
+							<Link href="/services" className="transition hover:text-white">
+								All services
+							</Link>
+						</li>
+					</ul>
+				</div>
+
+				<div>
+					<p className="mb-4 text-xs font-semibold tracking-[0.14em] text-white/90 uppercase">
+						Legal
+					</p>
+					<ul className="space-y-2.5 text-sm text-white/70">
+						<li>
+							<Link href="/legal/terms" className="transition hover:text-white">
+								Terms of Service
+							</Link>
+						</li>
+						<li>
+							<Link href="/legal/privacy" className="transition hover:text-white">
+								Privacy policy
+							</Link>
+						</li>
+					</ul>
+				</div>
+			</div>
+
+			<div className="border-t border-white/10">
+				<div className="mx-auto flex max-w-6xl flex-col gap-3 px-4 py-5 text-xs text-white/50 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+					<p>
+						Copyright © {year} {BRAND_NAME}
+					</p>
+					<div className="flex flex-wrap gap-4">
+						<Link href="/legal/terms" className="transition hover:text-white/80">
+							Terms of Service
+						</Link>
+						<Link href="/legal/privacy" className="transition hover:text-white/80">
+							Privacy policy
+						</Link>
+					</div>
 				</div>
 			</div>
 		</footer>

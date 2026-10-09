@@ -385,6 +385,7 @@ export const en = {
 	legalAbout: "About",
 	legalNotAvailable: "Content not available yet.",
 	telegramCommunity: "Telegram community",
+	whatsappChat: "WhatsApp",
 
 	recurringWeekly: "Weekly",
 	recurringMonthly: "Monthly",

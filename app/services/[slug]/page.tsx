@@ -10,6 +10,7 @@ import {
 	fetchPublicCategories,
 	fetchPublicCategoryBySlug,
 	fetchPublicServicesByCategory,
+	fetchPublicSubCategories,
 } from "@/services/catalog/publicCatalog";
 
 export const revalidate = 3600;
@@ -53,9 +54,10 @@ export default async function ServiceCategoryPage({
 	const category = await fetchPublicCategoryBySlug(slug);
 	if (!category) notFound();
 
-	const [services, allCategories] = await Promise.all([
+	const [services, allCategories, subcategories] = await Promise.all([
 		fetchPublicServicesByCategory(category.id, 12),
 		fetchPublicCategories(),
+		fetchPublicSubCategories(category.id, category.slug),
 	]);
 	const copy = getCategorySeoCopy(category.categoryName, category.slug);
 	const related = allCategories
@@ -68,6 +70,7 @@ export default async function ServiceCategoryPage({
 			copy={copy}
 			services={services}
 			related={related}
+			subcategories={subcategories}
 		/>
 	);
 }

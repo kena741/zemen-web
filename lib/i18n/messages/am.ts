@@ -376,6 +376,7 @@ export const am: Record<MessageKey, string> = {
 	legalAbout: "ስለ እኛ",
 	legalNotAvailable: "ይዘት አልተገኘም።",
 	telegramCommunity: "የቴሌግራም ማህበረሰብ",
+	whatsappChat: "ዋትስአፕ",
 
 	recurringWeekly: "ሳምንታዊ",
 	recurringMonthly: "ወርሃዊ",
