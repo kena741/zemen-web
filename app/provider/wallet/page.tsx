@@ -11,6 +11,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useLocale } from "@/lib/i18n";
+import { getSupabase } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 import { formatAmount, formatDateTime } from "@/services/bookings/types";
 import {
@@ -92,6 +93,7 @@ export default function WalletPage() {
 	const [info, setInfo] = useState<string | null>(null);
 	const [showWithdraw, setShowWithdraw] = useState(false);
 	const [amount, setAmount] = useState("");
+	const [withdrawPassword, setWithdrawPassword] = useState("");
 	const [note, setNote] = useState("");
 	const [selectedBankId, setSelectedBankId] = useState("");
 	const [tab, setTab] = useState<"tx" | "withdraw">("tx");
@@ -167,9 +169,28 @@ export default function WalletPage() {
 			setError(t("providerWalletValidAmount"));
 			return;
 		}
+		const email = user?.email ?? user?.provider?.email;
+		if (!email) {
+			setError(t("providerPasswordNoEmail"));
+			return;
+		}
+		if (!withdrawPassword.trim()) {
+			setError(t("providerPasswordIncorrect"));
+			return;
+		}
 		setBusy(true);
 		setError(null);
 		setInfo(null);
+		const supabase = getSupabase();
+		const passwordCheck = await supabase.auth.signInWithPassword({
+			email,
+			password: withdrawPassword,
+		});
+		if (passwordCheck.error) {
+			setBusy(false);
+			setError(t("providerPasswordIncorrect"));
+			return;
+		}
 		const res = await requestWithdrawal({
 			providerId,
 			amount: value,
@@ -188,6 +209,7 @@ export default function WalletPage() {
 		setShowWithdraw(false);
 		setAmount("");
 		setNote("");
+		setWithdrawPassword("");
 		if (res.updatedPending) {
 			setInfo(t("providerWalletPendingUpdated"));
 			setTab("withdraw");
@@ -230,6 +252,7 @@ export default function WalletPage() {
 									setSelectedBankId(defaultBank?.id ?? "");
 									setError(null);
 									setInfo(null);
+									setWithdrawPassword("");
 								}
 								return !v;
 							});
@@ -304,6 +327,16 @@ export default function WalletPage() {
 							required
 							value={amount}
 							onChange={(e) => setAmount(e.target.value)}
+						/>
+					</div>
+					<div className="space-y-1.5">
+						<Label htmlFor="withdraw-password">{t("providerCurrentPassword")}</Label>
+						<Input
+							id="withdraw-password"
+							type="password"
+							required
+							value={withdrawPassword}
+							onChange={(e) => setWithdrawPassword(e.target.value)}
 						/>
 					</div>
 					<div className="space-y-1.5">
