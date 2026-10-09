@@ -271,7 +271,11 @@ export async function uploadProofImages(params: {
 		const path = `serviceProof/${params.authUserId}/${Date.now()}_${safeName}`;
 		const { error } = await supabase.storage
 			.from(bucket)
-			.upload(path, file, { upsert: true, contentType: file.type });
+			.upload(path, file, {
+				upsert: true,
+				contentType: file.type,
+				cacheControl: "31536000",
+			});
 		if (error) {
 			console.error("uploadProofImages", error);
 			return { urls, error: error.message };

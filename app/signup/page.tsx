@@ -140,8 +140,8 @@ function SignupForm() {
 						className={cn(
 							"rounded-md px-3 py-2 text-[13px] font-medium transition-colors",
 							mode === option
-								? "bg-white/90 text-foreground shadow-sm"
-								: "text-muted-foreground",
+								? "bg-white text-[#0f1a0c] shadow-sm dark:bg-white dark:text-[#0f1a0c]"
+								: "text-muted-foreground dark:text-white/70 dark:hover:text-white",
 						)}
 					>
 						{modeLabel(option)}

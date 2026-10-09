@@ -11,7 +11,10 @@ import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import type { AppMode } from "@/lib/brand";
 import { useLocale } from "@/lib/i18n";
-import { validateLoginPhoneNumber } from "@/lib/phone";
+import {
+	looksLikePhoneIdentifier,
+	validateEmailOrPhone,
+} from "@/lib/phone";
 import { cn } from "@/lib/utils";
 import {
 	checkEmailForPasswordReset,
@@ -23,10 +26,9 @@ export default function ForgotPasswordPage() {
 	const { t } = useLocale();
 	const router = useRouter();
 	const [mode, setMode] = useState<AppMode>("service");
-	const [email, setEmail] = useState("");
-	const [phone, setPhone] = useState("");
-	const [usePhone, setUsePhone] = useState(false);
+	const [identifier, setIdentifier] = useState("");
 	const [otpSent, setOtpSent] = useState(false);
+	const [email, setEmail] = useState("");
 	const [code, setCode] = useState("");
 	const [newPassword, setNewPassword] = useState("");
 	const [confirm, setConfirm] = useState("");
@@ -37,22 +39,41 @@ export default function ForgotPasswordPage() {
 		return option === "provider" ? t("provider") : t("customer");
 	}
 
-	async function handleSendEmail(e: React.FormEvent) {
+	async function handleSendCode(e: React.FormEvent) {
 		e.preventDefault();
-		setBusy(true);
 		setError(null);
-		const check = await checkEmailForPasswordReset({ email, mode });
+		const validation = validateEmailOrPhone(identifier);
+		if (validation) {
+			setError(validation);
+			return;
+		}
+
+		const raw = identifier.trim();
+		if (looksLikePhoneIdentifier(raw)) {
+			router.push(
+				`/verify-phone?mode=${mode}&reset=1&phone=${encodeURIComponent(raw)}`,
+			);
+			return;
+		}
+
+		const normalizedEmail = raw.toLowerCase();
+		setBusy(true);
+		const check = await checkEmailForPasswordReset({
+			email: normalizedEmail,
+			mode,
+		});
 		if (check.error) {
 			setBusy(false);
 			setError(check.error);
 			return;
 		}
-		const result = await requestPasswordResetEmail(email);
+		const result = await requestPasswordResetEmail(normalizedEmail);
 		setBusy(false);
 		if (result.error) {
 			setError(result.error);
 			return;
 		}
+		setEmail(normalizedEmail);
 		setOtpSent(true);
 	}
 
@@ -85,18 +106,6 @@ export default function ForgotPasswordPage() {
 		if (result.error) setError(result.error);
 	}
 
-	function goPhoneReset() {
-		setError(null);
-		const phoneError = validateLoginPhoneNumber(phone);
-		if (phoneError) {
-			setError(phoneError);
-			return;
-		}
-		router.push(
-			`/verify-phone?mode=${mode}&reset=1&phone=${encodeURIComponent(phone.trim())}`,
-		);
-	}
-
 	return (
 		<AuthShell
 			title={t("forgotPassword")}
@@ -115,38 +124,13 @@ export default function ForgotPasswordPage() {
 						className={cn(
 							"rounded-md px-3 py-2 text-[13px] font-medium",
 							mode === option
-								? "bg-white shadow-sm dark:bg-card"
-								: "text-muted-foreground",
+								? "bg-white text-[#0f1a0c] shadow-sm dark:bg-white dark:text-[#0f1a0c]"
+								: "text-muted-foreground dark:text-white/70 dark:hover:text-white",
 						)}
 					>
 						{modeLabel(option)}
 					</button>
 				))}
-			</div>
-
-			<div className="mt-4 flex gap-2 text-sm">
-				<button
-					type="button"
-					className={!usePhone ? "font-semibold text-primary" : ""}
-					onClick={() => {
-						setUsePhone(false);
-						setOtpSent(false);
-						setError(null);
-					}}
-				>
-					{t("email")}
-				</button>
-				<button
-					type="button"
-					className={usePhone ? "font-semibold text-primary" : ""}
-					onClick={() => {
-						setUsePhone(true);
-						setOtpSent(false);
-						setError(null);
-					}}
-				>
-					{t("phone")}
-				</button>
 			</div>
 
 			{error ? (
@@ -155,29 +139,7 @@ export default function ForgotPasswordPage() {
 				</Alert>
 			) : null}
 
-			{usePhone ? (
-				<div className="mt-6 flex flex-col gap-4">
-					<p className="text-sm text-muted-foreground">{t("resetPhoneHint")}</p>
-					<FieldGroup>
-						<Field>
-							<FieldLabel>{t("phone")}</FieldLabel>
-							<Input
-								value={phone}
-								onChange={(e) => setPhone(e.target.value)}
-								placeholder="+251…"
-								inputMode="tel"
-							/>
-						</Field>
-					</FieldGroup>
-					<Button
-						type="button"
-						className="w-full"
-						onClick={() => goPhoneReset()}
-					>
-						{t("sendCode")}
-					</Button>
-				</div>
-			) : otpSent ? (
+			{otpSent ? (
 				<form
 					onSubmit={(e) => void handleVerifyEmail(e)}
 					className="mt-6 flex flex-col gap-4"
@@ -229,17 +191,25 @@ export default function ForgotPasswordPage() {
 				</form>
 			) : (
 				<form
-					onSubmit={(e) => void handleSendEmail(e)}
+					onSubmit={(e) => void handleSendCode(e)}
 					className="mt-6 flex flex-col gap-4"
 				>
 					<FieldGroup>
 						<Field>
-							<FieldLabel>{t("email")}</FieldLabel>
+							<FieldLabel htmlFor="emailOrPhone">
+								{t("emailOrPhone")}
+							</FieldLabel>
 							<Input
-								type="email"
+								id="emailOrPhone"
+								name="username"
+								type="text"
+								inputMode="email"
+								autoComplete="username"
+								spellCheck={false}
 								required
-								value={email}
-								onChange={(e) => setEmail(e.target.value)}
+								placeholder={t("emailOrPhonePlaceholder")}
+								value={identifier}
+								onChange={(e) => setIdentifier(e.target.value)}
 							/>
 						</Field>
 					</FieldGroup>

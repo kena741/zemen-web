@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { ArrowRightIcon, CheckIcon } from "lucide-react";
 
@@ -97,11 +98,14 @@ export function ServicesHubView({
 									>
 										<div className="relative size-14 shrink-0 overflow-hidden rounded-xl bg-[#e8f5e3]">
 											{category.image ? (
-												// eslint-disable-next-line @next/next/no-img-element
-												<img
+												<Image
 													src={category.image}
 													alt={`${category.categoryName} services`}
-													className="size-full object-cover"
+													fill
+													sizes="56px"
+													loading="lazy"
+													quality={65}
+													className="object-cover"
 												/>
 											) : (
 												<span className="flex size-full items-center justify-center text-xs font-semibold text-primary">
@@ -199,11 +203,14 @@ export function ServiceCategoryView({
 						</div>
 						{category.image ? (
 							<div className="relative aspect-[4/3] overflow-hidden rounded-[1.5rem] bg-[#e8f5e3] shadow-[0_16px_40px_rgba(23,67,9,0.1)]">
-								{/* eslint-disable-next-line @next/next/no-img-element */}
-								<img
+								<Image
 									src={category.image}
 									alt={`${category.categoryName} services in Addis Ababa`}
-									className="size-full object-cover"
+									fill
+									sizes="(max-width: 1024px) 100vw, 520px"
+									loading="lazy"
+									quality={70}
+									className="object-cover"
 								/>
 							</div>
 						) : null}
@@ -295,15 +302,18 @@ export function ServiceCategoryView({
 								>
 									<div className="relative aspect-[4/3] bg-[#e8f5e3]">
 										{service.serviceImage[0] ? (
-											// eslint-disable-next-line @next/next/no-img-element
-											<img
+											<Image
 												src={service.serviceImage[0]}
 												alt={
 													service.serviceName
 														? `${service.serviceName} in Addis Ababa`
 														: `${category.categoryName} service`
 												}
-												className="size-full object-cover"
+												fill
+												sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+												loading="lazy"
+												quality={65}
+												className="object-cover"
 											/>
 										) : null}
 									</div>

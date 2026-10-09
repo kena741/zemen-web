@@ -47,7 +47,6 @@ export function MarketingHeader({
 						alt=""
 						width={36}
 						height={36}
-						priority
 						className="size-9 rounded-lg"
 					/>
 					<span className="text-[17px] font-bold tracking-tight text-[#0f1a0c]">
