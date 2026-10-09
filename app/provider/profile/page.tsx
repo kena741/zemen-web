@@ -14,7 +14,6 @@ import {
 	KeyRoundIcon,
 	LogOutIcon,
 	MailIcon,
-	PaletteIcon,
 	PercentIcon,
 	TagIcon,
 	Trash2Icon,
@@ -368,15 +367,6 @@ export default function ProviderProfilePage() {
 				</MenuGroup>
 
 				<MenuGroup title={t("profileAppSettings")}>
-					<div className="flex items-center gap-3 px-4 py-3.5">
-						<PaletteIcon
-							className="size-5.5 shrink-0 text-foreground"
-							strokeWidth={1.75}
-						/>
-						<span className="min-w-0 flex-1 text-sm">{t("theme")}</span>
-						<LocaleThemeToggle mode="theme" />
-					</div>
-					<Divider />
 					<NotificationPermissionControl />
 					<Divider />
 					<MenuItem
