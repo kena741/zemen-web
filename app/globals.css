@@ -466,10 +466,105 @@
     color: inherit;
   }
 
+  .blog-prose .blog-table-wrap,
+  .blog-prose .table-wrap {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border: 1px solid #d7e3d2;
+    border-radius: 0.5rem;
+    background: #ffffff;
+  }
+
+  .blog-prose table.blog-table,
+  .blog-prose table {
+    width: 100%;
+    min-width: 28rem;
+    margin: 0;
+    border-collapse: collapse;
+    table-layout: auto;
+    font-size: 0.95rem;
+    line-height: 1.55;
+    color: #2f4030;
+  }
+
+  .blog-prose table.blog-table th,
+  .blog-prose table.blog-table td,
+  .blog-prose table th,
+  .blog-prose table td {
+    border: 1px solid #d7e3d2;
+    padding: 0.7rem 0.9rem;
+    vertical-align: top;
+    text-align: left;
+    word-break: break-word;
+  }
+
+  .blog-prose table.blog-table thead th,
+  .blog-prose table thead th,
+  .blog-prose table th {
+    background: #f0f5ed;
+    color: #0f1a0c;
+    font-weight: 650;
+    letter-spacing: -0.01em;
+  }
+
+  .blog-prose table.blog-table tbody tr:nth-child(even),
+  .blog-prose table tbody tr:nth-child(even) {
+    background: #f6faf4;
+  }
+
+  .blog-prose table.blog-table tbody tr:hover,
+  .blog-prose table tbody tr:hover {
+    background: #e8f5e3;
+  }
+
+  .blog-prose table.blog-table p,
+  .blog-prose table p {
+    margin: 0;
+  }
+
+  /* Fallback when a table is inserted without the wrap div */
+  .blog-prose > table {
+    display: block;
+    width: max-content;
+    max-width: 100%;
+    min-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border: 1px solid #d7e3d2;
+    border-radius: 0.5rem;
+  }
+
+  .blog-prose > table > thead,
+  .blog-prose > table > tbody {
+    display: table;
+    width: 100%;
+    min-width: 28rem;
+  }
+
   @media (max-width: 640px) {
     .blog-prose {
       font-size: 1.0625rem;
       line-height: 1.75;
+    }
+
+    .blog-prose table.blog-table,
+    .blog-prose table {
+      font-size: 0.875rem;
+      min-width: 22rem;
+    }
+
+    .blog-prose table.blog-table th,
+    .blog-prose table.blog-table td,
+    .blog-prose table th,
+    .blog-prose table td {
+      padding: 0.55rem 0.7rem;
+    }
+
+    .blog-prose > table > thead,
+    .blog-prose > table > tbody {
+      min-width: 22rem;
     }
   }
 }
