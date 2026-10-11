@@ -1,11 +1,20 @@
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowLeftIcon, ArrowRightIcon } from "lucide-react";
+import {
+	ArrowLeftIcon,
+	ArrowRightIcon,
+	EyeIcon,
+	HeartIcon,
+} from "lucide-react";
 
+import { BlogEngagement } from "@/components/marketing/blog-engagement";
 import { MarketingShell } from "@/components/marketing/site-chrome";
 import { BRAND_NAME } from "@/lib/brand";
 import { SHORT_CODE, WHATSAPP_URL } from "@/lib/marketing";
-import type { PublicBlogPost } from "@/services/blog/publicBlog";
+import type {
+	PublicBlogComment,
+	PublicBlogPost,
+} from "@/services/blog/publicBlog";
 
 function formatDate(iso: string | null): string {
 	if (!iso) return "";
@@ -18,6 +27,12 @@ function formatDate(iso: string | null): string {
 	} catch {
 		return "";
 	}
+}
+
+function formatCount(n: number): string {
+	if (n < 1000) return String(n);
+	if (n < 10_000) return `${(n / 1000).toFixed(1).replace(/\.0$/, "")}k`;
+	return `${Math.round(n / 1000)}k`;
 }
 
 function readingMinutes(html: string, excerpt?: string | null): number {
@@ -137,6 +152,16 @@ export function BlogIndexPage({ posts }: { posts: PublicBlogPost[] }) {
 													{featured.excerpt}
 												</p>
 											) : null}
+											<div className="flex items-center gap-4 text-sm text-[#5a6b54]">
+												<span className="inline-flex items-center gap-1.5">
+													<EyeIcon className="size-3.5" aria-hidden />
+													{formatCount(featured.viewCount)}
+												</span>
+												<span className="inline-flex items-center gap-1.5">
+													<HeartIcon className="size-3.5" aria-hidden />
+													{formatCount(featured.likeCount)}
+												</span>
+											</div>
 											<span className="inline-flex items-center gap-2 text-sm font-semibold text-[#1f5a0b]">
 												Read article
 												<ArrowRightIcon
@@ -181,9 +206,16 @@ export function BlogIndexPage({ posts }: { posts: PublicBlogPost[] }) {
 																{post.excerpt}
 															</p>
 														) : null}
-														<span className="mt-auto pt-2 text-sm font-medium text-[#1f5a0b] opacity-0 transition group-hover:opacity-100">
-															Read more →
-														</span>
+														<div className="mt-auto flex items-center gap-3 pt-2 text-xs text-[#5a6b54]">
+															<span className="inline-flex items-center gap-1">
+																<EyeIcon className="size-3.5" aria-hidden />
+																{formatCount(post.viewCount)}
+															</span>
+															<span className="inline-flex items-center gap-1">
+																<HeartIcon className="size-3.5" aria-hidden />
+																{formatCount(post.likeCount)}
+															</span>
+														</div>
 													</div>
 												</Link>
 											</article>
@@ -199,7 +231,13 @@ export function BlogIndexPage({ posts }: { posts: PublicBlogPost[] }) {
 	);
 }
 
-export function BlogPostPage({ post }: { post: PublicBlogPost }) {
+export function BlogPostPage({
+	post,
+	comments,
+}: {
+	post: PublicBlogPost;
+	comments: PublicBlogComment[];
+}) {
 	const minutes = readingMinutes(post.contentHtml, post.excerpt);
 
 	return (
@@ -256,6 +294,14 @@ export function BlogPostPage({ post }: { post: PublicBlogPost }) {
 					<div
 						className="blog-prose"
 						dangerouslySetInnerHTML={{ __html: post.contentHtml }}
+					/>
+
+					<BlogEngagement
+						slug={post.slug}
+						postId={post.id}
+						initialViewCount={post.viewCount}
+						initialLikeCount={post.likeCount}
+						initialComments={comments}
 					/>
 
 					<footer className="mt-16 border-t border-[#d7e3d2] pt-10">

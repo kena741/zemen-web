@@ -10,6 +10,15 @@ export type PublicBlogPost = {
 	authorName: string | null;
 	publishedAt: string | null;
 	updatedAt: string;
+	viewCount: number;
+	likeCount: number;
+};
+
+export type PublicBlogComment = {
+	id: string;
+	fullName: string;
+	body: string;
+	createdAt: string;
 };
 
 type BlogPostRow = {
@@ -22,6 +31,15 @@ type BlogPostRow = {
 	author_name?: string | null;
 	published_at?: string | null;
 	updated_at?: string | null;
+	view_count?: number | null;
+	like_count?: number | null;
+};
+
+type BlogCommentRow = {
+	id: string;
+	full_name?: string | null;
+	body?: string | null;
+	created_at?: string | null;
 };
 
 function mapRow(row: BlogPostRow): PublicBlogPost {
@@ -35,11 +53,13 @@ function mapRow(row: BlogPostRow): PublicBlogPost {
 		authorName: row.author_name ?? null,
 		publishedAt: row.published_at ?? null,
 		updatedAt: row.updated_at ?? row.published_at ?? new Date().toISOString(),
+		viewCount: Number(row.view_count ?? 0),
+		likeCount: Number(row.like_count ?? 0),
 	};
 }
 
 const CARD_SELECT =
-	"id, title, slug, excerpt, cover_image, author_name, published_at, updated_at";
+	"id, title, slug, excerpt, cover_image, author_name, published_at, updated_at, view_count, like_count";
 const DETAIL_SELECT = `${CARD_SELECT}, content_html`;
 
 export async function fetchPublishedBlogPosts(): Promise<PublicBlogPost[]> {
@@ -94,5 +114,31 @@ export async function fetchPublishedBlogSlugs(): Promise<
 	return ((data ?? []) as BlogPostRow[]).map((row) => ({
 		slug: row.slug,
 		updatedAt: row.updated_at ?? row.published_at ?? new Date().toISOString(),
+	}));
+}
+
+export async function fetchApprovedBlogComments(
+	postId: string,
+): Promise<PublicBlogComment[]> {
+	if (!postId) return [];
+
+	const { data, error } = await getPublicSupabase()
+		.from("blog_comment")
+		.select("id, full_name, body, created_at")
+		.eq("post_id", postId)
+		.eq("status", "approved")
+		.order("created_at", { ascending: false })
+		.limit(100);
+
+	if (error) {
+		console.error("fetchApprovedBlogComments", error);
+		return [];
+	}
+
+	return ((data ?? []) as BlogCommentRow[]).map((row) => ({
+		id: row.id,
+		fullName: row.full_name ?? "Reader",
+		body: row.body ?? "",
+		createdAt: row.created_at ?? new Date().toISOString(),
 	}));
 }

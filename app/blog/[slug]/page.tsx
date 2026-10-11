@@ -5,6 +5,7 @@ import { BlogPostPage } from "@/components/marketing/blog-pages";
 import { BRAND_NAME } from "@/lib/brand";
 import { buildOpenGraph, buildTwitter } from "@/lib/seo";
 import {
+	fetchApprovedBlogComments,
 	fetchPublishedBlogPostBySlug,
 	fetchPublishedBlogSlugs,
 } from "@/services/blog/publicBlog";
@@ -55,5 +56,6 @@ export default async function BlogSlugPage({ params }: PageProps) {
 	const { slug } = await params;
 	const post = await fetchPublishedBlogPostBySlug(slug);
 	if (!post) notFound();
-	return <BlogPostPage post={post} />;
+	const comments = await fetchApprovedBlogComments(post.id);
+	return <BlogPostPage post={post} comments={comments} />;
 }

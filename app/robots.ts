@@ -12,6 +12,8 @@ export default function robots(): MetadataRoute.Robots {
 				allow: [
 					"/",
 					"/about",
+					"/blog",
+					"/blog/",
 					"/services",
 					"/services/",
 					"/locations/",
