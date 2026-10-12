@@ -390,6 +390,23 @@ export function LandingPage({
 								Sign in to your dashboard
 							</button>
 						</p>
+
+						<div className="mt-10 max-w-xl animate-[marketing-fade-up_1.05s_ease_0.3s_both]">
+							<p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#52634c]">
+								Sponsored by
+							</p>
+							<div className="relative mt-3">
+								<div
+									aria-hidden
+									className="pointer-events-none absolute inset-y-0 left-0 z-10 w-6 bg-gradient-to-r from-[#f4f8f1] to-transparent sm:w-8"
+								/>
+								<div
+									aria-hidden
+									className="pointer-events-none absolute inset-y-0 right-0 z-10 w-8 bg-gradient-to-l from-[#f4f8f1]/80 to-transparent sm:w-12"
+								/>
+								<SponsorsCarousel sponsors={SPONSORS} />
+							</div>
+						</div>
 					</div>
 				</div>
 			</section>
@@ -405,10 +422,10 @@ export function LandingPage({
 							<p className="text-xs font-semibold uppercase tracking-[0.14em] text-primary">
 								Home services
 							</p>
-							<h2 className="mt-1 text-2xl font-bold tracking-tight sm:text-3xl">
+							<h2 className="mt-1 text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
 								Services in Addis Ababa
 							</h2>
-							<p className="mt-1.5 max-w-xl text-sm text-muted-foreground">
+							<p className="mt-1.5 max-w-xl text-sm text-[#3d5240]">
 								Explore cleaning, cooking, domestic help, repairs, maintenance,
 								moving, beauty, care, and more from verified providers.
 							</p>
@@ -784,9 +801,9 @@ export function LandingPage({
 
 			{/* Platforms CTA with auth visual strip */}
 			<section className="relative z-10 px-4 pb-14 sm:px-6 sm:pb-16">
-				<div className="relative mx-auto max-w-6xl overflow-hidden rounded-[1.75rem] bg-primary">
+				<div className="relative mx-auto max-w-6xl overflow-hidden rounded-[1.75rem] bg-[#174309]">
 					<div className="grid lg:grid-cols-2">
-						<div className="relative z-10 px-6 py-10 text-primary-foreground sm:px-10 sm:py-12">
+						<div className="relative z-10 px-6 py-10 text-white sm:px-10 sm:py-12">
 							<div
 								aria-hidden
 								className="pointer-events-none absolute -left-6 -top-6 opacity-20"
@@ -800,13 +817,13 @@ export function LandingPage({
 								/>
 							</div>
 							<div className="relative max-w-md">
-								<p className="text-xs font-semibold uppercase tracking-[0.14em] text-primary-foreground/70">
+								<p className="text-xs font-semibold uppercase tracking-[0.14em] text-white/70">
 									One platform
 								</p>
-								<h2 className="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">
+								<h2 className="mt-2 text-2xl font-bold tracking-tight text-white sm:text-3xl">
 									Customers book. Providers deliver.
 								</h2>
-								<p className="mt-2 text-sm leading-relaxed text-primary-foreground/80">
+								<p className="mt-2 text-sm leading-relaxed text-white/80">
 									Sign in as a customer to book, or as a provider to manage
 									jobs. Same Zemen web app.
 								</p>
@@ -844,26 +861,6 @@ export function LandingPage({
 								className="absolute inset-0 bg-gradient-to-r from-primary via-primary/40 to-transparent"
 							/>
 						</div>
-					</div>
-				</div>
-			</section>
-
-			{/* Sponsors */}
-			<section className="relative z-10 border-t border-primary/8 bg-white py-8 sm:py-9">
-				<div className="mx-auto max-w-6xl px-4 sm:px-6">
-					<p className="text-center text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-						Sponsored by
-					</p>
-					<div className="relative mt-5">
-						<div
-							aria-hidden
-							className="pointer-events-none absolute inset-y-0 left-0 z-10 w-6 bg-gradient-to-r from-white to-transparent sm:w-8"
-						/>
-						<div
-							aria-hidden
-							className="pointer-events-none absolute inset-y-0 right-0 z-10 w-8 bg-gradient-to-l from-white to-transparent sm:w-12"
-						/>
-						<SponsorsCarousel sponsors={SPONSORS} />
 					</div>
 				</div>
 			</section>

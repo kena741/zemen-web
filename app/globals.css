@@ -167,12 +167,13 @@
     }
   }
 
+  /* Always cream-on-brand-green — dark theme's --primary-foreground is near-black. */
   .admin-brand-band {
     overflow: hidden;
     border-radius: 1rem;
     border: 1px solid rgb(0 0 0 / 0.1);
-    background-color: var(--primary);
-    color: var(--primary-foreground);
+    background-color: #174309;
+    color: #f4faf0;
     box-shadow: var(--shadow-md);
   }
 
@@ -182,19 +183,19 @@
     font-weight: 500;
     letter-spacing: 0.16em;
     text-transform: uppercase;
-    color: color-mix(in oklab, var(--primary-foreground) 90%, transparent);
+    color: color-mix(in oklab, #f4faf0 90%, transparent);
   }
 
   .admin-brand-band-muted {
     font-size: 0.875rem;
     line-height: 1.25rem;
-    color: color-mix(in oklab, var(--primary-foreground) 85%, transparent);
+    color: color-mix(in oklab, #f4faf0 85%, transparent);
   }
 
   .admin-brand-band-hint {
     font-size: 0.75rem;
     line-height: 1rem;
-    color: color-mix(in oklab, var(--primary-foreground) 80%, transparent);
+    color: color-mix(in oklab, #f4faf0 80%, transparent);
   }
 
   .admin-loading-mark {

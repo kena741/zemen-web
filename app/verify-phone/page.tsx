@@ -77,8 +77,13 @@ function VerifyPhoneForm() {
 		setBusy(true);
 		setError(null);
 		if (isSignup) {
-			const taken = await phoneAlreadyRegistered(phone, mode);
-			if (taken) {
+			const check = await phoneAlreadyRegistered(phone, mode);
+			if (check.taken == null) {
+				setBusy(false);
+				setError(t("commonError"));
+				return;
+			}
+			if (check.taken) {
 				setBusy(false);
 				setError(t("signupPhoneAlreadyRegistered"));
 				return;
@@ -100,8 +105,13 @@ function VerifyPhoneForm() {
 			setBusy(true);
 			setError(null);
 			if (isSignup) {
-				const taken = await phoneAlreadyRegistered(phone, mode);
-				if (taken) {
+				const check = await phoneAlreadyRegistered(phone, mode);
+				if (check.taken == null) {
+					setBusy(false);
+					setError(t("commonError"));
+					return;
+				}
+				if (check.taken) {
 					setBusy(false);
 					setError(t("signupPhoneAlreadyRegistered"));
 					return;

@@ -150,11 +150,13 @@ export function ChapaCheckout({
 	return (
 		<div
 			className={cn(
-				"mt-4 rounded-xl border border-border bg-white p-4 dark:bg-card",
+				"mt-4 rounded-xl border border-border bg-white p-4 text-foreground dark:bg-card",
 				className,
 			)}
 		>
-			<p className="text-sm font-medium">{label ?? t("walletTopUp")}</p>
+			<p className="text-sm font-medium text-foreground">
+				{label ?? t("walletTopUp")}
+			</p>
 			<div className="mt-3 flex gap-2">
 				{showAmountInput ? (
 					<Input

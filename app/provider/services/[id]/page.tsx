@@ -91,8 +91,6 @@ export default function ServiceDetailPage() {
 				patch: { status: nextActive, archived: false },
 			}),
 		);
-		dispatch(invalidateProviderServices());
-		refresh();
 	}
 
 	async function handleFeatured() {

@@ -191,7 +191,7 @@ export function MarketingHeader({
 					</a>
 					<a
 						href={`tel:${SHORT_CODE}`}
-						className="inline-flex h-10 items-center gap-2 rounded-full bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-[0_6px_18px_rgba(23,67,9,0.25)] transition hover:bg-brand-ink"
+						className="inline-flex h-10 items-center gap-2 rounded-full bg-[#174309] px-4 text-sm font-semibold text-[#f4faf0] shadow-[0_6px_18px_rgba(23,67,9,0.25)] transition hover:bg-[#1f5a0b]"
 					>
 						<PhoneIcon className="size-4" />
 						{SHORT_CODE}

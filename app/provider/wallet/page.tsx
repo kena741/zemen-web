@@ -205,20 +205,9 @@ export default function WalletPage() {
 
 			<div className="admin-brand-band mt-6 px-5 py-6">
 				<p className="admin-brand-band-label">{t("walletBalance")}</p>
-				<p className="mt-2 text-3xl font-semibold tracking-tight text-primary-foreground tabular-nums">
+				<p className="mt-2 text-3xl font-semibold tracking-tight text-[#f4faf0] tabular-nums">
 					{loading ? "…" : formatAmount(String(wallet.balance))}
 				</p>
-				<div className="mt-4">
-					<ChapaTopUp
-						email={user?.email}
-						firstName={user?.provider?.firstName ?? user?.name}
-						lastName={user?.provider?.lastName ?? ""}
-						phone={user?.provider?.phoneNumber}
-						userId={user?.provider?.id ?? user?.id ?? ""}
-						accountType="provider"
-						returnPath="/pay/done?purpose=wallet"
-					/>
-				</div>
 				<div className="mt-4 flex flex-wrap gap-2">
 					<Button
 						size="sm"
@@ -247,6 +236,18 @@ export default function WalletPage() {
 						{t("bankTitle")}
 					</Link>
 				</div>
+			</div>
+
+			<div className="mt-4">
+				<ChapaTopUp
+					email={user?.email}
+					firstName={user?.provider?.firstName ?? user?.name}
+					lastName={user?.provider?.lastName ?? ""}
+					phone={user?.provider?.phoneNumber}
+					userId={user?.provider?.id ?? user?.id ?? ""}
+					accountType="provider"
+					returnPath="/pay/done?purpose=wallet"
+				/>
 			</div>
 
 			{error || loadError ? (

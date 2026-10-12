@@ -11,10 +11,7 @@ import { formatAmount } from "@/services/bookings/types";
 import { setServiceActive } from "@/services/services/servicesApi";
 import type { ProviderService } from "@/services/services/types";
 import { useAppDispatch } from "@/store/hooks";
-import {
-	invalidateProviderServices,
-	patchProviderService,
-} from "@/store/providerCacheSlice";
+import { patchProviderService } from "@/store/providerCacheSlice";
 
 function averageRating(service: ProviderService): number | null {
 	const count = Number(service.reviewCount ?? 0);
@@ -76,7 +73,6 @@ export function ServiceCard({
 				patch: { status: next, archived: false },
 			}),
 		);
-		dispatch(invalidateProviderServices());
 	}
 
 	return (

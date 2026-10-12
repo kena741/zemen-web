@@ -31,7 +31,9 @@ export default function NewServicePage() {
 	const authUserId = user?.id ?? "";
 	const { data: services, loading: servicesLoading } =
 		useCachedProviderServices(providerId);
-	const [tierMax, setTierMax] = useState<number | null>(null);
+	const [tierMax, setTierMax] = useState<number | null>(
+		user?.provider?.serviceTierMax ?? null,
+	);
 
 	useEffect(() => {
 		if (!providerId) return;

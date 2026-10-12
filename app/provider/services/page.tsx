@@ -30,7 +30,9 @@ export default function ProviderServicesPage() {
 		useCachedProviderServices(providerId);
 	const [filter, setFilter] = useState<ServiceFilter>("active");
 	const [query, setQuery] = useState("");
-	const [tierMax, setTierMax] = useState(0);
+	const [tierMax, setTierMax] = useState(
+		() => Number(user?.provider?.serviceTierMax ?? 0) || 0,
+	);
 
 	useEffect(() => {
 		if (!providerId) return;

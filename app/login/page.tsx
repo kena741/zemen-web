@@ -157,8 +157,8 @@ function LoginForm() {
 								className={cn(
 									"rounded-md px-3 py-2 text-[13px] font-medium transition-colors",
 									selected
-										? "bg-white text-[#0f1a0c] shadow-sm dark:bg-white dark:text-[#0f1a0c]"
-										: "text-muted-foreground hover:text-foreground dark:text-[#c5d6bc] dark:hover:text-white",
+										? "bg-white text-foreground shadow-sm dark:bg-white dark:text-[#0f1a0c]"
+										: "text-foreground/70 hover:text-foreground dark:text-[#c5d6bc] dark:hover:text-white",
 								)}
 							>
 								{modeLabel(option)}

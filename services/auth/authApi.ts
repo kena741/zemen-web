@@ -87,41 +87,54 @@ async function getCustomerEmailByPhone(phone: string): Promise<string | null> {
 	return email || null;
 }
 
-/** True when a customer/provider row already uses this phone (signup guard). */
+/**
+ * Signup phone guard.
+ * - `{ taken: true }` → show already-registered (do not send OTP)
+ * - `{ taken: false }` → available
+ * - `{ taken: null }` → lookup failed (do not send OTP; show retry error)
+ */
 export async function phoneAlreadyRegistered(
 	phone: string,
 	mode: AppMode,
-): Promise<boolean> {
+): Promise<{ taken: boolean | null }> {
 	const local = normalizeLocalEthiopianPhone(phone);
-	if (local.length !== 9) return false;
+	if (local.length !== 9) return { taken: false };
+
+	const variants = [
+		local,
+		`0${local}`,
+		`251${local}`,
+		`+251${local}`,
+	];
 
 	if (mode === "provider") {
 		const { data, error } = await getSupabase()
 			.from("provider")
 			.select("id")
-			.or(
-				`phoneNumber.eq.${local},phoneNumber.eq.0${local},phoneNumber.eq.251${local}`,
-			)
-			.maybeSingle();
+			.or(variants.map((v) => `phoneNumber.eq.${v}`).join(","))
+			.limit(1);
 		if (error) {
 			console.error("phoneAlreadyRegistered provider", error);
-			return false;
+			return { taken: null };
 		}
-		return Boolean(data?.id);
+		return { taken: Boolean(data?.[0]?.id) };
 	}
 
+	const cols = ["phone", "phoneNumber"] as const;
 	const { data, error } = await getSupabase()
 		.from("customer")
 		.select("id")
 		.or(
-			`phone.eq.${local},phone.eq.0${local},phone.eq.251${local},phoneNumber.eq.${local},phoneNumber.eq.0${local},phoneNumber.eq.251${local}`,
+			cols
+				.flatMap((col) => variants.map((v) => `${col}.eq.${v}`))
+				.join(","),
 		)
-		.maybeSingle();
+		.limit(1);
 	if (error) {
 		console.error("phoneAlreadyRegistered customer", error);
-		return false;
+		return { taken: null };
 	}
-	return Boolean(data?.id);
+	return { taken: Boolean(data?.[0]?.id) };
 }
 
 async function resolveLoginEmail(

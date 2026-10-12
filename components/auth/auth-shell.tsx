@@ -37,7 +37,10 @@ export function AuthShell({
 					sizes="(max-width: 768px) 100vw, 1280px"
 					className="object-cover object-center"
 				/>
-				<div className="absolute inset-0 hidden bg-black/40 dark:block" aria-hidden />
+				<div
+					className="absolute inset-0 bg-gradient-to-b from-black/45 via-black/25 to-black/40"
+					aria-hidden
+				/>
 			</div>
 
 			<header className="relative z-10 flex shrink-0 items-center justify-between gap-2.5 px-6 py-5 sm:px-8">
@@ -50,7 +53,7 @@ export function AuthShell({
 						height={28}
 						className="size-7 rounded-md"
 					/>
-					<span className="text-[15px] font-semibold tracking-tight text-[#0f1a0c] dark:text-white">
+					<span className="text-[15px] font-semibold tracking-tight text-white">
 						{BRAND_NAME}
 					</span>
 				</Link>

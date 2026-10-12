@@ -62,8 +62,12 @@ function SignupForm() {
 		if (mode === "service") {
 			setBusy(true);
 			try {
-				const taken = await phoneAlreadyRegistered(phone, "service");
-				if (taken) {
+				const check = await phoneAlreadyRegistered(phone, "service");
+				if (check.taken == null) {
+					setError(t("commonError"));
+					return;
+				}
+				if (check.taken) {
 					setError(t("signupPhoneAlreadyRegistered"));
 					return;
 				}
@@ -89,8 +93,12 @@ function SignupForm() {
 
 		setBusy(true);
 		try {
-			const phoneTaken = await phoneAlreadyRegistered(phone, "provider");
-			if (phoneTaken) {
+			const phoneCheck = await phoneAlreadyRegistered(phone, "provider");
+			if (phoneCheck.taken == null) {
+				setError(t("commonError"));
+				return;
+			}
+			if (phoneCheck.taken) {
 				setError(t("signupPhoneAlreadyRegistered"));
 				return;
 			}
@@ -140,8 +148,8 @@ function SignupForm() {
 						className={cn(
 							"rounded-md px-3 py-2 text-[13px] font-medium transition-colors",
 							mode === option
-								? "bg-white text-[#0f1a0c] shadow-sm dark:bg-white dark:text-[#0f1a0c]"
-								: "text-muted-foreground dark:text-white/70 dark:hover:text-white",
+								? "bg-white text-foreground shadow-sm dark:bg-white dark:text-[#0f1a0c]"
+								: "text-foreground/70 hover:text-foreground dark:text-white/70 dark:hover:text-white",
 						)}
 					>
 						{modeLabel(option)}

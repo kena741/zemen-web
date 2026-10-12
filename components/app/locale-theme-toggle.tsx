@@ -32,12 +32,14 @@ function SegmentButton({
 	ariaLabel,
 	children,
 	className,
+	tone = "default",
 }: {
 	selected: boolean;
 	onClick: () => void;
 	ariaLabel: string;
 	children: React.ReactNode;
 	className?: string;
+	tone?: "default" | "onDark";
 }) {
 	return (
 		<button
@@ -50,7 +52,9 @@ function SegmentButton({
 				"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-1",
 				selected
 					? "bg-white text-foreground shadow-[0_1px_2px_rgba(0,0,0,0.08)]"
-					: "text-muted-foreground hover:text-foreground",
+					: tone === "onDark"
+						? "text-white/80 hover:text-white"
+						: "text-muted-foreground hover:text-foreground",
 				className,
 			)}
 		>
@@ -80,7 +84,7 @@ export function LocaleThemeToggle({
 			className={cn(
 				"flex items-center gap-1.5",
 				variant === "auth" &&
-					"rounded-full border border-black/5 bg-white/70 p-1 shadow-[0_1px_3px_rgba(0,0,0,0.06)] backdrop-blur-md",
+					"rounded-full border border-white/25 bg-black/25 p-1 text-white shadow-[0_1px_3px_rgba(0,0,0,0.2)] backdrop-blur-md",
 				className,
 			)}
 		>
@@ -90,6 +94,7 @@ export function LocaleThemeToggle({
 					onClick={() => setLocale("am")}
 					ariaLabel="አማርኛ"
 					className="min-w-10"
+					tone={variant === "auth" ? "onDark" : "default"}
 				>
 					አማ
 				</SegmentButton>
@@ -98,6 +103,7 @@ export function LocaleThemeToggle({
 					onClick={() => setLocale("en")}
 					ariaLabel="English"
 					className="min-w-10"
+					tone={variant === "auth" ? "onDark" : "default"}
 				>
 					EN
 				</SegmentButton>
