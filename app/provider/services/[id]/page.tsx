@@ -19,7 +19,7 @@ import {
 	AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { AppLoading } from "@/components/ui/app-loading";
-import { ChapaCheckout } from "@/components/payments/chapa-checkout";
+import { TelebirrCheckout } from "@/components/payments/telebirr-checkout";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { useLocale } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
@@ -352,7 +352,7 @@ export default function ServiceDetailPage() {
 										amount: formatAmount(featuredFee),
 									})}
 								</p>
-								<ChapaCheckout
+								<TelebirrCheckout
 									className="w-full"
 									email={user?.email}
 									firstName={user?.provider?.firstName ?? user?.name}

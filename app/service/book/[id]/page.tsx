@@ -173,8 +173,8 @@ function BookServiceForm() {
 	const [couponCode, setCouponCode] = useState("");
 	const [appliedCoupon, setAppliedCoupon] = useState<Coupon | null>(null);
 	const [couponError, setCouponError] = useState<string | null>(null);
-	const [paymentMethod, setPaymentMethod] = useState<"wallet" | "chapa">(
-		"chapa",
+	const [paymentMethod, setPaymentMethod] = useState<"wallet" | "telebirr">(
+		"telebirr",
 	);
 	const [savedAddresses, setSavedAddresses] = useState<CustomerAddress[]>([]);
 	const [payConfig, setPayConfig] = useState<PaymentMethodsConfig | null>(null);
@@ -265,13 +265,13 @@ function BookServiceForm() {
 	const hasPartialPrePayment = !isRecurring && !isCustomOffer && prePayPercent < 100;
 
 	const walletAffordable = walletBalance >= dueNow;
-	const chapaEnabled = !payConfig || payConfig.chapaEnabled;
+	const telebirrEnabled = !payConfig || payConfig.telebirrEnabled;
 	const paymentOptions = useMemo(() => {
-		const options: Array<"wallet" | "chapa"> = [];
+		const options: Array<"wallet" | "telebirr"> = [];
 		if (walletAffordable) options.push("wallet");
-		if (chapaEnabled) options.push("chapa");
+		if (telebirrEnabled) options.push("telebirr");
 		return options;
-	}, [walletAffordable, chapaEnabled]);
+	}, [walletAffordable, telebirrEnabled]);
 
 	useEffect(() => {
 		if (paymentOptions.includes(paymentMethod)) return;
@@ -281,7 +281,7 @@ function BookServiceForm() {
 
 	const paymentLabels = {
 		wallet: t("paymentWallet"),
-		chapa: t("paymentChapa"),
+		telebirr: t("paymentTelebirr"),
 	} as const;
 
 	async function applyCoupon() {
@@ -478,7 +478,7 @@ function BookServiceForm() {
 			bookingId: res.bookingId,
 		});
 		setBusy(false);
-		const chapaRes = await fetch("/api/pay/chapa", {
+		const telebirrRes = await fetch("/api/pay/telebirr", {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
 			body: JSON.stringify({
@@ -492,15 +492,26 @@ function BookServiceForm() {
 				booking_id: res.bookingId,
 			}),
 		});
-		const chapaData = (await chapaRes.json()) as {
+		const telebirrData = (await telebirrRes.json()) as {
 			checkout_url?: string;
+			tx_ref?: string;
 			error?: string;
 		};
-		if (!chapaRes.ok || !chapaData.checkout_url) {
-			setError(chapaData.error || t("bookServiceChapaFailed"));
+		if (!telebirrRes.ok || !telebirrData.checkout_url) {
+			setError(telebirrData.error || t("bookServiceTelebirrFailed"));
 			return;
 		}
-		window.location.href = chapaData.checkout_url;
+		if (telebirrData.tx_ref) {
+			savePaymentPending({
+				purpose: "booking",
+				userId: user.id,
+				accountType: "customer",
+				amount: String(dueNow),
+				bookingId: res.bookingId,
+				txRef: telebirrData.tx_ref,
+			});
+		}
+		window.location.href = telebirrData.checkout_url;
 	}
 
 	if (loading || !user) return <ServiceLoading />;

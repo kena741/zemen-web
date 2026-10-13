@@ -24,7 +24,11 @@ function PayDoneContent() {
 	const { t } = useLocale();
 	const purpose = search.get("purpose") ?? "wallet";
 	const txRef =
-		search.get("tx_ref") ?? search.get("trx_ref") ?? search.get("ref") ?? "";
+		search.get("tx_ref") ??
+		search.get("merch_order_id") ??
+		search.get("trx_ref") ??
+		search.get("ref") ??
+		"";
 	const amount = search.get("amount") ?? "";
 
 	const [status, setStatus] = useState<"verifying" | "success" | "pending" | "error">(
