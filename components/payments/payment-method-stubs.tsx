@@ -19,26 +19,12 @@ export function PaymentMethodStubs() {
 	}, []);
 
 	if (!config) return null;
-	if (!config.telebirrEnabled && !config.flutterWaveEnabled) return null;
+	if (!config.flutterWaveEnabled) return null;
 
 	return (
 		<div className="mt-3 space-y-2">
 			<p className="text-xs text-muted-foreground">{t("otherPaymentMethods")}</p>
 			<div className="flex flex-wrap gap-2">
-				{config.telebirrEnabled ? (
-					<Button
-						type="button"
-						variant="outline"
-						size="sm"
-						onClick={() =>
-							setToast(
-								t("telebirrUnavailableNamed", { name: config.telebirrName }),
-							)
-						}
-					>
-						{config.telebirrName}
-					</Button>
-				) : null}
 				{config.flutterWaveEnabled ? (
 					<Button
 						type="button"

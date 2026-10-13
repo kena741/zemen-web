@@ -30,10 +30,8 @@ import {
 	remainingAmount,
 } from "@/lib/recurring";
 import { formatAmount } from "@/services/bookings/types";
-import {
-	createCustomerBooking,
-	payBookingWithWallet,
-} from "@/services/customer/bookingsApi";
+import { createCustomerBooking, payBookingWithWallet } from "@/services/customer/bookingsApi";
+import { savePaymentPending } from "@/lib/payment-pending";
 import {
 	couponDiscount,
 	fetchCouponByCode,
@@ -48,6 +46,10 @@ import {
 	fetchCustomerAddresses,
 	type CustomerAddress,
 } from "@/services/customer/addressesApi";
+import {
+	fetchPaymentMethodsConfig,
+	type PaymentMethodsConfig,
+} from "@/services/config/paymentConfigApi";
 import { useAppDispatch } from "@/store/hooks";
 import { invalidateBookings } from "@/store/customerCacheSlice";
 import { useAuth } from "@/store/useAuth";
@@ -171,7 +173,11 @@ function BookServiceForm() {
 	const [couponCode, setCouponCode] = useState("");
 	const [appliedCoupon, setAppliedCoupon] = useState<Coupon | null>(null);
 	const [couponError, setCouponError] = useState<string | null>(null);
+	const [paymentMethod, setPaymentMethod] = useState<"wallet" | "telebirr">(
+		"telebirr",
+	);
 	const [savedAddresses, setSavedAddresses] = useState<CustomerAddress[]>([]);
+	const [payConfig, setPayConfig] = useState<PaymentMethodsConfig | null>(null);
 	const [step, setStep] = useState<1 | 2>(1);
 	const walletBalance = Number(user?.customer?.walletAmount ?? 0) || 0;
 
@@ -199,6 +205,10 @@ function BookServiceForm() {
 
 	useEffect(() => {
 		void fetchPublicCoupons().then((res) => setCoupons(res.coupons));
+	}, []);
+
+	useEffect(() => {
+		void fetchPaymentMethodsConfig().then(setPayConfig);
 	}, []);
 
 	useEffect(() => {
@@ -255,6 +265,24 @@ function BookServiceForm() {
 	const hasPartialPrePayment = !isRecurring && !isCustomOffer && prePayPercent < 100;
 
 	const walletAffordable = walletBalance >= dueNow;
+	const telebirrEnabled = !payConfig || payConfig.telebirrEnabled;
+	const paymentOptions = useMemo(() => {
+		const options: Array<"wallet" | "telebirr"> = [];
+		if (walletAffordable) options.push("wallet");
+		if (telebirrEnabled) options.push("telebirr");
+		return options;
+	}, [walletAffordable, telebirrEnabled]);
+
+	useEffect(() => {
+		if (paymentOptions.includes(paymentMethod)) return;
+		const fallback = paymentOptions[0];
+		if (fallback) setPaymentMethod(fallback);
+	}, [paymentMethod, paymentOptions]);
+
+	const paymentLabels = {
+		wallet: t("paymentWallet"),
+		telebirr: t("paymentTelebirr"),
+	} as const;
 
 	async function applyCoupon() {
 		setCouponError(null);
@@ -311,8 +339,12 @@ function BookServiceForm() {
 			setError(t("bookServicePriceRequired"));
 			return;
 		}
-		if (!isCustomOffer && dueNow > 0 && !walletAffordable) {
+		if (!isCustomOffer && dueNow > 0 && paymentOptions.length === 0) {
 			setError(t("bookServiceInsufficientWallet"));
+			return;
+		}
+		if (!isCustomOffer && dueNow > 0 && !paymentMethod) {
+			setError(t("bookServicePaymentRequired"));
 			return;
 		}
 
@@ -356,9 +388,6 @@ function BookServiceForm() {
 				paymentType: "",
 				paymentCompleted: false,
 				totalAmount: total,
-				pricingType: service.pricingType,
-				billingInterval: service.billingInterval,
-				billingIntervalCount: service.billingIntervalCount,
 			});
 			if (!bookRes.bookingId) {
 				setBusy(false);
@@ -385,7 +414,7 @@ function BookServiceForm() {
 				}
 			: null;
 
-		if (dueNow > 0 && dueNow > walletBalance) {
+		if (paymentMethod === "wallet" && dueNow > walletBalance) {
 			setBusy(false);
 			setError(t("bookServiceInsufficientWallet"));
 			return;
@@ -405,7 +434,7 @@ function BookServiceForm() {
 			description: description.trim(),
 			quantity,
 			price: unitPrice,
-			paymentType: dueNow > 0 ? "wallet" : "free",
+			paymentType: dueNow > 0 ? paymentMethod : "free",
 			paymentCompleted: dueNow <= 0,
 			coupon: couponSnapshot,
 			discount: serviceDiscount + discount,
@@ -428,18 +457,64 @@ function BookServiceForm() {
 			return;
 		}
 
-		const paid = await payBookingWithWallet({
-			bookingId: res.bookingId,
-			customerId: user.id,
-			amount: dueNow,
-		});
-		setBusy(false);
-		if (!paid.ok) {
-			setError(paid.error || t("bookServiceWalletFailed"));
+		if (paymentMethod === "wallet") {
+			const paid = await payBookingWithWallet({
+				bookingId: res.bookingId,
+				customerId: user.id,
+				amount: dueNow,
+			});
+			setBusy(false);
+			if (!paid.ok) {
+				setError(paid.error || t("bookServiceWalletFailed"));
+				return;
+			}
+			dispatch(invalidateBookings());
+			router.replace(`/service/bookings/${res.bookingId}`);
 			return;
 		}
-		dispatch(invalidateBookings());
-		router.replace(`/service/bookings/${res.bookingId}`);
+
+		savePaymentPending({
+			purpose: "booking",
+			userId: user.id,
+			accountType: "customer",
+			amount: String(dueNow),
+			bookingId: res.bookingId,
+		});
+		setBusy(false);
+		const telebirrRes = await fetch("/api/pay/telebirr", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({
+				amount: dueNow,
+				email: user.email,
+				first_name: firstName,
+				last_name: lastName,
+				phone_number: customer.phone,
+				purpose: "booking",
+				return_path: `/pay/done?purpose=booking&amount=${dueNow}`,
+				booking_id: res.bookingId,
+			}),
+		});
+		const telebirrData = (await telebirrRes.json()) as {
+			checkout_url?: string;
+			tx_ref?: string;
+			error?: string;
+		};
+		if (!telebirrRes.ok || !telebirrData.checkout_url) {
+			setError(telebirrData.error || t("bookServiceTelebirrFailed"));
+			return;
+		}
+		if (telebirrData.tx_ref) {
+			savePaymentPending({
+				purpose: "booking",
+				userId: user.id,
+				accountType: "customer",
+				amount: String(dueNow),
+				bookingId: res.bookingId,
+				txRef: telebirrData.tx_ref,
+			});
+		}
+		window.location.href = telebirrData.checkout_url;
 	}
 
 	if (loading || !user) return <ServiceLoading />;
@@ -872,7 +947,7 @@ function BookServiceForm() {
 											{isRecurring
 												? t("bookServiceFirstCycle")
 												: t("commonTotal")}
-										</span>
+									</span>
 										<span className="font-bold tabular-nums text-primary">
 											{formatAmount(total)}
 										</span>
@@ -886,14 +961,32 @@ function BookServiceForm() {
 								<p className="text-[13px] font-semibold">
 									{t("bookServicePayment")}
 								</p>
-								<p className="text-[13px] text-[#6b6b6b]">
-									{t("paymentWallet")} ({formatAmount(walletBalance)})
-								</p>
-								{!walletAffordable ? (
+								{paymentOptions.length === 0 ? (
 									<p className="text-xs text-destructive">
 										{t("bookServiceInsufficientWallet")}
 									</p>
-								) : null}
+								) : (
+									<div className="flex gap-2">
+										{paymentOptions.map((method) => (
+											<button
+												key={method}
+												type="button"
+												className={cn(
+													"h-10 flex-1 rounded-xl text-[13px] font-semibold transition-colors duration-150",
+													paymentMethod === method
+														? "bg-primary text-primary-foreground"
+														: "bg-[#f0f0ee] text-[#1a1a1a] hover:bg-[#e8e8e4]",
+												)}
+												onClick={() => setPaymentMethod(method)}
+											>
+												{paymentLabels[method]}
+												{method === "wallet"
+													? ` (${formatAmount(walletBalance)})`
+													: ""}
+											</button>
+										))}
+									</div>
+								)}
 							</div>
 						) : null}
 					</div>

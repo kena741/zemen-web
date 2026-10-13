@@ -253,7 +253,7 @@ export default function CustomerBookingDetailPage() {
 		refresh();
 	}
 
-	async function onPayNextCycleChapa() {
+	async function onPayNextCycleTelebirr() {
 		if (!booking || !user?.id || busy) return;
 		const amount = Number(booking.subTotal ?? booking.totalAmount ?? 0) || 0;
 		savePaymentPending({
@@ -268,7 +268,7 @@ export default function CustomerBookingDetailPage() {
 		});
 		setBusy(true);
 		setShowNextCycleConfirm(false);
-		const res = await fetch("/api/pay/chapa", {
+		const res = await fetch("/api/pay/telebirr", {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
 			body: JSON.stringify({
@@ -282,11 +282,28 @@ export default function CustomerBookingDetailPage() {
 				booking_id: booking.id,
 			}),
 		});
-		const data = (await res.json()) as { checkout_url?: string; error?: string };
+		const data = (await res.json()) as {
+			checkout_url?: string;
+			tx_ref?: string;
+			error?: string;
+		};
 		setBusy(false);
 		if (!res.ok || !data.checkout_url) {
-			setActionError(data.error || t("bookServiceChapaFailed"));
+			setActionError(data.error || t("bookServiceTelebirrFailed"));
 			return;
+		}
+		if (data.tx_ref) {
+			savePaymentPending({
+				purpose: "booking",
+				userId: user.id,
+				accountType: "customer",
+				amount: String(amount),
+				bookingId: booking.id,
+				nextCycle: true,
+				billingInterval: booking.service?.billingInterval ?? undefined,
+				billingIntervalCount: booking.service?.billingIntervalCount ?? undefined,
+				txRef: data.tx_ref,
+			});
 		}
 		window.location.href = data.checkout_url;
 	}
@@ -670,9 +687,9 @@ export default function CustomerBookingDetailPage() {
 								variant="outline"
 								className="flex-1"
 								disabled={busy}
-								onClick={() => void onPayNextCycleChapa()}
+								onClick={() => void onPayNextCycleTelebirr()}
 							>
-								{busy ? t("bookingStarting") : t("bookingPayWithChapa")}
+								{busy ? t("bookingStarting") : t("bookingPayWithTelebirr")}
 							</Button>
 						</div>
 						<Button

@@ -62,7 +62,8 @@ export const am: Record<MessageKey, string> = {
 	forceUpdateDefaultBody:
 		"አዲስ የዘመን ድረ-ገጽ ያስፈልጋል። እባክዎ ያድሱ ወይም የሞባይል መተግበሪያውን ይጠቀሙ።",
 	walletTopUp: "ዋሌት ሙላ",
-	payWithChapa: "በቻፓ ይክፈሉ",
+	payWithChapa: "በቴሌብር ይክፈሉ",
+	payWithTelebirr: "በቴሌብር ይክፈሉ",
 	language: "ቋንቋ",
 	theme: "ገጽታ",
 	light: "ብርሃን",
@@ -133,9 +134,9 @@ export const am: Record<MessageKey, string> = {
 	walletNoHistory: "ግብይት የለም",
 	otherPaymentMethods: "ሌሎች ዘዴዎች",
 	telebirrUnavailable:
-		"በድረ-ገጽ ላይ ቴሌብር ሙላ አልተገኘም። ቻፓን ይጠቀሙ (ቴሌብር በቻፓ ውስጥ ይገኛል)።",
+		"የቴሌብር ሙላ ለጊዜው አይገኝም። እባክዎ ቆይተው እንደገና ይሞክሩ።",
 	telebirrUnavailableNamed:
-		"{name} በድረ-ገጽ ላይ አልተገኘም። ቻፓን ይጠቀሙ (ቴሌብር በቻፓ ውስጥ ይገኛል)።",
+		"{name} ለጊዜው አይገኝም። እባክዎ ቆይተው እንደገና ይሞክሩ።",
 	flutterwaveUnavailable:
 		"ፍሌተርዌቭ በድረ-ገጽ አልተገኘም። በሞባይል መተግበሪያ ይክፈሉ።",
 	flutterwaveUnavailableNamed:
@@ -160,8 +161,9 @@ export const am: Record<MessageKey, string> = {
 	bookingPayWallet: "ከዋሌት ክፈል",
 	bookingPayWalletConfirm: "ለዚህ ቦታ ማስያዝ {amount} ከዋሌትዎ ይከፈል?",
 	bookingPaying: "በመክፈል ላይ…",
-	bookingPayChapa: "በቻፓ ክፈል",
-	bookingPayNextCycle: "ቀጣይ ዑደት በቻፓ ክፈል",
+	bookingPayChapa: "በቴሌብር ክፈል",
+	bookingPayTelebirr: "በቴሌብር ክፈል",
+	bookingPayNextCycle: "ቀጣይ ዑደት በቴሌብር ክፈል",
 	bookingStarting: "በመጀመር ላይ…",
 	bookingMessageProvider: "አቅራቢን መልእክት ላክ",
 	bookingAddReview: "ግምገማ ጨምር",
@@ -216,7 +218,8 @@ export const am: Record<MessageKey, string> = {
 	bookServiceLocationDenied: "አካባቢዎን ማግኘት አልተቻለም። ፈቃድ ይፍቀዱ እና እንደገና ይሞክሩ።",
 	bookServicePayCash: "አገልግሎት ሲጠናቀቅ በጥሬ ገንዘብ ይክፈሉ",
 	bookServicePayWallet: "ከዋሌት ቀሪ ይከፈላል",
-	bookServicePayChapa: "ቦታ ከመያዝ በፊት በቻፓ ይክፈሉ",
+	bookServicePayChapa: "ቦታ ከመያዝ በፊት በቴሌብር ይክፈሉ",
+	bookServicePayTelebirr: "ቦታ ከመያዝ በፊት በቴሌብር ይክፈሉ",
 	bookServiceCustomOfferNote: "ብጁ ዋጋ ቅናሽ · አቅራቢ ከተቀበለ በኋላ ይከፈላል",
 
 	servicesTitle: "አገልግሎቶች",
@@ -322,7 +325,8 @@ export const am: Record<MessageKey, string> = {
 	providerUpgradeShort: "ማሻሻያ",
 	providerOneTime: "አንድ ጊዜ",
 	providerChoosePaymentMethod: "የክፍያ ዘዴ ይምረጡ",
-	providerChapaPayHint: "በቻፓ በደህንነት ይክፈሉ",
+	providerChapaPayHint: "በቴሌብር በደህንነት ይክፈሉ",
+	providerTelebirrPayHint: "በቴሌብር በደህንነት ይክፈሉ",
 	providerAmountToPay: "የሚከፈል መጠን",
 	providerProceedToPay: "ለመክፈል ቀጥሉ",
 	commonCurrencyEtb: "ብር",
@@ -502,7 +506,8 @@ export const am: Record<MessageKey, string> = {
 	bookServiceCreateFailed: "ቦታ ማስያዝ መፍጠር አልተሳካም",
 	bookServiceInsufficientWallet: "የዋሌት ቀሪ ለዚህ ቦታ ማስያዝ በቂ አይደለም።",
 	bookServiceWalletFailed: "የዋሌት ክፍያ አልተሳካም",
-	bookServiceChapaFailed: "የቻፓ ክፍያ መጀመር አልተሳካም",
+	bookServiceChapaFailed: "የቴሌብር ክፍያ መጀመር አልተሳካም",
+	bookServiceTelebirrFailed: "የቴሌብር ክፍያ መጀመር አልተሳካም",
 
 	serviceAbout: "ስለ ዚህ አገልግሎት",
 	servicePriceDetail: "የዋጋ ዝርዝር",
@@ -594,7 +599,8 @@ export const am: Record<MessageKey, string> = {
 
 	paymentCash: "ጥሬ ገንዘብ",
 	paymentWallet: "ዋሌት",
-	paymentChapa: "ቻፓ",
+	paymentChapa: "ቴሌብር",
+	paymentTelebirr: "ቴሌብር",
 
 	commonViewAll: "ሁሉንም ይመልከቱ",
 	commonAccept: "ተቀበል",
@@ -857,7 +863,8 @@ export const am: Record<MessageKey, string> = {
 	bookingNextCycleNotice:
 		"የቀጣይ {period} ክፍያ ደርሷል። አገልግሎቱ እንዲቀጥል አሁን ይክፈሉ።",
 	bookingPayWithWallet: "በዋሌት ይክፈሉ",
-	bookingPayWithChapa: "በቻፓ ይክፈሉ",
+	bookingPayWithChapa: "በቴሌብር ይክፈሉ",
+	bookingPayWithTelebirr: "በቴሌብር ይክፈሉ",
 	bookingConfirmPayTitle: "ክፍያ አረጋግጥ",
 	bookingDueNow: "አሁን የሚከፈል",
 	bookingRemaining: "ቀሪ",
