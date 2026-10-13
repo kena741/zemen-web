@@ -390,23 +390,26 @@ export function LandingPage({
 								Sign in to your dashboard
 							</button>
 						</p>
+					</div>
+				</div>
+			</section>
 
-						<div className="mt-10 max-w-xl animate-[marketing-fade-up_1.05s_ease_0.3s_both]">
-							<p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#52634c]">
-								Sponsored by
-							</p>
-							<div className="relative mt-3">
-								<div
-									aria-hidden
-									className="pointer-events-none absolute inset-y-0 left-0 z-10 w-6 bg-gradient-to-r from-[#f4f8f1] to-transparent sm:w-8"
-								/>
-								<div
-									aria-hidden
-									className="pointer-events-none absolute inset-y-0 right-0 z-10 w-8 bg-gradient-to-l from-[#f4f8f1]/80 to-transparent sm:w-12"
-								/>
-								<SponsorsCarousel sponsors={SPONSORS} />
-							</div>
-						</div>
+			{/* Sponsors — directly under hero */}
+			<section className="relative z-10 border-t border-primary/8 bg-[#f4f8f1] py-8 sm:py-9">
+				<div className="mx-auto max-w-6xl px-4 sm:px-6">
+					<p className="text-center text-xs font-semibold uppercase tracking-[0.14em] text-[#52634c]">
+						Sponsored by
+					</p>
+					<div className="relative mt-5">
+						<div
+							aria-hidden
+							className="pointer-events-none absolute inset-y-0 left-0 z-10 w-6 bg-gradient-to-r from-[#f4f8f1] to-transparent sm:w-8"
+						/>
+						<div
+							aria-hidden
+							className="pointer-events-none absolute inset-y-0 right-0 z-10 w-8 bg-gradient-to-l from-[#f4f8f1] to-transparent sm:w-12"
+						/>
+						<SponsorsCarousel sponsors={SPONSORS} />
 					</div>
 				</div>
 			</section>
