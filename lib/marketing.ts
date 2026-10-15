@@ -5,8 +5,9 @@ export const WHATSAPP_PHONE = "251951175959";
 export const WHATSAPP_DISPLAY = "+251 951 175 959";
 export const WHATSAPP_URL = `https://wa.me/${WHATSAPP_PHONE}`;
 export const PLAY_STORE_URL =
-	"https://play.google.com/store/apps/details?id=com.zemenservice";
-export const APP_STORE_URL = "https://apps.apple.com/app/zemen-service";
+	"https://play.google.com/store/apps/details?id=com.zemen.service";
+export const APP_STORE_URL =
+	"https://apps.apple.com/us/app/zemen-service/id6763512421";
 
 /** Public trust metrics for marketing / SEO surfaces. */
 export const TRUST_STATS = [
