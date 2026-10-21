@@ -232,7 +232,9 @@ export async function fetchOfferById(
 			offer.customerName =
 				offer.customerName || customerDisplayName(customerRow);
 			const phone = asNullableString(
-				customerRow.phoneNumber ?? customerRow.phone_number,
+				customerRow.phone ??
+					customerRow.phoneNumber ??
+					customerRow.phone_number,
 			);
 			const code = asNullableString(
 				customerRow.countryCode ?? customerRow.country_code,

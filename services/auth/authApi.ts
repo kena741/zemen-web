@@ -120,15 +120,10 @@ export async function phoneAlreadyRegistered(
 		return { taken: Boolean(data?.[0]?.id) };
 	}
 
-	const cols = ["phone", "phoneNumber"] as const;
 	const { data, error } = await getSupabase()
 		.from("customer")
 		.select("id")
-		.or(
-			cols
-				.flatMap((col) => variants.map((v) => `${col}.eq.${v}`))
-				.join(","),
-		)
+		.or(variants.map((v) => `phone.eq.${v}`).join(","))
 		.limit(1);
 	if (error) {
 		console.error("phoneAlreadyRegistered customer", error);
