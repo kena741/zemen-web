@@ -292,21 +292,60 @@ export async function acceptJobBid(params: {
 export async function cancelCustomerBooking(
 	bookingId: string,
 	reason?: string,
-): Promise<{ ok: boolean; error: string | null }> {
-	const { error } = await getSupabase()
-		.from("booked_service")
-		.update({
-			status: "rejected",
-			reason: (reason ?? "").trim() || "Cancelled by customer",
-		})
-		.eq("id", bookingId)
-		.in("status", ["pending", "accepted"]);
-
-	if (error) {
-		console.error("cancelCustomerBooking", error);
-		return { ok: false, error: error.message };
+): Promise<{
+	ok: boolean;
+	newBalance: number | null;
+	refunded: number;
+	error: string | null;
+}> {
+	const { data, error: sessionError } = await getSupabase().auth.getSession();
+	if (sessionError) {
+		return {
+			ok: false,
+			newBalance: null,
+			refunded: 0,
+			error: sessionError.message,
+		};
 	}
-	return { ok: true, error: null };
+	const token = data.session?.access_token;
+	if (!token) {
+		return {
+			ok: false,
+			newBalance: null,
+			refunded: 0,
+			error: "You must be signed in.",
+		};
+	}
+
+	const res = await fetch("/api/bookings/cancel", {
+		method: "POST",
+		headers: {
+			Authorization: `Bearer ${token}`,
+			"Content-Type": "application/json",
+		},
+		body: JSON.stringify({ bookingId, reason }),
+	});
+	const json = (await res.json()) as {
+		ok?: boolean;
+		newBalance?: number;
+		refunded?: number;
+		error?: string;
+	};
+	if (!res.ok || !json.ok) {
+		return {
+			ok: false,
+			newBalance: null,
+			refunded: 0,
+			error: json.error || "Failed to cancel booking.",
+		};
+	}
+	return {
+		ok: true,
+		newBalance:
+			typeof json.newBalance === "number" ? json.newBalance : null,
+		refunded: Number(json.refunded ?? 0) || 0,
+		error: null,
+	};
 }
 
 export async function completeCustomerBooking(

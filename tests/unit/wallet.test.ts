@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { customerBookingRefundAmount } from "@/services/customer/bookingRefund";
 
 /** Mirrors requestWithdrawal: queue-only, check full wallet (no soft-hold). */
 function canRequest(balance: number, amount: number): boolean {
@@ -41,5 +42,22 @@ describe("rejected withdrawal refund", () => {
 		expect(rejectedRefundCredit(10)).toBe(10);
 		expect(rejectedRefundCredit(0)).toBe(0);
 		expect(rejectedRefundCredit(0.009)).toBe(0);
+	});
+});
+
+describe("customer booking refund", () => {
+	it("refunds the sum of valid booking debits rounded to cents", () => {
+		expect(
+			customerBookingRefundAmount([
+				{ amount: "25.36" },
+				{ amount: 14.5 },
+				{ amount: "invalid" },
+				{ amount: -3 },
+			]),
+		).toBe(39.86);
+	});
+
+	it("does not refund when there are no valid debits", () => {
+		expect(customerBookingRefundAmount([{ amount: 0 }, { amount: null }])).toBe(0);
 	});
 });
