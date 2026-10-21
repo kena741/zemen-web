@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
 
 import {
-	finalizeBookingChapaPayment,
+	finalizeBookingTelebirrPayment,
 	verifyAndCreditWallet,
 	verifyFeaturedRequestPayment,
 	verifyProviderActivation,
 	verifyServiceTierPayment,
-} from "@/services/payments/chapaServer";
+} from "@/services/payments/telebirrServer";
 import {
 	getAuthUserFromRequest,
 	getSupabaseAdmin,
@@ -39,14 +39,20 @@ async function sleep(ms: number) {
 export async function POST(request: Request) {
 	const auth = await getAuthUserFromRequest(request);
 	if (!auth.userId) {
-		return NextResponse.json({ error: auth.error ?? "Unauthorized" }, { status: 401 });
+		return NextResponse.json(
+			{ error: auth.error ?? "Unauthorized" },
+			{ status: 401 },
+		);
 	}
 
 	try {
 		const body = (await request.json()) as VerifyBody;
 		const txRef = (body.tx_ref ?? "").trim();
 		if (!txRef) {
-			return NextResponse.json({ error: "tx_ref is required" }, { status: 400 });
+			return NextResponse.json(
+				{ error: "tx_ref is required" },
+				{ status: 400 },
+			);
 		}
 
 		const purpose = (body.purpose ?? "wallet").trim();
@@ -84,9 +90,13 @@ export async function POST(request: Request) {
 						body.providerId?.trim() ||
 						(await resolveProviderIdForAuthUser(admin, auth.userId));
 					if (!providerId) {
-						return NextResponse.json({ error: "Provider not found" }, { status: 404 });
+						return NextResponse.json(
+							{ error: "Provider not found" },
+							{ status: 404 },
+						);
 					}
 					result = await verifyProviderActivation({
+						admin,
 						txRef,
 						providerId,
 						amount,
@@ -96,9 +106,12 @@ export async function POST(request: Request) {
 				case "booking": {
 					const bookingId = (body.bookingId ?? "").trim();
 					if (!bookingId) {
-						return NextResponse.json({ error: "bookingId is required" }, { status: 400 });
+						return NextResponse.json(
+							{ error: "bookingId is required" },
+							{ status: 400 },
+						);
 					}
-					result = await finalizeBookingChapaPayment({
+					result = await finalizeBookingTelebirrPayment({
 						admin,
 						txRef,
 						bookingId,
@@ -120,9 +133,13 @@ export async function POST(request: Request) {
 						body.providerId?.trim() ||
 						(await resolveProviderIdForAuthUser(admin, auth.userId));
 					if (!providerId) {
-						return NextResponse.json({ error: "Provider not found" }, { status: 404 });
+						return NextResponse.json(
+							{ error: "Provider not found" },
+							{ status: 404 },
+						);
 					}
 					result = await verifyServiceTierPayment({
+						admin,
 						txRef,
 						providerId,
 						userId: auth.userId,
@@ -144,6 +161,7 @@ export async function POST(request: Request) {
 						);
 					}
 					result = await verifyFeaturedRequestPayment({
+						admin,
 						txRef,
 						providerId,
 						userId: auth.userId,
@@ -153,11 +171,18 @@ export async function POST(request: Request) {
 					break;
 				}
 				default:
-					return NextResponse.json({ error: "Unknown payment purpose" }, { status: 400 });
+					return NextResponse.json(
+						{ error: "Unknown payment purpose" },
+						{ status: 400 },
+					);
 			}
 
 			if (result.ok) {
-				return NextResponse.json({ status: "success", purpose, tx_ref: txRef });
+				return NextResponse.json({
+					status: "success",
+					purpose,
+					tx_ref: txRef,
+				});
 			}
 
 			lastError = result.error;
@@ -169,7 +194,8 @@ export async function POST(request: Request) {
 			{ status: 202 },
 		);
 	} catch (error: unknown) {
-		const message = error instanceof Error ? error.message : "Unexpected error";
+		const message =
+			error instanceof Error ? error.message : "Unexpected error";
 		return NextResponse.json({ error: message }, { status: 500 });
 	}
 }

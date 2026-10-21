@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { CheckCircle2Icon, CircleIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 
-import { ChapaCheckout } from "@/components/payments/chapa-checkout";
+import { TelebirrCheckout } from "@/components/payments/telebirr-checkout";
 import { ProfileBackLink } from "@/components/provider/profile-back-link";
 import { ServiceLoading } from "@/components/service/service-loading";
 import { Button } from "@/components/ui/button";
@@ -35,7 +35,7 @@ export default function ProviderTierPage() {
 	const [loading, setLoading] = useState(true);
 	const [selectedMax, setSelectedMax] = useState<number | null>(null);
 	const [error, setError] = useState<string | null>(null);
-	const [payMethod, setPayMethod] = useState<"chapa">("chapa");
+	const [payMethod, setPayMethod] = useState<"telebirr">("telebirr");
 
 	useEffect(() => {
 		void (async () => {
@@ -205,24 +205,24 @@ export default function ProviderTierPage() {
 							</p>
 							<button
 								type="button"
-								onClick={() => setPayMethod("chapa")}
+								onClick={() => setPayMethod("telebirr")}
 								className={cn(
 									"mt-3 flex w-full items-center gap-3 rounded-[10px] bg-white p-3 text-left ring-1",
-									payMethod === "chapa"
+									payMethod === "telebirr"
 										? "ring-[1.6px] ring-primary"
 										: "ring-black/20",
 								)}
 							>
 								<span className="flex size-8 items-center justify-center rounded-md bg-primary/10 text-xs font-bold text-primary">
-									C
+									T
 								</span>
 								<span className="min-w-0 flex-1">
-									<p className="text-sm font-semibold">{t("paymentChapa")}</p>
+									<p className="text-sm font-semibold">{t("paymentTelebirr")}</p>
 									<p className="text-xs text-muted-foreground">
-										{t("providerChapaPayHint")}
+										{t("providerTelebirrPayHint")}
 									</p>
 								</span>
-								{payMethod === "chapa" ? (
+								{payMethod === "telebirr" ? (
 									<CheckCircle2Icon className="size-5 text-primary" />
 								) : (
 									<CircleIcon className="size-5 text-muted-foreground" />
@@ -242,7 +242,7 @@ export default function ProviderTierPage() {
 										{formatAmount(payAmount)}
 									</span>
 								</div>
-								<ChapaCheckout
+								<TelebirrCheckout
 									variant="cta"
 									email={user?.email}
 									firstName={user?.provider?.firstName ?? user?.name}

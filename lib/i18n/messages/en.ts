@@ -64,7 +64,8 @@ export const en = {
 	forceUpdateDefaultBody:
 		"A newer version of Zemen Web is required. Please refresh or use the mobile app.",
 	walletTopUp: "Top up wallet",
-	payWithChapa: "Pay with Chapa",
+	payWithChapa: "Pay with Telebirr",
+	payWithTelebirr: "Pay with Telebirr",
 	language: "Language",
 	theme: "Theme",
 	light: "Light",
@@ -135,9 +136,9 @@ export const en = {
 	walletNoHistory: "No transactions yet",
 	otherPaymentMethods: "Other methods",
 	telebirrUnavailable:
-		"Telebirr top-up is not available on web yet. Use Chapa (Telebirr is available inside Chapa checkout).",
+		"Telebirr top-up is temporarily unavailable. Please try again shortly.",
 	telebirrUnavailableNamed:
-		"{name} top-up is not available on web yet. Use Chapa (Telebirr is available inside Chapa checkout).",
+		"{name} top-up is temporarily unavailable. Please try again shortly.",
 	flutterwaveUnavailable:
 		"Flutterwave top-up is not available on web yet. Complete payment in the mobile app.",
 	flutterwaveUnavailableNamed:
@@ -162,8 +163,9 @@ export const en = {
 	bookingPayWallet: "Pay with wallet",
 	bookingPayWalletConfirm: "Pay {amount} from your wallet for this booking?",
 	bookingPaying: "Paying…",
-	bookingPayChapa: "Pay with Chapa",
-	bookingPayNextCycle: "Pay next cycle with Chapa",
+	bookingPayChapa: "Pay with Telebirr",
+	bookingPayTelebirr: "Pay with Telebirr",
+	bookingPayNextCycle: "Pay next cycle with Telebirr",
 	bookingStarting: "Starting…",
 	bookingMessageProvider: "Message provider",
 	bookingAddReview: "Add review",
@@ -217,7 +219,8 @@ export const en = {
 	bookServiceLocationDenied: "Could not get your location. Allow location access and try again.",
 	bookServicePayCash: "Pay the provider in cash when the service is done",
 	bookServicePayWallet: "Paid from your wallet balance",
-	bookServicePayChapa: "Pay now with Chapa before booking is confirmed",
+	bookServicePayChapa: "Pay now with Telebirr before booking is confirmed",
+	bookServicePayTelebirr: "Pay now with Telebirr before booking is confirmed",
 	bookServiceCustomOfferNote: "Sent as custom price offer · pay after provider accepts",
 
 	servicesTitle: "Services",
@@ -325,7 +328,8 @@ export const en = {
 	providerUpgradeShort: "Upgrade",
 	providerOneTime: "One-time",
 	providerChoosePaymentMethod: "Choose payment method",
-	providerChapaPayHint: "Pay securely with Chapa",
+	providerChapaPayHint: "Pay securely with Telebirr",
+	providerTelebirrPayHint: "Pay securely with Telebirr",
 	providerAmountToPay: "Amount to pay",
 	providerProceedToPay: "Proceed to Pay",
 	commonCurrencyEtb: "ETB",
@@ -512,7 +516,8 @@ export const en = {
 	bookServiceInsufficientWallet:
 		"Wallet balance is insufficient for this booking.",
 	bookServiceWalletFailed: "Wallet payment failed",
-	bookServiceChapaFailed: "Could not start Chapa payment",
+	bookServiceChapaFailed: "Could not start Telebirr payment",
+	bookServiceTelebirrFailed: "Could not start Telebirr payment",
 
 	serviceAbout: "About this service",
 	servicePriceDetail: "Price Detail",
@@ -602,7 +607,8 @@ export const en = {
 
 	paymentCash: "Cash",
 	paymentWallet: "Wallet",
-	paymentChapa: "Chapa",
+	paymentChapa: "Telebirr",
+	paymentTelebirr: "Telebirr",
 
 	commonViewAll: "View all",
 	commonAccept: "Accept",
@@ -857,7 +863,8 @@ export const en = {
 	bookingNextCycleNotice:
 		"Payment for the next {period} is due. Pay now to keep the service active.",
 	bookingPayWithWallet: "Pay with wallet",
-	bookingPayWithChapa: "Pay with Chapa",
+	bookingPayWithChapa: "Pay with Telebirr",
+	bookingPayWithTelebirr: "Pay with Telebirr",
 	bookingConfirmPayTitle: "Confirm payment",
 	bookingDueNow: "Due now",
 	bookingRemaining: "Remaining",
