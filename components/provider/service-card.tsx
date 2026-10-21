@@ -50,6 +50,7 @@ export function ServiceCard({
 	const dispatch = useAppDispatch();
 	const [imgFailed, setImgFailed] = useState(false);
 	const [busy, setBusy] = useState(false);
+	const [toggleError, setToggleError] = useState<string | null>(null);
 	const image = service.serviceImage[0];
 	const rating = averageRating(service);
 	const discount = discountLabel(service.discount);
@@ -61,12 +62,17 @@ export function ServiceCard({
 	async function onToggleActive(next: boolean) {
 		if (busy || service.archived) return;
 		setBusy(true);
+		setToggleError(null);
 		const res = await setServiceActive({
 			serviceId: service.id,
 			active: next,
 		});
 		setBusy(false);
-		if (!res.ok) return;
+		if (!res.ok) {
+			setToggleError(res.error ?? t("commonError"));
+			return;
+		}
+		// Patch only — do not invalidate (that clears cache and sticks the list on loading)
 		dispatch(
 			patchProviderService({
 				id: service.id,
@@ -176,43 +182,51 @@ export function ServiceCard({
 			</Link>
 
 			{showActiveToggle && !service.archived ? (
-				<label
-					className="flex items-center justify-between gap-2 border-t border-black/5 px-3 py-2"
+				<div
+					className="border-t border-black/5 px-2.5 py-2"
 					onClick={(e) => e.stopPropagation()}
+					onKeyDown={(e) => e.stopPropagation()}
 				>
-					<span className="text-[11px] font-medium text-muted-foreground">
-						{service.status
-							? t("providerServiceActive")
-							: t("providerServiceInactive")}
-					</span>
-					<input
-						type="checkbox"
-						role="switch"
-						checked={service.status}
+					<button
+						type="button"
 						disabled={busy}
-						aria-label={
-							service.status
-								? t("providerServiceDeactivate")
-								: t("providerServiceActivate")
-						}
-						onChange={(e) => void onToggleActive(e.target.checked)}
-						className="peer sr-only"
-					/>
-					<span
+						aria-pressed={service.status}
+						onClick={() => void onToggleActive(!service.status)}
 						className={cn(
-							"relative h-5 w-9 shrink-0 rounded-full transition-colors",
-							service.status ? "bg-primary" : "bg-muted",
+							"flex h-9 w-full items-center justify-center gap-2 rounded-lg text-[12px] font-semibold transition-colors",
+							"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
+							service.status
+								? "bg-muted text-foreground hover:bg-muted/80"
+								: "bg-primary text-primary-foreground hover:bg-primary/90",
 							busy && "opacity-60",
 						)}
 					>
 						<span
 							className={cn(
-								"absolute top-0.5 left-0.5 size-4 rounded-full bg-white shadow transition-transform",
-								service.status && "translate-x-4",
+								"relative h-4 w-7 shrink-0 rounded-full transition-colors",
+								service.status ? "bg-primary" : "bg-white/40",
 							)}
-						/>
-					</span>
-				</label>
+							aria-hidden
+						>
+							<span
+								className={cn(
+									"absolute top-0.5 left-0.5 size-3 rounded-full bg-white shadow transition-transform",
+									service.status && "translate-x-3",
+								)}
+							/>
+						</span>
+						{busy
+							? t("commonLoading")
+							: service.status
+								? t("providerServiceDeactivate")
+								: t("providerServiceActivate")}
+					</button>
+					{toggleError ? (
+						<p className="mt-1 text-center text-[10px] text-destructive">
+							{toggleError}
+						</p>
+					) : null}
+				</div>
 			) : null}
 		</div>
 	);

@@ -170,7 +170,7 @@ export default function ProviderServicesPage() {
 							key={service.id}
 							service={service}
 							compact
-							showActiveToggle={filter !== "archived"}
+							showActiveToggle
 							providerName={user?.name}
 							providerImage={user?.provider?.profileImage}
 						/>

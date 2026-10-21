@@ -1,6 +1,10 @@
 import { BOOKING_STATUS } from "@/lib/booking-status";
 import { getSupabase } from "@/lib/supabase/client";
 import {
+	canCreateService,
+	fetchProviderTierMax,
+} from "@/services/provider/tiersApi";
+import {
 	SERVICE_CONSTRAINTS,
 	generateServiceSlug,
 	mapServiceRow,
@@ -269,6 +273,29 @@ export async function upsertService(params: {
 }): Promise<{ serviceId: string | null; error: string | null }> {
 	const validation = validateServiceForm(params.input);
 	if (validation) return { serviceId: null, error: validation };
+
+	// ponytail: unpaid providers get FREE_SERVICE_LIMIT listings; enforce on create
+	if (!params.isEdit) {
+		const tierMax = await fetchProviderTierMax(params.input.providerId);
+		const { data: existing, error: countErr } = await getSupabase()
+			.from("service")
+			.select("id, isArchived")
+			.eq("provider_id", params.input.providerId);
+		if (countErr) {
+			console.error("upsertService count", countErr);
+			return { serviceId: null, error: countErr.message };
+		}
+		const activeCount = (existing ?? []).filter(
+			(row) => !(row as { isArchived?: boolean }).isArchived,
+		).length;
+		if (!canCreateService(tierMax, activeCount)) {
+			return {
+				serviceId: null,
+				error:
+					"Service limit reached. Upgrade your listing plan to add more.",
+			};
+		}
+	}
 
 	const upload = await uploadServiceImages({
 		authUserId: params.authUserId,

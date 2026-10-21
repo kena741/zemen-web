@@ -73,21 +73,31 @@ function VerifyPhoneForm() {
 	const [busy, setBusy] = useState(false);
 	const autoSendStarted = useRef(false);
 
+	async function guardSignupPhone(): Promise<boolean> {
+		if (!isSignup) return true;
+		if (!phone.trim()) {
+			setError(t("commonError"));
+			return false;
+		}
+		const check = await phoneAlreadyRegistered(phone, mode);
+		if (check.taken == null) {
+			setError(t("commonError"));
+			return false;
+		}
+		if (check.taken) {
+			setError(t("signupPhoneAlreadyRegistered"));
+			return false;
+		}
+		return true;
+	}
+
 	async function sendCode() {
 		setBusy(true);
 		setError(null);
-		if (isSignup) {
-			const check = await phoneAlreadyRegistered(phone, mode);
-			if (check.taken == null) {
-				setBusy(false);
-				setError(t("commonError"));
-				return;
-			}
-			if (check.taken) {
-				setBusy(false);
-				setError(t("signupPhoneAlreadyRegistered"));
-				return;
-			}
+		const allowed = await guardSignupPhone();
+		if (!allowed) {
+			setBusy(false);
+			return;
 		}
 		const result = await sendPhoneOtp(phone);
 		setBusy(false);
