@@ -30,8 +30,15 @@ import {
 	remainingAmount,
 } from "@/lib/recurring";
 import { formatAmount } from "@/services/bookings/types";
-import { createCustomerBooking, payBookingWithWallet } from "@/services/customer/bookingsApi";
-import { savePaymentPending } from "@/lib/payment-pending";
+import {
+	cancelCustomerBooking,
+	createCustomerBooking,
+	payBookingWithWallet,
+} from "@/services/customer/bookingsApi";
+import {
+	clearPaymentPending,
+	savePaymentPending,
+} from "@/lib/payment-pending";
 import {
 	couponDiscount,
 	fetchCouponByCode,
@@ -477,30 +484,54 @@ function BookServiceForm() {
 			amount: String(dueNow),
 			bookingId: res.bookingId,
 		});
-		setBusy(false);
-		const chapaRes = await fetch("/api/pay/chapa", {
-			method: "POST",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({
-				amount: dueNow,
-				email: user.email,
-				first_name: firstName,
-				last_name: lastName,
-				phone_number: customer.phone,
-				purpose: "booking",
-				return_path: `/pay/done?purpose=booking&amount=${dueNow}`,
-				booking_id: res.bookingId,
-			}),
-		});
-		const chapaData = (await chapaRes.json()) as {
-			checkout_url?: string;
-			error?: string;
-		};
-		if (!chapaRes.ok || !chapaData.checkout_url) {
-			setError(chapaData.error || t("bookServiceChapaFailed"));
+		try {
+			const chapaRes = await fetch("/api/pay/chapa", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					amount: dueNow,
+					email: user.email,
+					first_name: firstName,
+					last_name: lastName,
+					phone_number: customer.phone,
+					purpose: "booking",
+					return_path: `/pay/done?purpose=booking&amount=${dueNow}`,
+					booking_id: res.bookingId,
+				}),
+			});
+			const chapaData = (await chapaRes.json()) as {
+				checkout_url?: string;
+				error?: string;
+			};
+			if (!chapaRes.ok || !chapaData.checkout_url) {
+				const cancelRes = await cancelCustomerBooking(
+					res.bookingId,
+					"Payment initialization failed",
+				);
+				clearPaymentPending();
+				setBusy(false);
+				setError(
+					cancelRes.ok
+						? chapaData.error || t("bookServiceChapaFailed")
+						: `${chapaData.error || t("bookServiceChapaFailed")} ${cancelRes.error}`,
+				);
+				return;
+			}
+			window.location.assign(chapaData.checkout_url);
+		} catch {
+			const cancelRes = await cancelCustomerBooking(
+				res.bookingId,
+				"Payment initialization failed",
+			);
+			clearPaymentPending();
+			setBusy(false);
+			setError(
+				cancelRes.ok
+					? t("bookServiceChapaFailed")
+					: `${t("bookServiceChapaFailed")} ${cancelRes.error}`,
+			);
 			return;
 		}
-		window.location.href = chapaData.checkout_url;
 	}
 
 	if (loading || !user) return <ServiceLoading />;
