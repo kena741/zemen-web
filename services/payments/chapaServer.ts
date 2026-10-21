@@ -203,7 +203,7 @@ export async function finalizeBookingChapaPayment(params: {
 
 	const { data: booking } = await params.admin
 		.from("booked_service")
-		.select("id, paymentCompleted, totalAmount")
+		.select("id, customer_id, customerId, paymentCompleted, totalAmount")
 		.eq("id", params.bookingId)
 		.maybeSingle();
 
@@ -212,6 +212,42 @@ export async function finalizeBookingChapaPayment(params: {
 	const row = booking as Record<string, unknown>;
 	if (row.paymentCompleted === true) {
 		return { ok: true, error: null };
+	}
+
+	const customerId = String(row.customer_id ?? row.customerId ?? "").trim();
+	const paidAmount = Number(verified.data.amount ?? params.fallbackAmount);
+	if (!customerId || !Number.isFinite(paidAmount) || paidAmount <= 0) {
+		return { ok: false, error: "Unable to record booking payment." };
+	}
+
+	const { data: existingPayment, error: paymentLookupError } = await params.admin
+		.from("wallet_transaction")
+		.select("id")
+		.eq("transactionId", params.bookingId)
+		.eq("type", "customer")
+		.eq("paymentType", "chapa")
+		.eq("isCredit", false)
+		.maybeSingle();
+	if (paymentLookupError) {
+		return { ok: false, error: paymentLookupError.message };
+	}
+	if (!existingPayment) {
+		const { error: paymentError } = await params.admin
+			.from("wallet_transaction")
+			.insert({
+				id: crypto.randomUUID(),
+				userId: customerId,
+				amount: paidAmount.toFixed(2),
+				createdDate: new Date().toISOString(),
+				paymentType: "chapa",
+				transactionId: params.bookingId,
+				isCredit: false,
+				type: "customer",
+				note: "Service fee paid via Chapa",
+			});
+		if (paymentError) {
+			return { ok: false, error: paymentError.message };
+		}
 	}
 
 	const { error } = await params.admin

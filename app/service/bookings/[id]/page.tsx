@@ -154,6 +154,16 @@ export default function CustomerBookingDetailPage() {
 			setActionError(res.error);
 			return;
 		}
+		if (res.newBalance != null && user?.customer) {
+			dispatch(
+				patchAuthUser({
+					customer: {
+						...user.customer,
+						walletAmount: String(res.newBalance),
+					},
+				}),
+			);
+		}
 		setShowCancel(false);
 		dispatch(invalidateBookings());
 		refresh();
