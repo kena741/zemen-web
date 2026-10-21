@@ -83,8 +83,7 @@ export async function verifyAndCreditWallet(params: {
 
 	const verified = await verifyChapaTransaction(secret, params.txRef);
 	if (!verified.ok) {
-		const pending = verified.error.toLowerCase().includes("unknown");
-		return { ok: false, pending, error: verified.error };
+		return { ok: false, pending: verified.pending, error: verified.error };
 	}
 
 	const creditAmount = resolveChapaWalletCreditAmount(
@@ -159,8 +158,47 @@ export async function finalizeBookingChapaPayment(params: {
 
 	const verified = await verifyChapaTransaction(secret, params.txRef);
 	if (!verified.ok) {
-		const pending = verified.error.toLowerCase().includes("unknown");
-		return { ok: false, pending, error: verified.error };
+		if (verified.failed) {
+			const { data: booking, error: bookingError } = await params.admin
+				.from("booked_service")
+				.select("paymentCompleted, paymentType, status")
+				.eq("id", params.bookingId)
+				.maybeSingle();
+
+			if (bookingError) {
+				return {
+					ok: false,
+					error: `${verified.error}; failed to check booking status: ${bookingError.message}`,
+				};
+			}
+
+			const row = booking as Record<string, unknown> | null;
+			if (
+				row?.status === "pending" &&
+				row.paymentCompleted === false &&
+				String(row.paymentType ?? "").toLowerCase() === "chapa"
+			) {
+				const { error: rejectError } = await params.admin
+					.from("booked_service")
+					.update({ status: "rejected", reason: "Payment failed" })
+					.eq("id", params.bookingId)
+					.eq("status", "pending")
+					.eq("paymentCompleted", false)
+					.eq("paymentType", "chapa");
+
+				if (rejectError) {
+					return {
+						ok: false,
+						error: `${verified.error}; failed to reject unpaid booking: ${rejectError.message}`,
+					};
+				}
+			}
+		}
+		return {
+			ok: false,
+			pending: verified.pending,
+			error: verified.error,
+		};
 	}
 
 	const { data: booking } = await params.admin

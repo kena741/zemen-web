@@ -55,6 +55,7 @@ export async function POST(request: Request) {
 
 		const maxAttempts = 3;
 		let lastError: string | null = "Verification failed";
+		let pending = false;
 
 		for (let attempt = 1; attempt <= maxAttempts; attempt++) {
 			if (attempt > 1) await sleep(2000);
@@ -97,6 +98,30 @@ export async function POST(request: Request) {
 					const bookingId = (body.bookingId ?? "").trim();
 					if (!bookingId) {
 						return NextResponse.json({ error: "bookingId is required" }, { status: 400 });
+					}
+					const { data: booking, error: bookingError } = await admin
+						.from("booked_service")
+						.select("customer_id, customerId")
+						.eq("id", bookingId)
+						.maybeSingle();
+					if (bookingError) {
+						return NextResponse.json(
+							{ error: bookingError.message },
+							{ status: 500 },
+						);
+					}
+					if (!booking) {
+						return NextResponse.json(
+							{ error: "Booking not found" },
+							{ status: 404 },
+						);
+					}
+					const bookingRow = booking as Record<string, unknown>;
+					const bookingCustomerId = String(
+						bookingRow.customer_id ?? bookingRow.customerId ?? "",
+					).trim();
+					if (bookingCustomerId !== auth.userId) {
+						return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 					}
 					result = await finalizeBookingChapaPayment({
 						admin,
@@ -161,12 +186,13 @@ export async function POST(request: Request) {
 			}
 
 			lastError = result.error;
+			pending = Boolean(result.pending);
 			if (!result.pending) break;
 		}
 
 		return NextResponse.json(
-			{ status: "pending", error: lastError, tx_ref: txRef },
-			{ status: 202 },
+			{ status: pending ? "pending" : "failed", error: lastError, tx_ref: txRef },
+			{ status: pending ? 202 : 402 },
 		);
 	} catch (error: unknown) {
 		const message = error instanceof Error ? error.message : "Unexpected error";
