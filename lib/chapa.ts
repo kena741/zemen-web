@@ -71,6 +71,13 @@ export function isChapaSuccessStatus(status: string | undefined): boolean {
 	return ["success", "successful", "completed", "paid"].includes(normalized);
 }
 
+export function isChapaPendingStatus(status: string | undefined): boolean {
+	const normalized = (status || "").toLowerCase().trim();
+	return ["", "unknown", "pending", "processing", "initiated"].includes(
+		normalized,
+	);
+}
+
 const CHAPA_DOMESTIC_FEE_RATE = 0.025;
 const CHAPA_LEGACY_DOMESTIC_FEE_RATE = 0.035;
 
@@ -93,7 +100,10 @@ function resolveInferredNetFromGross(gross: number): number | null {
 export async function verifyChapaTransaction(
 	secretKey: string,
 	txRef: string,
-): Promise<{ ok: true; data: ChapaVerifyTransaction } | { ok: false; error: string }> {
+): Promise<
+	| { ok: true; data: ChapaVerifyTransaction }
+	| { ok: false; error: string; pending?: boolean; failed?: boolean }
+> {
 	const response = await fetch(
 		`https://api.chapa.co/v1/transaction/verify/${encodeURIComponent(txRef)}`,
 		{
@@ -110,12 +120,28 @@ export async function verifyChapaTransaction(
 	};
 
 	if (!response.ok || payload.status !== "success") {
-		return { ok: false, error: payload.message || "Chapa verify failed" };
+		const error = payload.message || "Chapa verify failed";
+		const normalizedError = error.toLowerCase();
+		return {
+			ok: false,
+			error,
+			pending:
+				normalizedError.includes("unknown") ||
+				normalizedError.includes("not found") ||
+				normalizedError.includes("pending") ||
+				normalizedError.includes("processing"),
+		};
 	}
 
 	const txStatus = String(payload.data?.status ?? "").toLowerCase();
 	if (!isChapaSuccessStatus(txStatus)) {
-		return { ok: false, error: `Chapa status is ${txStatus || "unknown"}` };
+		const pending = isChapaPendingStatus(txStatus);
+		return {
+			ok: false,
+			error: `Chapa status is ${txStatus || "unknown"}`,
+			pending,
+			failed: !pending,
+		};
 	}
 
 	return { ok: true, data: payload.data ?? {} };
