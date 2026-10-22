@@ -44,10 +44,8 @@ export default function NewServicePage() {
 		() => services.filter((s) => !s.archived).length,
 		[services],
 	);
-	const limit =
-		tierMax == null ? null : serviceCreateLimit(tierMax);
-	const allowed =
-		tierMax != null && canCreateService(tierMax, activeCount);
+	const limit = tierMax == null ? null : serviceCreateLimit(tierMax);
+	const allowed = tierMax != null && canCreateService(tierMax, activeCount);
 	const onFree = tierMax != null && isOnFreeServicePlan(tierMax);
 
 	if (!providerId || !authUserId || servicesLoading || tierMax == null) {
@@ -85,35 +83,26 @@ export default function NewServicePage() {
 	}
 
 	return (
-		<div className="relative mx-auto max-w-2xl pb-8">
-			<div
-				aria-hidden
-				className="pointer-events-none absolute -top-8 right-0 h-48 w-48 rounded-full bg-primary/8 blur-3xl"
-			/>
-			<ProfileBackLink
-				href="/provider/services"
-				label={t("providerServicesTitle")}
-			/>
-			<header className="mt-4 space-y-1.5">
-				<p className="font-mono text-[11px] font-semibold tracking-[0.16em] text-primary/70 uppercase">
-					{t("providerServicesTitle")}
-				</p>
-				<h1 className="text-[26px] leading-[1.15] font-semibold tracking-tight text-foreground text-balance sm:text-[30px]">
+		<div className="mx-auto max-w-2xl pb-8">
+			<div className="flex items-center gap-1">
+				<ProfileBackLink
+					href="/provider/services"
+					label=""
+					className="mb-0 size-10 shrink-0 justify-center px-0"
+				/>
+				<h1 className="text-[22px] font-semibold tracking-tight text-foreground">
 					{t("providerAddService")}
 				</h1>
-				<p className="max-w-md text-[14px] leading-snug text-muted-foreground text-pretty">
-					{t("providerServiceCreateSubtitle")}
+			</div>
+			{onFree ? (
+				<p className="mt-1 text-[13px] text-muted-foreground">
+					{t("providerFreeServiceLimit", {
+						used: activeCount,
+						limit: limit ?? 0,
+					})}
 				</p>
-				{onFree ? (
-					<p className="text-[13px] text-muted-foreground">
-						{t("providerFreeServiceLimit", {
-							used: activeCount,
-							limit: limit ?? 0,
-						})}
-					</p>
-				) : null}
-			</header>
-			<div className="mt-6">
+			) : null}
+			<div className="mt-5">
 				<ServiceForm
 					mode="create"
 					providerId={providerId}

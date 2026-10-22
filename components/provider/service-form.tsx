@@ -41,38 +41,7 @@ const INTERVAL_OPTIONS = [
 ] as const;
 
 const fieldClass =
-	"w-full rounded-xl border-0 bg-[#eef3ea] px-3.5 py-3 text-[14px] text-foreground outline-none transition-[box-shadow,background-color] placeholder:text-muted-foreground/70 focus:bg-white focus:ring-2 focus:ring-primary/25";
-
-function Section({
-	step,
-	title,
-	hint,
-	children,
-}: {
-	step: string;
-	title: string;
-	hint?: string;
-	children: ReactNode;
-}) {
-	return (
-		<section className="relative space-y-3 pt-1">
-			<div className="flex items-end gap-3">
-				<span className="font-mono text-[10px] font-semibold tracking-[0.14em] text-primary/70">
-					{step}
-				</span>
-				<div className="min-w-0 flex-1 border-b border-primary/10 pb-1.5">
-					<h2 className="text-[15px] font-semibold tracking-tight text-foreground text-balance">
-						{title}
-					</h2>
-					{hint ? (
-						<p className="mt-0.5 text-[12px] text-muted-foreground">{hint}</p>
-					) : null}
-				</div>
-			</div>
-			{children}
-		</section>
-	);
-}
+	"h-12 w-full rounded-xl border border-[#cfd8c9] bg-white px-4 text-[15px] text-foreground outline-none transition-[box-shadow,border-color] placeholder:text-muted-foreground/60 focus:border-primary focus:ring-2 focus:ring-primary/20";
 
 function Chip({
 	selected,
@@ -97,7 +66,7 @@ function Chip({
 				"disabled:cursor-not-allowed disabled:opacity-40",
 				selected
 					? "bg-primary text-primary-foreground shadow-sm"
-					: "bg-[#e8efe3] text-foreground hover:bg-[#dce8d4]",
+					: "bg-[#f3f5f1] text-foreground hover:bg-[#e8ebe4]",
 			)}
 		>
 			{children}
@@ -105,7 +74,7 @@ function Chip({
 	);
 }
 
-function ToggleRow({
+function ToggleCard({
 	checked,
 	onChange,
 	label,
@@ -123,35 +92,50 @@ function ToggleRow({
 			aria-checked={checked}
 			onClick={() => onChange(!checked)}
 			className={cn(
-				"flex w-full items-center justify-between gap-4 rounded-2xl px-4 py-3.5 text-left transition-colors duration-150",
-				"bg-[#eef3ea] hover:bg-[#e4ecde]",
+				"flex w-full items-center justify-between gap-4 rounded-xl bg-[#f5f5f5] px-4 py-3.5 text-left transition-colors duration-150",
+				"hover:bg-[#efefef]",
 				"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
 			)}
 		>
 			<span className="min-w-0">
-				<span className="block text-[14px] font-medium text-foreground">
+				<span className="block text-[15px] font-semibold text-foreground">
 					{label}
 				</span>
 				{description ? (
-					<span className="mt-0.5 block text-[12px] text-muted-foreground">
+					<span className="mt-0.5 block text-[12px] leading-snug text-muted-foreground">
 						{description}
 					</span>
 				) : null}
 			</span>
 			<span
 				className={cn(
-					"relative h-6 w-11 shrink-0 rounded-full transition-colors duration-150",
-					checked ? "bg-primary" : "bg-black/15",
+					"relative h-7 w-12 shrink-0 rounded-full transition-colors duration-150",
+					checked ? "bg-primary" : "bg-[#d0d0d0]",
 				)}
 			>
 				<span
 					className={cn(
-						"absolute top-0.5 left-0.5 size-5 rounded-full bg-white shadow transition-transform duration-150",
+						"absolute top-0.5 left-0.5 size-6 rounded-full bg-white shadow transition-transform duration-150",
 						checked && "translate-x-5",
 					)}
 				/>
 			</span>
 		</button>
+	);
+}
+
+function SuffixField({
+	suffix,
+	className,
+	...props
+}: React.ComponentProps<"input"> & { suffix: string }) {
+	return (
+		<div className="relative">
+			<input {...props} className={cn(fieldClass, "pr-12", className)} />
+			<span className="pointer-events-none absolute top-1/2 right-4 -translate-y-1/2 text-[14px] font-medium text-muted-foreground">
+				{suffix}
+			</span>
+		</div>
 	);
 }
 
@@ -336,6 +320,7 @@ export function ServiceForm({
 				setError(
 					`Discount must be between ${SERVICE_CONSTRAINTS.minDiscount} and ${SERVICE_CONSTRAINTS.maxDiscount}.`,
 				);
+				setBusy(false);
 				return;
 			}
 		}
@@ -382,142 +367,255 @@ export function ServiceForm({
 		onSuccess(res.serviceId);
 	}
 
-	const descLen = description.trim().length;
+	const descLen = description.length;
 
 	return (
-		<form onSubmit={(e) => void handleSubmit(e)} className="space-y-6 pb-28">
+		<form onSubmit={(e) => void handleSubmit(e)} className="space-y-4 pb-28">
 			{error ? (
 				<div
 					role="alert"
-					className="rounded-2xl bg-destructive/10 px-4 py-3 text-[14px] text-destructive"
+					className="rounded-xl bg-destructive/10 px-4 py-3 text-[14px] text-destructive"
 				>
 					{error}
 				</div>
 			) : null}
 
-			<Section step="01" title={t("providerServiceName")}>
-				<input
-					id="name"
-					required
-					value={serviceName}
-					onChange={(e) => setServiceName(e.target.value)}
-					placeholder={t("providerServiceNamePlaceholder")}
-					className={fieldClass}
-				/>
-			</Section>
-
-			<Section
-				step="02"
-				title={t("commonCategory")}
-				hint={t("providerSelectCategory")}
-			>
-				{loadingMeta ? (
-					<p className="text-[13px] text-muted-foreground">
-						{t("commonLoading")}
-					</p>
-				) : (
-					<div className="space-y-3">
-						<SearchableSelect
-							options={categories.map((c) => ({
-								id: c.id,
-								label: c.categoryName ?? c.id,
-							}))}
-							value={categoryId}
-							onChange={(id) => {
-								setCategoryId(id);
-								setSubCategoryId("");
+			{/* Images — dashed picker first, matching mobile */}
+			<div className="space-y-3">
+				{imageSlotsUsed === 0 && slotsLeft > 0 ? (
+					<label className="flex min-h-[140px] cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-[#b8c4b0] bg-white px-4 py-8 text-center transition-colors hover:bg-[#fafbf9]">
+						<ImagePlusIcon className="size-8 text-muted-foreground/70" />
+						<span className="text-[15px] font-medium text-foreground">
+							{t("providerChooseImage")}
+						</span>
+						<span className="text-[13px] text-muted-foreground">
+							{t("providerMaxImages", {
+								count: SERVICE_CONSTRAINTS.maxImages,
+							})}
+						</span>
+						<input
+							type="file"
+							accept="image/*"
+							multiple
+							className="sr-only"
+							onChange={(e) => {
+								onPickFiles(e.target.files);
+								e.target.value = "";
 							}}
-							placeholder={t("providerSelectCategory")}
 						/>
-						{categoryId ? (
-							<div className="space-y-1.5">
-								<p className="text-[12px] font-medium text-muted-foreground">
-									{t("providerSubcategory")}
-								</p>
-								<SearchableSelect
-									options={subCategories.map((s) => ({
-										id: s.id,
-										label: s.subCategoryName ?? s.id,
-									}))}
-									value={subCategoryId}
-									onChange={setSubCategoryId}
-									placeholder={t("providerSelectSubcategory")}
-									disabled={subCategories.length === 0}
+					</label>
+				) : (
+					<div className="flex flex-wrap gap-3">
+						{existingImages.map((url) => (
+							<div
+								key={url}
+								className="relative size-[88px] overflow-hidden rounded-xl border border-[#cfd8c9] bg-[#f5f5f5]"
+							>
+								<Image
+									src={url}
+									alt=""
+									fill
+									className="object-cover"
+									unoptimized
+									sizes="88px"
 								/>
+								<button
+									type="button"
+									onClick={() => removeExisting(url)}
+									className="absolute top-1.5 right-1.5 rounded-full bg-black/55 p-1 text-white"
+									aria-label={t("commonClear")}
+								>
+									<XIcon className="size-3.5" />
+								</button>
 							</div>
+						))}
+						{newPreviews.map((url, i) => (
+							<div
+								key={url}
+								className="relative size-[88px] overflow-hidden rounded-xl border border-[#cfd8c9] bg-[#f5f5f5]"
+							>
+								{/* eslint-disable-next-line @next/next/no-img-element */}
+								<img src={url} alt="" className="size-full object-cover" />
+								<button
+									type="button"
+									onClick={() => removeNew(i)}
+									className="absolute top-1.5 right-1.5 rounded-full bg-black/55 p-1 text-white"
+									aria-label={t("commonClear")}
+								>
+									<XIcon className="size-3.5" />
+								</button>
+							</div>
+						))}
+						{slotsLeft > 0 ? (
+							<label className="flex size-[88px] cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-[#b8c4b0] bg-white text-muted-foreground transition-colors hover:bg-[#fafbf9]">
+								<ImagePlusIcon className="size-5" />
+								<span className="text-[11px] font-medium">
+									{t("commonAdd")}
+								</span>
+								<input
+									type="file"
+									accept="image/*"
+									multiple
+									className="sr-only"
+									onChange={(e) => {
+										onPickFiles(e.target.files);
+										e.target.value = "";
+									}}
+								/>
+							</label>
 						) : null}
 					</div>
 				)}
-			</Section>
+			</div>
 
-			<Section step="03" title={t("bookServicePayment")}>
-				{(recurringSettings.enabled || isRecurring) ? (
-					<div className="grid grid-cols-2 gap-2 rounded-2xl bg-[#e8efe3] p-1.5">
-						{(
-							[
-								["ONE_TIME", t("pricingOneTime")],
-								["RECURRING", t("pricingRecurring")],
-							] as const
-						).map(([value, label]) => (
-							<button
-								key={value}
-								type="button"
-								aria-pressed={pricingType === value}
-								onClick={() => setPricingType(value)}
-								className={cn(
-									"rounded-xl py-3 text-[14px] font-semibold transition-colors duration-150",
-									"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
-									pricingType === value
-										? "bg-white text-primary shadow-sm"
-										: "text-muted-foreground hover:text-foreground",
-								)}
-							>
-								{label}
-							</button>
-						))}
-					</div>
-				) : null}
+			<input
+				id="name"
+				required
+				value={serviceName}
+				onChange={(e) => setServiceName(e.target.value)}
+				placeholder={t("providerServiceNamePlaceholder")}
+				aria-label={t("providerServiceName")}
+				className={fieldClass}
+			/>
 
-				<div className="grid gap-3 sm:grid-cols-2">
-					<label className="block space-y-1.5">
-						<span className="text-[12px] font-medium text-muted-foreground">
-							{t("commonPrice")} (ETB)
-						</span>
+			{loadingMeta ? (
+				<p className="text-[13px] text-muted-foreground">{t("commonLoading")}</p>
+			) : (
+				<div className="space-y-3">
+					<SearchableSelect
+						options={categories.map((c) => ({
+							id: c.id,
+							label: c.categoryName ?? c.id,
+						}))}
+						value={categoryId}
+						onChange={(id) => {
+							setCategoryId(id);
+							setSubCategoryId("");
+						}}
+						placeholder={t("providerSelectCategory")}
+					/>
+					{categoryId ? (
+						<SearchableSelect
+							options={subCategories.map((s) => ({
+								id: s.id,
+								label: s.subCategoryName ?? s.id,
+							}))}
+							value={subCategoryId}
+							onChange={setSubCategoryId}
+							placeholder={t("providerSelectSubcategory")}
+							disabled={subCategories.length === 0}
+						/>
+					) : null}
+				</div>
+			)}
+
+			<PlacesAddressField
+				value={address}
+				required
+				label={undefined}
+				compact
+				placeholder={t("providerServiceAddress")}
+				onChange={setAddress}
+				onLocationChange={(loc) => {
+					if (!loc) return;
+					setLatitude(loc.lat);
+					setLongitude(loc.lng);
+				}}
+				inputClassName="h-12 rounded-xl border border-[#cfd8c9] bg-white px-4 text-[15px] shadow-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/20"
+				className="space-y-2"
+			/>
+
+			<SuffixField
+				type="number"
+				min={SERVICE_CONSTRAINTS.minPrice}
+				step="1"
+				required
+				value={price}
+				onChange={(e) => setPrice(e.target.value)}
+				placeholder={t("commonPrice")}
+				aria-label={`${t("commonPrice")} (ETB)`}
+				suffix="ETB"
+			/>
+
+			<div className="space-y-1.5">
+				<SuffixField
+					type="number"
+					min={SERVICE_CONSTRAINTS.minDiscount}
+					max={SERVICE_CONSTRAINTS.maxDiscount}
+					step="1"
+					value={discount}
+					onChange={(e) => setDiscount(e.target.value)}
+					placeholder={t("commonDiscount")}
+					aria-label={t("commonDiscount")}
+					suffix="%"
+				/>
+				<p className="px-0.5 text-[12px] text-muted-foreground">
+					{t("providerAdminCommission")}: -- · Max{" "}
+					{SERVICE_CONSTRAINTS.maxDiscount}%
+				</p>
+			</div>
+
+			{!isRecurring ? (
+				<fieldset className="relative rounded-xl border border-[#cfd8c9] px-3 pb-2 pt-3">
+					<legend className="ml-1 px-1 text-[12px] font-medium text-muted-foreground">
+						{t("providerPrePaymentPercent")}
+					</legend>
+					<div className="relative">
 						<input
 							type="number"
-							min={SERVICE_CONSTRAINTS.minPrice}
+							inputMode="numeric"
+							min={SERVICE_CONSTRAINTS.minPrePaymentPercent}
+							max={SERVICE_CONSTRAINTS.maxPrePaymentPercent}
 							step="1"
 							required
-							value={price}
-							onChange={(e) => setPrice(e.target.value)}
-							className={fieldClass}
+							value={prePaymentInput}
+							onChange={(e) => {
+								const raw = e.target.value.replace(/[^\d]/g, "");
+								setPrePaymentInput(raw);
+								const n = Number(raw);
+								if (
+									Number.isFinite(n) &&
+									n >= SERVICE_CONSTRAINTS.minPrePaymentPercent &&
+									n <= SERVICE_CONSTRAINTS.maxPrePaymentPercent
+								) {
+									setPrePaymentPercent(n);
+								}
+							}}
+							onBlur={() => {
+								const n = Number(prePaymentInput);
+								const clamped = Number.isFinite(n)
+									? Math.min(
+											SERVICE_CONSTRAINTS.maxPrePaymentPercent,
+											Math.max(
+												SERVICE_CONSTRAINTS.minPrePaymentPercent,
+												Math.round(n),
+											),
+										)
+									: SERVICE_CONSTRAINTS.maxPrePaymentPercent;
+								setPrePaymentPercent(clamped);
+								setPrePaymentInput(String(clamped));
+							}}
+							className="h-10 w-full border-0 bg-transparent px-1 text-[15px] outline-none"
 						/>
-					</label>
-					<label className="block space-y-1.5">
-						<span className="text-[12px] font-medium text-muted-foreground">
-							{t("commonDiscount")} % ({t("commonOptional")}) ·{" "}
-							{SERVICE_CONSTRAINTS.minDiscount}–
-							{SERVICE_CONSTRAINTS.maxDiscount}
+						<span className="pointer-events-none absolute top-1/2 right-1 -translate-y-1/2 text-[14px] font-medium text-muted-foreground">
+							%
 						</span>
-						<input
-							type="number"
-							min={SERVICE_CONSTRAINTS.minDiscount}
-							max={SERVICE_CONSTRAINTS.maxDiscount}
-							step="1"
-							value={discount}
-							onChange={(e) => setDiscount(e.target.value)}
-							placeholder={`${SERVICE_CONSTRAINTS.minDiscount}–${SERVICE_CONSTRAINTS.maxDiscount}`}
-							className={fieldClass}
-						/>
-					</label>
-				</div>
+					</div>
+				</fieldset>
+			) : null}
 
-				{isRecurring ? (
-					<div className="space-y-3">
-						<p className="text-[12px] font-medium tracking-wide text-muted-foreground uppercase">
-							{t("billingInterval")}
-						</p>
-						<div className="flex flex-wrap gap-2">
+			{(recurringSettings.enabled || isRecurring) ? (
+				<div className="space-y-3">
+					<ToggleCard
+						checked={isRecurring}
+						onChange={(on) =>
+							setPricingType(on ? "RECURRING" : "ONE_TIME")
+						}
+						label={t("providerEnableRecurringPayment")}
+						description={t("providerRecurringPaymentDesc")}
+					/>
+					{isRecurring ? (
+						<div className="flex flex-wrap gap-2 px-0.5">
 							{intervalOptions.map((o) => (
 								<Chip
 									key={o.value}
@@ -528,172 +626,45 @@ export function ServiceForm({
 								</Chip>
 							))}
 						</div>
-					</div>
-				) : (
-					<div className="space-y-2">
-						<label className="block space-y-1.5">
-							<span className="text-[12px] font-medium text-muted-foreground">
-								{t("providerPrePaymentPercent")}
-							</span>
-							<div className="relative">
-								<input
-									type="number"
-									inputMode="numeric"
-									min={SERVICE_CONSTRAINTS.minPrePaymentPercent}
-									max={SERVICE_CONSTRAINTS.maxPrePaymentPercent}
-									step="1"
-									required
-									value={prePaymentInput}
-									onChange={(e) => {
-										const raw = e.target.value.replace(/[^\d]/g, "");
-										setPrePaymentInput(raw);
-										const n = Number(raw);
-										if (
-											Number.isFinite(n) &&
-											n >= SERVICE_CONSTRAINTS.minPrePaymentPercent &&
-											n <= SERVICE_CONSTRAINTS.maxPrePaymentPercent
-										) {
-											setPrePaymentPercent(n);
-										}
-									}}
-									onBlur={() => {
-										const n = Number(prePaymentInput);
-										const clamped = Number.isFinite(n)
-											? Math.min(
-													SERVICE_CONSTRAINTS.maxPrePaymentPercent,
-													Math.max(
-														SERVICE_CONSTRAINTS.minPrePaymentPercent,
-														Math.round(n),
-													),
-												)
-											: SERVICE_CONSTRAINTS.maxPrePaymentPercent;
-										setPrePaymentPercent(clamped);
-										setPrePaymentInput(String(clamped));
-									}}
-									className={cn(fieldClass, "pr-10")}
-								/>
-								<span className="pointer-events-none absolute top-1/2 right-3.5 -translate-y-1/2 text-sm text-muted-foreground">
-									%
-								</span>
-							</div>
-						</label>
-						<p className="text-[12px] text-muted-foreground">
-							{t("providerPrePaymentRangeHint", {
-								min: SERVICE_CONSTRAINTS.minPrePaymentPercent,
-								max: SERVICE_CONSTRAINTS.maxPrePaymentPercent,
-							})}
-						</p>
-					</div>
-				)}
+					) : null}
+				</div>
+			) : null}
 
-				{!isRecurring ? (
-					<ToggleRow
-						checked={allowsCustomOffer}
-						onChange={setAllowsCustomOffer}
-						label={t("providerAllowCustomPrice")}
-					/>
-				) : null}
-			</Section>
+			{!isRecurring ? (
+				<ToggleCard
+					checked={allowsCustomOffer}
+					onChange={setAllowsCustomOffer}
+					label={t("providerAllowCustomPrice")}
+					description={t("providerAllowCustomPriceDesc")}
+				/>
+			) : null}
 
-			<Section step="04" title={t("requestDescription")}>
+			<ToggleCard
+				checked={status}
+				onChange={setStatus}
+				label={t("providerServiceActiveListing")}
+				description={t("providerServiceVisibleHint")}
+			/>
+
+			<div className="relative">
 				<textarea
 					required
 					rows={5}
 					value={description}
-					onChange={(e) => setDescription(e.target.value)}
-					className={cn(fieldClass, "min-h-[140px] resize-y leading-relaxed")}
+					onChange={(e) =>
+						setDescription(
+							e.target.value.slice(0, SERVICE_CONSTRAINTS.maxDescription),
+						)
+					}
+					placeholder={t("requestDescription")}
+					className={cn(
+						"min-h-[120px] w-full resize-y rounded-xl border border-[#cfd8c9] bg-white px-4 py-3 pb-8 text-[15px] leading-relaxed text-foreground outline-none transition-[box-shadow,border-color] placeholder:text-muted-foreground/60 focus:border-primary focus:ring-2 focus:ring-primary/20",
+					)}
 				/>
-				<p className="text-[12px] text-muted-foreground tabular-nums">
-					{descLen}/{SERVICE_CONSTRAINTS.minDescription} min ·{" "}
-					{SERVICE_CONSTRAINTS.maxDescription} max
+				<p className="pointer-events-none absolute right-3 bottom-3 text-[12px] tabular-nums text-muted-foreground">
+					{descLen} / {SERVICE_CONSTRAINTS.maxDescription}
 				</p>
-			</Section>
-
-			<Section step="05" title={t("commonAddress")}>
-				<div className="rounded-2xl bg-[#eef3ea] p-3 [&_input]:border-0 [&_input]:bg-white/80 [&_input]:shadow-none">
-					<PlacesAddressField
-						value={address}
-						required
-						onChange={setAddress}
-						onLocationChange={(loc) => {
-							if (!loc) return;
-							setLatitude(loc.lat);
-							setLongitude(loc.lng);
-						}}
-					/>
-				</div>
-			</Section>
-
-			<Section
-				step="06"
-				title={t("providerServiceImages")}
-				hint={`${imageSlotsUsed}/${SERVICE_CONSTRAINTS.maxImages}`}
-			>
-				<div className="flex flex-wrap gap-3">
-					{existingImages.map((url) => (
-						<div
-							key={url}
-							className="relative size-[88px] overflow-hidden rounded-2xl bg-[#e8efe3]"
-						>
-							<Image
-								src={url}
-								alt=""
-								fill
-								className="object-cover"
-								unoptimized
-								sizes="88px"
-							/>
-							<button
-								type="button"
-								onClick={() => removeExisting(url)}
-								className="absolute top-1.5 right-1.5 rounded-full bg-black/55 p-1 text-white"
-								aria-label={t("commonClear")}
-							>
-								<XIcon className="size-3.5" />
-							</button>
-						</div>
-					))}
-					{newPreviews.map((url, i) => (
-						<div
-							key={url}
-							className="relative size-[88px] overflow-hidden rounded-2xl bg-[#e8efe3]"
-						>
-							{/* eslint-disable-next-line @next/next/no-img-element */}
-							<img src={url} alt="" className="size-full object-cover" />
-							<button
-								type="button"
-								onClick={() => removeNew(i)}
-								className="absolute top-1.5 right-1.5 rounded-full bg-black/55 p-1 text-white"
-								aria-label={t("commonClear")}
-							>
-								<XIcon className="size-3.5" />
-							</button>
-						</div>
-					))}
-					{slotsLeft > 0 ? (
-						<label className="flex size-[88px] cursor-pointer flex-col items-center justify-center gap-1 rounded-2xl border border-dashed border-primary/25 bg-[#eef3ea] text-primary transition-colors hover:bg-[#e4ecde]">
-							<ImagePlusIcon className="size-5" />
-							<span className="text-[11px] font-medium">{t("commonAdd")}</span>
-							<input
-								type="file"
-								accept="image/*"
-								multiple
-								className="sr-only"
-								onChange={(e) => {
-									onPickFiles(e.target.files);
-									e.target.value = "";
-								}}
-							/>
-						</label>
-					) : null}
-				</div>
-			</Section>
-
-			<ToggleRow
-				checked={status}
-				onChange={setStatus}
-				label={t("providerServiceActiveListing")}
-			/>
+			</div>
 
 			{mode === "edit" ? (
 				<p className="text-[12px] text-muted-foreground">
@@ -707,17 +678,13 @@ export function ServiceForm({
 						type="submit"
 						disabled={busy}
 						className={cn(
-							"h-12 w-full rounded-2xl bg-primary text-[15px] font-semibold text-primary-foreground shadow-[0_8px_24px_-8px_rgba(23,67,9,0.55)] transition-[transform,opacity] duration-150",
+							"h-12 w-full rounded-xl bg-primary text-[16px] font-semibold text-primary-foreground shadow-[0_8px_24px_-8px_rgba(23,67,9,0.55)] transition-[transform,opacity] duration-150",
 							"hover:opacity-95 active:scale-[0.99]",
 							"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2",
 							"disabled:cursor-not-allowed disabled:opacity-60",
 						)}
 					>
-						{busy
-							? t("commonSaving")
-							: mode === "edit"
-								? t("commonSaveChanges")
-								: t("providerAddService")}
+						{busy ? t("commonSaving") : t("commonSave")}
 					</button>
 				</div>
 			</div>

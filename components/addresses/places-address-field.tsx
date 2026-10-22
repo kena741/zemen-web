@@ -69,6 +69,7 @@ export function PlacesAddressField({
 	required,
 	className,
 	inputClassName,
+	placeholder,
 	compact = false,
 }: {
 	id?: string;
@@ -79,6 +80,7 @@ export function PlacesAddressField({
 	required?: boolean;
 	className?: string;
 	inputClassName?: string;
+	placeholder?: string;
 	compact?: boolean;
 }) {
 	const { t } = useLocale();
@@ -231,7 +233,7 @@ export function PlacesAddressField({
 					required={required}
 					value={value}
 					onChange={(e) => onChange(e.target.value)}
-					placeholder={t("bookServiceAddressPlaceholder")}
+					placeholder={placeholder ?? t("bookServiceAddressPlaceholder")}
 					className={cn("bg-white", inputClassName)}
 					autoComplete="street-address"
 				/>

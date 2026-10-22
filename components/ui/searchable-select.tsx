@@ -17,6 +17,8 @@ export function SearchableSelect({
 	placeholder,
 	disabled,
 	emptyLabel = "No matches",
+	className,
+	triggerClassName,
 }: {
 	options: SearchableOption[];
 	value: string;
@@ -24,6 +26,8 @@ export function SearchableSelect({
 	placeholder: string;
 	disabled?: boolean;
 	emptyLabel?: string;
+	className?: string;
+	triggerClassName?: string;
 }) {
 	const [open, setOpen] = useState(false);
 	const [query, setQuery] = useState("");
@@ -48,7 +52,7 @@ export function SearchableSelect({
 	}, [open]);
 
 	return (
-		<div ref={rootRef} className="relative">
+		<div ref={rootRef} className={cn("relative", className)}>
 			<button
 				type="button"
 				disabled={disabled}
@@ -59,9 +63,10 @@ export function SearchableSelect({
 					setQuery("");
 				}}
 				className={cn(
-					"flex h-11 w-full items-center justify-between gap-2 rounded-xl border-0 bg-[#eef3ea] px-4 text-left text-[15px] outline-none transition-[box-shadow,background-color]",
-					"focus-visible:bg-white focus-visible:ring-2 focus-visible:ring-primary/25",
+					"flex h-12 w-full items-center justify-between gap-2 rounded-xl border border-[#cfd8c9] bg-white px-4 text-left text-[15px] outline-none transition-[box-shadow,border-color]",
+					"focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/20",
 					disabled && "opacity-60",
+					triggerClassName,
 				)}
 			>
 				<span

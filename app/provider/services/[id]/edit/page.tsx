@@ -34,13 +34,17 @@ export default function EditServicePage() {
 	}
 
 	return (
-		<div className="mx-auto max-w-2xl">
-			<ProfileBackLink
-				href={id ? `/provider/services/${id}` : "/provider/services"}
-				label={t("commonBack")}
-			/>
-			<p className="admin-eyebrow">{t("providerServicesTitle")}</p>
-			<h1 className="admin-page-title mt-1">{t("providerServiceEdit")}</h1>
+		<div className="mx-auto max-w-2xl pb-8">
+			<div className="flex items-center gap-1">
+				<ProfileBackLink
+					href={id ? `/provider/services/${id}` : "/provider/services"}
+					label=""
+					className="mb-0 size-10 shrink-0 justify-center px-0"
+				/>
+				<h1 className="text-[22px] font-semibold tracking-tight text-foreground">
+					{t("providerServiceEdit")}
+				</h1>
+			</div>
 
 			{loading ? (
 				<AppLoading compact />
@@ -49,7 +53,7 @@ export default function EditServicePage() {
 					{ownershipError || loadError || t("providerServiceNotFound")}
 				</p>
 			) : (
-				<div className="mt-6 rounded-xl border border-border bg-white p-4 shadow-xs sm:p-5">
+				<div className="mt-5">
 					<ServiceForm
 						mode="edit"
 						providerId={providerId}
