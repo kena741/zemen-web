@@ -101,29 +101,130 @@ export async function fetchProviderTierMax(
 	);
 }
 
-/** Unpaid providers may create this many listings before buying a plan.
- * ponytail: free-category carve-out (cleaning/chef…) not implemented — no
- * fetchable free-services source in web or mobile snapshot; keep global slot. */
+/**
+ * Paid-plan create cap when unpaid had a legacy 1-slot allotment.
+ * Free categories (see fetchFreeServiceCategories) never consume this.
+ */
 export const FREE_SERVICE_LIMIT = 1;
 
-/** Effective create/list cap: paid tier, unlimited (<0), or free allotment when unpaid. */
+/** Effective create/list cap for *paid-plan* (non-free-category) listings. */
 export function serviceCreateLimit(tierMax: number): number {
 	const max = Number(tierMax) || 0;
 	if (isUnlimitedTier(max)) return Number.POSITIVE_INFINITY;
 	if (max >= 1) return max;
-	return FREE_SERVICE_LIMIT;
+	// Unpaid: no non-free slot — free categories only until upgrade.
+	return 0;
 }
 
 export function canCreateService(
 	tierMax: number,
-	activeServiceCount: number,
+	planUsageCount: number,
 ): boolean {
-	return activeServiceCount < serviceCreateLimit(tierMax);
+	return planUsageCount < serviceCreateLimit(tierMax);
 }
 
 export function isOnFreeServicePlan(tierMax: number): boolean {
 	const max = Number(tierMax) || 0;
 	return max === 0;
+}
+
+export type FreeServiceCategories = {
+	ids: string[];
+	/** Lowercase category name fragments / exact names from settings or defaults. */
+	names: string[];
+};
+
+/** Fallback when app_settings has no free_service_categories list. */
+const DEFAULT_FREE_CATEGORY_NAMES = ["cleaning", "chef", "cook"];
+
+/**
+ * Free listing categories from `app_settings.constant`:
+ * `free_service_categories` | `free_services` (ids and/or names).
+ */
+export async function fetchFreeServiceCategories(): Promise<FreeServiceCategories> {
+	const { data, error } = await getSupabase()
+		.from("app_settings")
+		.select("data")
+		.eq("id", "constant")
+		.maybeSingle();
+
+	if (error || !data) {
+		return { ids: [], names: [...DEFAULT_FREE_CATEGORY_NAMES] };
+	}
+
+	const root = parseObjectValue(
+		(data as { data?: unknown } | null)?.data ?? data,
+	);
+	const raw =
+		root.free_service_categories ??
+		root.freeServiceCategories ??
+		root.free_services ??
+		root.freeServices;
+
+	const ids: string[] = [];
+	const names: string[] = [];
+
+	if (Array.isArray(raw)) {
+		for (const item of raw) {
+			if (typeof item === "string") {
+				const s = item.trim();
+				if (!s) continue;
+				if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s)) {
+					ids.push(s);
+				} else {
+					names.push(s.toLowerCase());
+				}
+				continue;
+			}
+			if (item && typeof item === "object") {
+				const row = item as Record<string, unknown>;
+				if (row.id != null) ids.push(String(row.id).trim());
+				const label = row.categoryName ?? row.category_name ?? row.name;
+				if (label != null) names.push(String(label).trim().toLowerCase());
+			}
+		}
+	}
+
+	if (ids.length === 0 && names.length === 0) {
+		return { ids: [], names: [...DEFAULT_FREE_CATEGORY_NAMES] };
+	}
+	return { ids, names: names.filter(Boolean) };
+}
+
+export function isFreeServiceCategory(
+	categoryId: string | null | undefined,
+	categoryName: string | null | undefined,
+	free: FreeServiceCategories,
+): boolean {
+	const id = (categoryId ?? "").trim();
+	if (id && free.ids.includes(id)) return true;
+	const name = (categoryName ?? "").trim().toLowerCase();
+	if (!name) return false;
+	return free.names.some((n) => n && (name === n || name.includes(n)));
+}
+
+export function countPlanUsageServices(
+	services: Array<{
+		archived?: boolean;
+		categoryId?: string | null;
+		categoryName?: string | null;
+	}>,
+	free: FreeServiceCategories,
+): number {
+	return services.filter((s) => {
+		if (s.archived) return false;
+		return !isFreeServiceCategory(s.categoryId, s.categoryName, free);
+	}).length;
+}
+
+/** Free categories always allowed; non-free require paid tier capacity. */
+export function canCreateServiceListing(params: {
+	tierMax: number;
+	planUsageCount: number;
+	categoryIsFree: boolean;
+}): boolean {
+	if (params.categoryIsFree) return true;
+	return canCreateService(params.tierMax, params.planUsageCount);
 }
 
 /** Mobile ServiceTierUtils.upgradeAmount — charge delta, not full tier price. */

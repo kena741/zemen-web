@@ -748,10 +748,15 @@ export const en = {
 	providerSelectCategory: "Category",
 	providerSelectSubcategory: "Subcategory",
 	providerFreeServiceLimit:
-		"Free plan: {used}/{limit} services used. Upgrade to add more.",
+		"Plan listings: {used}/{limit} (free categories do not count). Upgrade for more paid categories.",
 	providerFreeServiceUpgrade: "Upgrade plan",
 	providerServiceLimitReached:
 		"Service limit reached ({used}/{limit}). Upgrade your plan to add more.",
+	providerFreeCategoryHint:
+		"Cleaning, chef, and other free categories can be posted without a plan. Other categories require an upgrade.",
+	providerPaidCategoryNeedsUpgrade:
+		"Paid categories need a listing plan.",
+	providerPlanUsage: "Plan listings: {used}/{limit}",
 	providerServiceImages: "Images",
 	providerServiceActiveListing: "Active",
 	providerServiceEditPendingHint:

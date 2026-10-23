@@ -1,8 +1,12 @@
 import { BOOKING_STATUS } from "@/lib/booking-status";
 import { getSupabase } from "@/lib/supabase/client";
 import {
-	canCreateService,
+	canCreateServiceListing,
+	countPlanUsageServices,
+	fetchFreeServiceCategories,
 	fetchProviderTierMax,
+	isFreeServiceCategory,
+	isOnFreeServicePlan,
 } from "@/services/provider/tiersApi";
 import {
 	SERVICE_CONSTRAINTS,
@@ -274,26 +278,59 @@ export async function upsertService(params: {
 	const validation = validateServiceForm(params.input);
 	if (validation) return { serviceId: null, error: validation };
 
-	// ponytail: unpaid providers get FREE_SERVICE_LIMIT listings; enforce on create
+	// Free categories never consume plan slots; non-free need paid tier capacity.
 	if (!params.isEdit) {
-		const tierMax = await fetchProviderTierMax(params.input.providerId);
-		const { data: existing, error: countErr } = await getSupabase()
-			.from("service")
-			.select("id, isArchived")
-			.eq("provider_id", params.input.providerId);
-		if (countErr) {
-			console.error("upsertService count", countErr);
-			return { serviceId: null, error: countErr.message };
-		}
-		const activeCount = (existing ?? []).filter(
-			(row) => !(row as { isArchived?: boolean }).isArchived,
-		).length;
-		if (!canCreateService(tierMax, activeCount)) {
-			return {
-				serviceId: null,
-				error:
-					"Service limit reached. Upgrade your listing plan to add more.",
-			};
+		const [tierMax, freeCats] = await Promise.all([
+			fetchProviderTierMax(params.input.providerId),
+			fetchFreeServiceCategories(),
+		]);
+		const categoryIsFree = isFreeServiceCategory(
+			params.input.categoryId,
+			params.input.categoryName,
+			freeCats,
+		);
+		if (!categoryIsFree) {
+			const { data: existing, error: countErr } = await getSupabase()
+				.from("service")
+				.select("id, isArchived, categoryId, categoryModel")
+				.eq("provider_id", params.input.providerId);
+			if (countErr) {
+				console.error("upsertService count", countErr);
+				return { serviceId: null, error: countErr.message };
+			}
+			const planUsage = countPlanUsageServices(
+				(existing ?? []).map((row) => {
+					const r = row as Record<string, unknown>;
+					const model =
+						r.categoryModel && typeof r.categoryModel === "object"
+							? (r.categoryModel as Record<string, unknown>)
+							: null;
+					return {
+						archived: Boolean(r.isArchived),
+						categoryId:
+							r.categoryId != null ? String(r.categoryId) : null,
+						categoryName:
+							model?.categoryName != null
+								? String(model.categoryName)
+								: null,
+					};
+				}),
+				freeCats,
+			);
+			if (
+				!canCreateServiceListing({
+					tierMax,
+					planUsageCount: planUsage,
+					categoryIsFree: false,
+				})
+			) {
+				return {
+					serviceId: null,
+					error: isOnFreeServicePlan(tierMax)
+						? "This category requires a listing plan. Free categories can still be posted, or upgrade to add more."
+						: "Service limit reached. Upgrade your listing plan to add more.",
+				};
+			}
 		}
 	}
 

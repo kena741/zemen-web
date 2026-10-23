@@ -13,9 +13,12 @@ import { useLocale } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import {
 	canCreateService,
+	countPlanUsageServices,
+	fetchFreeServiceCategories,
 	fetchProviderTierMax,
 	isOnFreeServicePlan,
 	serviceCreateLimit,
+	type FreeServiceCategories,
 } from "@/services/provider/tiersApi";
 import { useAppDispatch } from "@/store/hooks";
 import { invalidateProviderServices } from "@/store/providerCacheSlice";
@@ -34,52 +37,36 @@ export default function NewServicePage() {
 	const [tierMax, setTierMax] = useState<number | null>(
 		user?.provider?.serviceTierMax ?? null,
 	);
+	const [freeCats, setFreeCats] = useState<FreeServiceCategories | null>(
+		null,
+	);
 
 	useEffect(() => {
 		if (!providerId) return;
 		void fetchProviderTierMax(providerId).then(setTierMax);
 	}, [providerId]);
 
-	const activeCount = useMemo(
-		() => services.filter((s) => !s.archived).length,
-		[services],
-	);
+	useEffect(() => {
+		void fetchFreeServiceCategories().then(setFreeCats);
+	}, []);
+
+	const planUsage = useMemo(() => {
+		if (!freeCats) return 0;
+		return countPlanUsageServices(services, freeCats);
+	}, [services, freeCats]);
 	const limit = tierMax == null ? null : serviceCreateLimit(tierMax);
-	const allowed = tierMax != null && canCreateService(tierMax, activeCount);
+	const canAddPaid =
+		tierMax != null && canCreateService(tierMax, planUsage);
 	const onFree = tierMax != null && isOnFreeServicePlan(tierMax);
 
-	if (!providerId || !authUserId || servicesLoading || tierMax == null) {
+	if (
+		!providerId ||
+		!authUserId ||
+		servicesLoading ||
+		tierMax == null ||
+		!freeCats
+	) {
 		return <AppLoading />;
-	}
-
-	if (!allowed) {
-		return (
-			<div className="mx-auto max-w-2xl pb-8">
-				<ProfileBackLink
-					href="/provider/services"
-					label={t("providerServicesTitle")}
-				/>
-				<Alert className="mt-6">
-					<AlertDescription>
-						{onFree
-							? t("providerFreeServiceLimit", {
-									used: activeCount,
-									limit: limit ?? 0,
-								})
-							: t("providerServiceLimitReached", {
-									used: activeCount,
-									limit: Number.isFinite(limit ?? 0) ? (limit ?? 0) : "∞",
-								})}
-					</AlertDescription>
-				</Alert>
-				<Link
-					href="/provider/tier"
-					className={cn(buttonVariants(), "mt-4 inline-flex")}
-				>
-					{t("providerFreeServiceUpgrade")}
-				</Link>
-			</div>
-		);
 	}
 
 	return (
@@ -94,11 +81,33 @@ export default function NewServicePage() {
 					{t("providerAddService")}
 				</h1>
 			</div>
-			{onFree ? (
+			<p className="mt-1 text-[13px] text-muted-foreground">
+				{t("providerFreeCategoryHint")}
+			</p>
+			{onFree && !canAddPaid ? (
+				<Alert className="mt-3">
+					<AlertDescription>
+						{t("providerPaidCategoryNeedsUpgrade")}{" "}
+						<Link
+							href="/provider/tier"
+							className={cn(buttonVariants({ variant: "link" }), "h-auto p-0")}
+						>
+							{t("providerFreeServiceUpgrade")}
+						</Link>
+					</AlertDescription>
+				</Alert>
+			) : onFree ? (
 				<p className="mt-1 text-[13px] text-muted-foreground">
 					{t("providerFreeServiceLimit", {
-						used: activeCount,
+						used: planUsage,
 						limit: limit ?? 0,
+					})}
+				</p>
+			) : !canAddPaid ? (
+				<p className="mt-1 text-[13px] text-muted-foreground">
+					{t("providerServiceLimitReached", {
+						used: planUsage,
+						limit: Number.isFinite(limit ?? 0) ? (limit ?? 0) : "∞",
 					})}
 				</p>
 			) : null}

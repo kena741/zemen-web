@@ -13,9 +13,12 @@ import { useLocale } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import {
 	canCreateService,
+	countPlanUsageServices,
+	fetchFreeServiceCategories,
 	fetchProviderTierMax,
 	isOnFreeServicePlan,
 	serviceCreateLimit,
+	type FreeServiceCategories,
 } from "@/services/provider/tiersApi";
 import { useAuth } from "@/store/useAuth";
 import { useCachedProviderServices } from "@/store/useProviderCache";
@@ -33,18 +36,26 @@ export default function ProviderServicesPage() {
 	const [tierMax, setTierMax] = useState(
 		() => Number(user?.provider?.serviceTierMax ?? 0) || 0,
 	);
+	const [freeCats, setFreeCats] = useState<FreeServiceCategories | null>(
+		null,
+	);
 
 	useEffect(() => {
 		if (!providerId) return;
 		void fetchProviderTierMax(providerId).then(setTierMax);
 	}, [providerId]);
 
-	const activeCount = useMemo(
-		() => services.filter((s) => !s.archived).length,
-		[services],
-	);
+	useEffect(() => {
+		void fetchFreeServiceCategories().then(setFreeCats);
+	}, []);
+
+	const planUsage = useMemo(() => {
+		if (!freeCats) return 0;
+		return countPlanUsageServices(services, freeCats);
+	}, [services, freeCats]);
 	const limit = serviceCreateLimit(tierMax);
-	const canAdd = canCreateService(tierMax, activeCount);
+	// Free categories are always postable; paid slots may be full.
+	const canAddPaid = canCreateService(tierMax, planUsage);
 	const onFree = isOnFreeServicePlan(tierMax);
 
 	const visible = services
@@ -74,10 +85,8 @@ export default function ProviderServicesPage() {
 		{ id: "archived", label: t("providerServiceArchived") },
 	];
 
-	const addHref = canAdd ? "/provider/services/new" : "/provider/tier";
-	const addLabel = canAdd
-		? t("providerAddService")
-		: t("providerFreeServiceUpgrade");
+	const addHref = "/provider/services/new";
+	const addLabel = t("providerAddService");
 
 	return (
 		<div className="mx-auto w-full max-w-5xl pb-20 lg:pb-0">
@@ -95,12 +104,18 @@ export default function ProviderServicesPage() {
 					<p className="mt-1.5 text-sm text-muted-foreground">
 						{loading ? t("commonLoading") : countLabel}
 					</p>
-					{onFree && !loading ? (
+					{!loading && freeCats ? (
 						<p className="mt-1 text-xs text-muted-foreground">
-							{t("providerFreeServiceLimit", {
-								used: activeCount,
-								limit,
-							})}
+							{onFree
+								? t("providerFreeServiceLimit", {
+										used: planUsage,
+										limit,
+									})
+								: t("providerPlanUsage", {
+										used: planUsage,
+										limit: Number.isFinite(limit) ? limit : "∞",
+									})}
+							{!canAddPaid ? ` · ${t("providerPaidCategoryNeedsUpgrade")}` : ""}
 						</p>
 					) : null}
 				</div>
@@ -118,12 +133,17 @@ export default function ProviderServicesPage() {
 				</div>
 			</div>
 
-			{onFree && !loading ? (
+			{!loading && freeCats ? (
 				<p className="mt-2 text-xs text-muted-foreground lg:hidden">
-					{t("providerFreeServiceLimit", {
-						used: activeCount,
-						limit,
-					})}
+					{onFree
+						? t("providerFreeServiceLimit", {
+								used: planUsage,
+								limit,
+							})
+						: t("providerPlanUsage", {
+								used: planUsage,
+								limit: Number.isFinite(limit) ? limit : "∞",
+							})}
 				</p>
 			) : null}
 

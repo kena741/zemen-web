@@ -732,10 +732,14 @@ export const am: Record<MessageKey, string> = {
 	providerSelectCategory: "ምድብ",
 	providerSelectSubcategory: "ንዑስ ምድብ",
 	providerFreeServiceLimit:
-		"ነጻ ዕቅድ፡ {used}/{limit} አገልግሎቶች። ተጨማሪ ለመጨመር ያሻሽሉ።",
+		"የዕቅድ ዝርዝሮች፡ {used}/{limit} (ነጻ ምድቦች አይቆጠሩም)። ለተጨማሪ ያሻሽሉ።",
 	providerFreeServiceUpgrade: "ዕቅድ አሻሽል",
 	providerServiceLimitReached:
 		"የአገልግሎት ገደብ ተደርሷል ({used}/{limit})። ተጨማሪ ለመጨመር ዕቅድዎን ያሻሽሉ።",
+	providerFreeCategoryHint:
+		"ጽዳት፣ ሼፍ እና ሌሎች ነጻ ምድቦች ያለ ዕቅድ መለጠፍ ይችላሉ። ሌሎች ምድቦች ማሻሻያ ያስፈልጋቸዋል።",
+	providerPaidCategoryNeedsUpgrade: "የሚከፈልባቸው ምድቦች የዝርዝር ዕቅድ ያስፈልጋቸዋል።",
+	providerPlanUsage: "የዕቅድ ዝርዝሮች፡ {used}/{limit}",
 	providerServiceImages: "ምስሎች",
 	providerServiceActiveListing: "ንቁ",
 	providerServiceEditPendingHint: "ማስቀመጥ ዝርዝሩን ወደ ማጽደቅ በመጠባበቅ ይመልሳል።",
