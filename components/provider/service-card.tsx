@@ -4,8 +4,10 @@ import Link from "next/link";
 import { useState } from "react";
 import { ImageIcon, StarIcon } from "lucide-react";
 
+import { RecurringBadge } from "@/components/recurring/recurring-badge";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { useLocale } from "@/lib/i18n";
+import { isRecurringPricingType } from "@/lib/recurring";
 import { cn } from "@/lib/utils";
 import { formatAmount } from "@/services/bookings/types";
 import { setServiceActive } from "@/services/services/servicesApi";
@@ -56,6 +58,7 @@ export function ServiceCard({
 	const discount = discountLabel(service.discount);
 	const featuredPending =
 		showFeaturedPending && service.featureRequestedStatus === "pending";
+	const isRecurring = isRecurringPricingType(service.pricingType);
 	const displayName = providerName ?? service.providerName;
 	const displayImage = providerImage ?? service.providerImage;
 
@@ -134,6 +137,22 @@ export function ServiceCard({
 					) : featuredPending ? (
 						<span className="absolute top-2 right-2 rounded-full bg-amber-500/95 px-2 py-0.5 text-[10px] font-semibold text-white">
 							Pending
+						</span>
+					) : isRecurring ? (
+						<span className="absolute top-2 right-2">
+							<RecurringBadge
+								interval={service.billingInterval}
+								count={service.billingIntervalCount}
+							/>
+						</span>
+					) : null}
+
+					{isRecurring && (service.feature || featuredPending) ? (
+						<span className="absolute right-2 bottom-2">
+							<RecurringBadge
+								interval={service.billingInterval}
+								count={service.billingIntervalCount}
+							/>
 						</span>
 					) : null}
 

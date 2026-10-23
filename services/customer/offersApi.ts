@@ -85,7 +85,7 @@ export async function createCustomerServiceOffer(params: {
 	if (!params.fromBid) {
 		const { data: serviceRow, error: serviceErr } = await supabase
 			.from("service")
-			.select("allows_custom_offer, allowsCustomOffer")
+			.select("allows_custom_offer")
 			.eq("id", params.serviceId)
 			.maybeSingle();
 		if (serviceErr || !serviceRow) {
@@ -95,8 +95,7 @@ export async function createCustomerServiceOffer(params: {
 			};
 		}
 		const allows =
-			(serviceRow as Record<string, unknown>).allows_custom_offer === true ||
-			(serviceRow as Record<string, unknown>).allowsCustomOffer === true;
+			(serviceRow as Record<string, unknown>).allows_custom_offer === true;
 		if (!allows) {
 			return {
 				offer: null,

@@ -1,3 +1,7 @@
+import {
+	isRecurringPricingType,
+	stampRecurringPeriod,
+} from "@/lib/recurring";
 import { getSupabase } from "@/lib/supabase/client";
 import {
 	mapBookingRow,
@@ -106,6 +110,9 @@ export type CreateBookingInput = {
 	discount?: number | null;
 	totalAmount?: number | null;
 	postJob?: boolean;
+	pricingType?: string | null;
+	billingInterval?: string | null;
+	billingIntervalCount?: number | null;
 };
 
 export async function createCustomerBooking(
@@ -151,6 +158,16 @@ export async function createCustomerBooking(
 	};
 	if (input.coupon) payload.coupon = input.coupon;
 	if (discount > 0) payload.discount = String(discount);
+
+	if (isRecurringPricingType(input.pricingType)) {
+		const period = stampRecurringPeriod({
+			billingInterval: input.billingInterval,
+			billingIntervalCount: input.billingIntervalCount,
+		});
+		payload.currentPeriodStart = period.currentPeriodStart;
+		payload.currentPeriodEnd = period.currentPeriodEnd;
+		payload.nextCycleDue = period.nextCycleDue;
+	}
 
 	const { error } = await getSupabase().from("booked_service").insert(payload);
 	if (error) {
@@ -403,9 +420,10 @@ export async function createJobRequest(params: {
 	title: string;
 	description: string;
 	price?: string;
+	serviceModelList?: Array<Record<string, unknown>>;
 }): Promise<{ id: string | null; error: string | null }> {
 	const id = crypto.randomUUID();
-	const payload = {
+	const payload: Record<string, unknown> = {
 		id,
 		customerId: params.customerId,
 		title: params.title.trim(),
@@ -413,9 +431,14 @@ export async function createJobRequest(params: {
 		price: params.price?.trim() || null,
 		accepted: false,
 		is_paid: false,
+		// Mobile sets status accepted so providers see open jobs
+		status: "accepted",
 		createdAt: new Date().toISOString(),
 		bidList: [],
 	};
+	if (params.serviceModelList?.length) {
+		payload.serviceModelList = params.serviceModelList;
+	}
 
 	const { error } = await getSupabase().from("job_request").insert(payload);
 	if (error) {

@@ -163,6 +163,25 @@ export function isRecurringPricingType(raw: string | null | undefined): boolean 
 	return (raw ?? "").trim().toUpperCase() === "RECURRING";
 }
 
+/** Match mobile BookingModel.stampRecurringPeriodIfNeeded — seed first cycle at book time. */
+export function stampRecurringPeriod(params: {
+	billingInterval?: string | null;
+	billingIntervalCount?: number | null;
+	from?: Date;
+}): { currentPeriodStart: string; currentPeriodEnd: string; nextCycleDue: false } {
+	const start = params.from ?? new Date();
+	const count =
+		params.billingIntervalCount != null && params.billingIntervalCount >= 1
+			? params.billingIntervalCount
+			: 1;
+	const end = addBillingInterval(start, params.billingInterval, count);
+	return {
+		currentPeriodStart: start.toISOString(),
+		currentPeriodEnd: end.toISOString(),
+		nextCycleDue: false,
+	};
+}
+
 /** Matches mobile ServiceModel.effectivePrePaymentPercent. */
 export function effectivePrePaymentPercent(params: {
 	pricingType?: string | null;

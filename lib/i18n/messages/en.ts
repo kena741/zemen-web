@@ -207,6 +207,7 @@ export const en = {
 	bookServiceSubtotal: "Subtotal",
 	bookServiceTotal: "Total",
 	bookServiceConfirm: "Confirm booking",
+	bookServiceFirstCycle: "First cycle",
 	bookServiceSendCustom: "Send custom price",
 	bookServicePayment: "Payment",
 	bookServicePaymentRequired: "Choose a payment method to continue.",
@@ -545,7 +546,12 @@ export const en = {
 	requestOpenForBids: "Open for bids",
 	requestBidCount: "{count} bids",
 	requestBidCountOne: "1 bid",
-	requestNewSubtitle: "Describe what you need and receive provider bids",
+	requestNewSubtitle:
+		"Add service details and budget so matching providers can bid",
+	requestFieldsRequired:
+		"Service name, category, subcategory, and description are required",
+	requestBudget: "Budget (ETB)",
+	requestBudgetMin: "Minimum budget is {min} ETB",
 	requestTitlePlaceholder: "e.g. Fix leaking kitchen sink",
 	requestDescPlaceholder: "Share details, location notes, preferred time…",
 	requestBudgetOptional: "Budget (optional, ETB)",
@@ -688,6 +694,8 @@ export const en = {
 	providerSubmitApproval: "Submit for customer approval",
 	providerEditExtraCharge: "Edit extra charge",
 	providerAddExtraCharge: "Add extra charge",
+	providerAskExtraOnComplete:
+		"Do you want to add an extra charge before submitting for approval?",
 	providerExtraDetailPlaceholder: "What is the extra charge for?",
 	providerMinAmount: "Min 1",
 	providerSaveCharge: "Save charge",

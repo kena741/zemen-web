@@ -12,7 +12,7 @@ import {
 	SearchIcon,
 } from "lucide-react";
 
-import appIcon from "@/assets/images/app_icon.png";
+import appIcon from "@/assets/images/optimized/app_icon_sm.png";
 import { ServiceCard } from "@/components/provider/service-card";
 import { BannerCarousel } from "@/components/service/banner-carousel";
 import { ServiceLoading } from "@/components/service/service-loading";
@@ -93,13 +93,15 @@ export default function ServiceHomePage() {
 					<div className="flex items-start justify-between gap-3">
 						<div className="min-w-0 flex-1">
 							<div className="flex items-center gap-2">
-								<Image
-									src={appIcon}
-									alt=""
-									width={28}
-									height={28}
-									className="size-7 rounded-md ring-1 ring-white/20"
-								/>
+								<span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-white p-1 shadow-sm">
+									<Image
+										src={appIcon}
+										alt=""
+										width={24}
+										height={24}
+										className="size-6 object-contain"
+									/>
+								</span>
 								<p className="text-lg font-semibold tracking-tight">
 									{BRAND_NAME}
 								</p>

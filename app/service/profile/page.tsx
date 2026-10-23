@@ -157,12 +157,6 @@ export default function CustomerProfilePage() {
 						icon={TagIcon}
 						label={t("profileOffers")}
 					/>
-					<div className="mx-4 border-t border-border/60" />
-					<MenuLink
-						href="/service/my-services"
-						icon={TagIcon}
-						label={t("profileMyServices")}
-					/>
 				</div>
 			</section>
 

@@ -245,6 +245,14 @@ export default function ServiceDetailPage() {
 						}
 					/>
 				</button>
+				{isRecurring ? (
+					<span className="absolute top-14 right-3">
+						<RecurringBadge
+							interval={service.billingInterval}
+							count={service.billingIntervalCount}
+						/>
+					</span>
+				) : null}
 				{service.serviceImage.length > 1 ? (
 					<>
 						<button

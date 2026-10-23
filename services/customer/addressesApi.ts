@@ -37,13 +37,13 @@ export async function fetchCustomerAddresses(
 
 	const { data, error } = await getSupabase()
 		.from("customer")
-		.select("addAddresses, add_addresses")
+		.select("add_addresses")
 		.or(filter)
 		.maybeSingle();
 
 	if (error) return { addresses: [], error: error.message };
 	const row = (data ?? {}) as Record<string, unknown>;
-	const raw = row.addAddresses ?? row.add_addresses;
+	const raw = row.add_addresses;
 	if (!Array.isArray(raw)) return { addresses: [], error: null };
 	return {
 		addresses: raw.map((item) =>
@@ -66,7 +66,6 @@ export async function saveCustomerAddresses(params: {
 		params.addresses.find((a) => a.isDefault)?.id ?? params.addresses[0]?.id ?? null;
 
 	const payload = {
-		addAddresses: params.addresses,
 		add_addresses: params.addresses,
 		default_address: defaultId,
 	};

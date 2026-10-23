@@ -65,6 +65,8 @@ export default function BookingDetailPage() {
 	const [showHold, setShowHold] = useState(false);
 	const [holdReason, setHoldReason] = useState("");
 	const [showExtra, setShowExtra] = useState(false);
+	const [askExtraOnComplete, setAskExtraOnComplete] = useState(false);
+	const [completeAfterExtra, setCompleteAfterExtra] = useState(false);
 	const [extraDetail, setExtraDetail] = useState("");
 	const [extraAmount, setExtraAmount] = useState("");
 	const [showProof, setShowProof] = useState(false);
@@ -134,12 +136,25 @@ export default function BookingDetailPage() {
 
 	async function finishWork() {
 		if (!booking) return;
-		const extra = Number(booking.extraChargeAmount ?? booking.extraCharge?.extraCharge ?? 0);
-		const next =
-			!Number.isNaN(extra) && extra >= 1
-				? BOOKING_STATUS.pendingExtraPayment
-				: BOOKING_STATUS.pendingApproval;
-		await setStatus(next);
+		const extra = Number(
+			booking.extraChargeAmount ?? booking.extraCharge?.extraCharge ?? 0,
+		);
+		if (!Number.isNaN(extra) && extra >= 1) {
+			await setStatus(BOOKING_STATUS.pendingExtraPayment);
+			return;
+		}
+		setAskExtraOnComplete(true);
+	}
+
+	async function finishWithoutExtra() {
+		setAskExtraOnComplete(false);
+		await setStatus(BOOKING_STATUS.pendingApproval);
+	}
+
+	function finishWithExtraPrompt() {
+		setAskExtraOnComplete(false);
+		setCompleteAfterExtra(true);
+		setShowExtra(true);
 	}
 
 	async function saveExtra() {
@@ -152,12 +167,35 @@ export default function BookingDetailPage() {
 			amount: extraAmount,
 			existingId: booking.extraCharge?.id,
 		});
-		setBusy(false);
 		if (!res.ok) {
+			setBusy(false);
 			setError(res.error);
 			return;
 		}
 		setShowExtra(false);
+		const amount = Number(extraAmount);
+		if (
+			completeAfterExtra &&
+			Number.isFinite(amount) &&
+			amount >= 1
+		) {
+			setCompleteAfterExtra(false);
+			const statusRes = await updateBookingStatus({
+				bookingId: booking.id,
+				status: BOOKING_STATUS.pendingExtraPayment,
+				reason: null,
+			});
+			setBusy(false);
+			if (!statusRes.ok) {
+				setError(statusRes.error);
+				await afterUpdate();
+				return;
+			}
+			await afterUpdate();
+			return;
+		}
+		setCompleteAfterExtra(false);
+		setBusy(false);
 		await afterUpdate();
 	}
 
@@ -528,13 +566,38 @@ export default function BookingDetailPage() {
 								<Button disabled={busy} onClick={() => void finishWork()}>
 									{t("providerSubmitApproval")}
 								</Button>
+								{askExtraOnComplete ? (
+									<div className="space-y-2 rounded-xl border border-border bg-white p-4">
+										<p className="text-sm font-medium">
+											{t("providerAskExtraOnComplete")}
+										</p>
+										<div className="flex flex-wrap gap-2">
+											<Button
+												disabled={busy}
+												onClick={finishWithExtraPrompt}
+											>
+												{t("commonYes")}
+											</Button>
+											<Button
+												variant="outline"
+												disabled={busy}
+												onClick={() => void finishWithoutExtra()}
+											>
+												{t("commonNo")}
+											</Button>
+											<Button
+												variant="ghost"
+												onClick={() => setAskExtraOnComplete(false)}
+											>
+												{t("commonCancel")}
+											</Button>
+										</div>
+									</div>
+								) : null}
 							</>
 						) : null}
 
-						{(canManageWork ||
-							status === BOOKING_STATUS.pendingApproval ||
-							status === BOOKING_STATUS.accepted ||
-							status === BOOKING_STATUS.onTheWay) && (
+						{status === BOOKING_STATUS.inProgress && (
 							<>
 								{!showExtra ? (
 									<Button
@@ -542,11 +605,15 @@ export default function BookingDetailPage() {
 										disabled={busy}
 										onClick={() => setShowExtra(true)}
 									>
-										{booking.extraCharge ? t("providerEditExtraCharge") : t("providerAddExtraCharge")}
+										{booking.extraCharge
+											? t("providerEditExtraCharge")
+											: t("providerAddExtraCharge")}
 									</Button>
 								) : (
 									<div className="space-y-2 rounded-xl border border-border bg-white p-4">
-										<Label htmlFor="extra-detail">{t("commonDescription")}</Label>
+										<Label htmlFor="extra-detail">
+											{t("commonDescription")}
+										</Label>
 										<Input
 											id="extra-detail"
 											value={extraDetail}
@@ -562,26 +629,40 @@ export default function BookingDetailPage() {
 											placeholder={t("providerMinAmount")}
 										/>
 										<div className="flex gap-2">
-					<Button disabled={busy} onClick={() => void saveExtra()}>
+											<Button
+												disabled={busy}
+												onClick={() => void saveExtra()}
+											>
 												{t("providerSaveCharge")}
 											</Button>
 											<Button
 												variant="ghost"
-												onClick={() => setShowExtra(false)}
+												onClick={() => {
+													setShowExtra(false);
+													setCompleteAfterExtra(false);
+												}}
 											>
 												{t("commonCancel")}
 											</Button>
 										</div>
 									</div>
 								)}
+							</>
+						)}
 
+						{(status === BOOKING_STATUS.pendingExtraPayment ||
+							status === BOOKING_STATUS.pendingApproval ||
+							status === BOOKING_STATUS.completed) && (
+							<>
 								{!showProof ? (
 									<Button
 										variant="outline"
 										disabled={busy}
 										onClick={() => setShowProof(true)}
 									>
-										{booking.serviceProof ? t("providerEditServiceProof") : t("providerAddServiceProof")}
+										{booking.serviceProof
+											? t("providerEditServiceProof")
+											: t("providerAddServiceProof")}
 									</Button>
 								) : (
 									<div className="space-y-2 rounded-xl border border-border bg-white p-4">
@@ -591,7 +672,9 @@ export default function BookingDetailPage() {
 											value={proofTitle}
 											onChange={(e) => setProofTitle(e.target.value)}
 										/>
-										<Label htmlFor="proof-desc">{t("commonDescription")}</Label>
+										<Label htmlFor="proof-desc">
+											{t("commonDescription")}
+										</Label>
 										<textarea
 											id="proof-desc"
 											value={proofDesc}
@@ -599,7 +682,9 @@ export default function BookingDetailPage() {
 											rows={3}
 											className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
 										/>
-										<Label htmlFor="proof-files">{t("providerProofImages")}</Label>
+										<Label htmlFor="proof-files">
+											{t("providerProofImages")}
+										</Label>
 										<Input
 											id="proof-files"
 											type="file"
@@ -608,7 +693,10 @@ export default function BookingDetailPage() {
 											onChange={(e) => setProofFiles(e.target.files)}
 										/>
 										<div className="flex gap-2">
-					<Button disabled={busy} onClick={() => void saveProof()}>
+											<Button
+												disabled={busy}
+												onClick={() => void saveProof()}
+											>
 												{t("providerSaveProof")}
 											</Button>
 											<Button

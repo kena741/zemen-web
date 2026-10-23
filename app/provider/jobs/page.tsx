@@ -21,7 +21,7 @@ function ProviderJobsContent() {
 	const { t } = useLocale();
 	const { user } = useAuth();
 	const search = useSearchParams();
-	const providerId = user?.id ?? "";
+	const providerId = user?.provider?.id ?? "";
 	const [tab, setTab] = useState<"open" | "bids">(
 		search.get("tab") === "bids" ? "bids" : "open",
 	);
@@ -39,7 +39,7 @@ function ProviderJobsContent() {
 		setError(null);
 		const res =
 			tab === "open"
-				? await fetchOpenJobRequests()
+				? await fetchOpenJobRequests({ providerId })
 				: await fetchMyBidJobs(providerId);
 		setJobs(res.jobs);
 		setError(res.error);

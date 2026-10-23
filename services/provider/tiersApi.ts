@@ -101,7 +101,9 @@ export async function fetchProviderTierMax(
 	);
 }
 
-/** Unpaid providers may create this many listings before buying a plan. */
+/** Unpaid providers may create this many listings before buying a plan.
+ * ponytail: free-category carve-out (cleaning/chef…) not implemented — no
+ * fetchable free-services source in web or mobile snapshot; keep global slot. */
 export const FREE_SERVICE_LIMIT = 1;
 
 /** Effective create/list cap: paid tier, unlimited (<0), or free allotment when unpaid. */

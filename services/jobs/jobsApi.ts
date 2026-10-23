@@ -18,6 +18,8 @@ export type ProviderJobRequest = {
 	status: string | null;
 	bidList: JobBid[];
 	createdAt: string | null;
+	/** Subcategory ids from nested serviceModelList (mobile parity). */
+	subCategoryIds: string[];
 };
 
 function asString(value: unknown): string | null {
@@ -37,6 +39,26 @@ function mapBid(raw: unknown): JobBid | null {
 	};
 }
 
+function subCategoryIdsFromServiceModelList(raw: unknown): string[] {
+	if (!Array.isArray(raw)) return [];
+	const ids = new Set<string>();
+	for (const item of raw) {
+		if (!item || typeof item !== "object") continue;
+		const m = item as Record<string, unknown>;
+		const id = asString(
+			m.subCategoryId ?? m.sub_category_id ?? m.subcategoryId,
+		);
+		if (id) ids.add(id);
+		const nested = m.subCategoryModel ?? m.sub_category_model;
+		if (nested && typeof nested === "object") {
+			const n = nested as Record<string, unknown>;
+			const nestedId = asString(n.id ?? n.subCategoryId ?? n.sub_category_id);
+			if (nestedId) ids.add(nestedId);
+		}
+	}
+	return [...ids];
+}
+
 export function mapJobRequestRow(
 	row: Record<string, unknown>,
 ): ProviderJobRequest {
@@ -44,6 +66,8 @@ export function mapJobRequestRow(
 	const bidList = bidsRaw
 		.map(mapBid)
 		.filter((b): b is JobBid => Boolean(b));
+	const serviceModelList =
+		row.serviceModelList ?? row.service_model_list ?? row.serviceModellist;
 
 	return {
 		id: String(row.id ?? ""),
@@ -56,11 +80,30 @@ export function mapJobRequestRow(
 		status: asString(row.status),
 		bidList,
 		createdAt: asString(row.createdAt ?? row.created_at),
+		subCategoryIds: subCategoryIdsFromServiceModelList(serviceModelList),
 	};
 }
 
+export async function fetchProviderVerifiedSubCategoryIds(
+	providerId: string,
+): Promise<string[]> {
+	if (!providerId) return [];
+	const { data, error } = await getSupabase()
+		.from("provider")
+		.select("verified_subcategory_ids")
+		.eq("id", providerId)
+		.maybeSingle();
+	if (error || !data) return [];
+	const raw = (data as Record<string, unknown>).verified_subcategory_ids;
+	if (!Array.isArray(raw)) return [];
+	return raw.map((id) => String(id).trim()).filter(Boolean);
+}
+
 /** Open marketplace jobs (not yet assigned to a provider). */
-export async function fetchOpenJobRequests(): Promise<{
+export async function fetchOpenJobRequests(params?: {
+	/** When set, only jobs matching provider verified subcategories (mobile parity). */
+	providerId?: string;
+}): Promise<{
 	jobs: ProviderJobRequest[];
 	error: string | null;
 }> {
@@ -76,7 +119,7 @@ export async function fetchOpenJobRequests(): Promise<{
 		return { jobs: [], error: error.message };
 	}
 
-	const jobs = (data ?? [])
+	let jobs = (data ?? [])
 		.map((row) => mapJobRequestRow(row as Record<string, unknown>))
 		.filter((job) => {
 			const pid = job.providerId?.trim() ?? "";
@@ -85,6 +128,21 @@ export async function fetchOpenJobRequests(): Promise<{
 			if (job.accepted && hasProvider) return false;
 			return true;
 		});
+
+	if (params?.providerId) {
+		const approved = new Set(
+			await fetchProviderVerifiedSubCategoryIds(params.providerId),
+		);
+		// Match mobile: only show jobs whose subcategory is in verified_subcategory_ids.
+		// Jobs without subcategory metadata stay hidden from filtered feed.
+		if (approved.size > 0) {
+			jobs = jobs.filter((job) =>
+				job.subCategoryIds.some((id) => approved.has(id)),
+			);
+		} else {
+			jobs = [];
+		}
+	}
 
 	return { jobs, error: null };
 }

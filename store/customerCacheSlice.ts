@@ -373,7 +373,7 @@ export const loadAddresses = createAsyncThunk(
 	}) => {
 		const { data, error } = await getSupabase()
 			.from("customer")
-			.select("addAddresses, add_addresses, default_address")
+			.select("add_addresses, default_address")
 			.or(
 				`id.eq.${params.customerId}${
 					params.authUserId ? `,user_id.eq.${params.authUserId}` : ""
@@ -382,7 +382,7 @@ export const loadAddresses = createAsyncThunk(
 			.maybeSingle();
 		if (error) throw new Error(error.message);
 		const row = (data ?? {}) as Record<string, unknown>;
-		return parseAddresses(row.addAddresses ?? row.add_addresses);
+		return parseAddresses(row.add_addresses);
 	},
 	{
 		condition: (params, { getState }) => {
