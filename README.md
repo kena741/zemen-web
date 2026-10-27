@@ -1,3 +1,34 @@
+## Run with Docker Compose
+
+Install Docker with the Compose plugin, then create the local environment file:
+
+```bash
+cp .env.example .env
+```
+
+Fill in the Supabase, Edge Functions, site URL, Google Maps, and Firebase values
+in `.env`. `SUPABASE_SERVICE_ROLE_KEY` is supplied only to the running
+container; it is not passed to the Docker build. Keep `.env` private and do not
+commit it.
+
+Build and start the production app:
+
+```bash
+docker compose up --build -d
+```
+
+Open [http://localhost:3000](http://localhost:3000). To view logs or stop the
+app, run:
+
+```bash
+docker compose logs -f web
+docker compose down
+```
+
+The `NEXT_PUBLIC_*` values are compiled into browser assets during the image
+build. Rebuild the image with `docker compose up --build -d` after changing
+those values.
+
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
 ## Getting Started

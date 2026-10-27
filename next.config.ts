@@ -15,6 +15,7 @@ function supabaseHostname(): string | null {
 const supabaseHost = supabaseHostname();
 
 const nextConfig: NextConfig = {
+	output: "standalone",
 	allowedDevOrigins: ["127.0.0.1", "localhost"],
 	images: {
 		qualities: [65, 70, 75],
