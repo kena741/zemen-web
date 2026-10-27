@@ -29,6 +29,16 @@ The `NEXT_PUBLIC_*` values are compiled into browser assets during the image
 build. Rebuild the image with `docker compose up --build -d` after changing
 those values.
 
+### Coolify
+
+Configure `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` as
+build-time variables in Coolify; Next.js needs them to generate the static blog
+pages and browser bundle. Configure the other `NEXT_PUBLIC_*` variables as
+build-time variables as well so their values are included in browser assets.
+Set the remaining variables as runtime variables. In particular,
+`SUPABASE_SERVICE_ROLE_KEY` is runtime-only and must not be a build-time
+variable. Trigger a new deployment after changing build-time values.
+
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
 ## Getting Started
