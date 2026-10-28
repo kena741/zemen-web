@@ -21,6 +21,6 @@ services:
       SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY:-}
       EDGE_FUNCTIONS_BASE_URL: ${EDGE_FUNCTIONS_BASE_URL:-}
       PASSWORD_RESET_REDIRECT_URL: ${PASSWORD_RESET_REDIRECT_URL:-}
-    ports:
-      - "3000:3000"
+    expose:
+      - "3000"
     restart: unless-stopped
