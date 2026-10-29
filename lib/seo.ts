@@ -33,7 +33,7 @@ export const SEO_TITLE_DEFAULT =
 	"Zemen Service | Premium Home Services in Addis Ababa, Ethiopia";
 
 export const SEO_DESCRIPTION =
-	"Premium, verified home service professionals in Addis Ababa, Ethiopia. Book cleaning, housemaids, cooks, babysitters, nannies, plumbers, electricians, repairs, moving, beauty, and home nursing.";
+	"Premium, verified home service professionals in Addis Ababa, Ethiopia. Book cleaning, housemaids, cooks, babysitters, nannies, plumbers, electricians, AC repair, CCTV and security cameras, repairs, movers, beauty, and home nursing.";
 
 export const SEO_OG_DESCRIPTION =
 	"Premium, verified home service professionals in Addis Ababa, Ethiopia. Book the service you need with Zemen Service.";
@@ -47,8 +47,19 @@ export const SEO_KEYWORDS = [
 	"home services Addis Ababa",
 	"home services Ethiopia",
 	"Ethiopian home services app",
+	"cleaning service Addis Ababa",
 	"cleaning services Addis Ababa",
+	"home cleaning Addis Ababa",
+	"house cleaning Addis Ababa",
+	"office cleaning Addis Ababa",
+	"deep cleaning Addis Ababa",
+	"kitchen deep cleaning services near me",
+	"kitchen deep cleaning Addis Ababa",
+	"deep cleaning near me",
 	"premium cleaning services Ethiopia",
+	"maid agency near me",
+	"maid agency Addis Ababa",
+	"maid agency Ethiopia",
 	"maid services Addis Ababa",
 	"housemaid Addis Ababa",
 	"domestic help Ethiopia",
@@ -56,11 +67,34 @@ export const SEO_KEYWORDS = [
 	"home cook Addis Ababa",
 	"babysitting Addis Ababa",
 	"nanny Addis Ababa",
+	"nanny suppliers in Ethiopia",
+	"nanny suppliers Ethiopia",
+	"nanny agency Ethiopia",
 	"plumber Addis Ababa",
+	"plumbing company",
+	"plumbing company Addis Ababa",
+	"plumbing company near me",
+	"plumbing services Addis Ababa",
 	"electrician Addis Ababa",
 	"handyman Addis Ababa",
 	"home repair Addis Ababa",
+	"air conditioning repair service Addis Ababa",
+	"AC repair Addis Ababa",
+	"air conditioner repair Addis Ababa",
+	"AC service Addis Ababa",
+	"AC gas refill Addis Ababa",
+	"split AC installation Addis Ababa",
+	"security camera Addis Ababa",
+	"CCTV installation Addis Ababa",
+	"CCTV camera Addis Ababa",
+	"security camera installation Ethiopia",
 	"moving services Addis Ababa",
+	"movers Addis Ababa",
+	"furniture movers Addis Ababa",
+	"house movers Addis Ababa",
+	"packers and movers Addis Ababa",
+	"moving company Addis Ababa",
+	"relocation Addis Ababa",
 	"home nursing Addis Ababa",
 	"verified service providers Ethiopia",
 	"Bole Addis Ababa home services",
@@ -70,6 +104,10 @@ export const SEO_KEYWORDS = [
 	"የቧንቧ ሰራተኛ አዲስ አበባ",
 	"ኤሌክትሪሻን አዲስ አበባ",
 	"Zemen Service",
+	"Zemen movers Addis Ababa",
+	"Zemen cleaning Addis Ababa",
+	"Zemen CCTV Addis Ababa",
+	"Zemen AC repair Addis Ababa",
 ] as const;
 
 /** Approximate city-centre coordinates for Addis Ababa (geo meta + JSON-LD). */

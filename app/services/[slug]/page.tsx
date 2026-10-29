@@ -42,6 +42,7 @@ export async function generateMetadata({
 		title: copy.title,
 		description: copy.description,
 		path: `/services/${category.slug}`,
+		keywords: copy.keywords,
 	});
 }
 

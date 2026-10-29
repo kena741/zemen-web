@@ -83,7 +83,7 @@ export function ServicesHubView({
 					<p className="mt-4 max-w-2xl text-[15px] leading-relaxed text-[#3d5240]">
 						Browse trusted service categories on {BRAND_NAME}. Book verified
 						professionals for cleaning, cooking, babysitting, plumbing,
-						electrical, repairs, and more across Addis Ababa.
+						electrical, AC repair, CCTV, movers, and more across Addis Ababa.
 					</p>
 					<BookingCta className="mt-7" />
 				</div>
@@ -822,7 +822,7 @@ export function LocationAddisView({
 					<p className="mt-4 max-w-2xl text-[15px] leading-relaxed text-[#3d5240]">
 						{BRAND_NAME} connects households in Addis Ababa with verified local
 						professionals for cleaning, cooking, babysitting, plumbing,
-						electrical work, and more.
+						electrical work, AC repair, CCTV, movers, and more.
 					</p>
 					<BookingCta className="mt-7" />
 				</div>

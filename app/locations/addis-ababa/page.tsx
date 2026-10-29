@@ -11,8 +11,19 @@ import {
 export const metadata: Metadata = buildPageMetadata({
 	title: "Home Help Across Addis Ababa, Ethiopia",
 	description:
-		"Find premium, verified home service professionals across Addis Ababa, Ethiopia — Bole, CMC, Kazanchis, Sarbet, Ayat and beyond. Book cleaning, cooking, babysitting, plumbing, electrical, and more with Zemen Service.",
+		"Find premium, verified home service professionals across Addis Ababa, Ethiopia — Bole, CMC, Kazanchis, Sarbet, Ayat and beyond. Book cleaning, cooking, babysitting, plumbing, electrical, CCTV, movers, and more with Zemen Service.",
 	path: "/locations/addis-ababa",
+	keywords: [
+		"home services Addis Ababa",
+		"cleaning service Addis Ababa",
+		"air conditioning repair service Addis Ababa",
+		"AC repair Addis Ababa",
+		"security camera Addis Ababa",
+		"CCTV installation Addis Ababa",
+		"movers Addis Ababa",
+		"housemaid Addis Ababa",
+		"plumber Addis Ababa",
+	],
 });
 
 export const revalidate = 3600;

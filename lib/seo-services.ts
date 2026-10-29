@@ -27,44 +27,65 @@ export type CategorySeoCopy = {
 	includes?: string[];
 	excludes?: string[];
 	pricingNote?: string;
+	keywords?: string[];
 };
 
 /** Enrichment keyed by slug tokens. Used only when matching category exists in DB. */
 const CATEGORY_COPY: Record<string, CategorySeoCopy> = {
 	cleaning: {
-		title: "Premium Home Cleaning & Maid Services in Addis Ababa",
-		h1: "Trusted Home Cleaning Services in Addis Ababa",
+		title: "Cleaning Service in Addis Ababa | Home & Office Cleaners",
+		h1: "Cleaning Services in Addis Ababa",
 		description:
-			"Book trusted home cleaning and maid services in Addis Ababa, Ethiopia for apartments, houses, and offices with Zemen Service.",
+			"Book a trusted cleaning service in Addis Ababa, Ethiopia for homes, apartments, and offices. Compare verified cleaners on Zemen Service and book online, in the app, or by phone.",
 		intro:
-			"Book verified cleaning and maid professionals in Addis Ababa for regular home cleaning, deep cleans, and office spaces. Providers on Zemen Service are reviewed before they can take jobs.",
+			"Need a cleaning service in Addis Ababa? Zemen Service connects you with verified home and office cleaners for regular cleans, deep cleans, and one-time help across neighborhoods like Bole, CMC, Kazanchis, Sarbet, and Ayat. See listing prices before you book.",
 		offered: [
-			"Home and apartment cleaning",
-			"Deep cleaning support",
+			"Home and apartment cleaning in Addis Ababa",
+			"Kitchen, bathroom, and living-area cleans",
 			"Office and shared-space cleaning",
-			"Flexible booking through app, web, or call center",
+			"Verified cleaners with flexible booking",
 		],
 		includes: [
-			"Sweeping, mopping, and surface cleaning",
+			"Sweeping, mopping, and dusting",
 			"Kitchen and bathroom cleaning",
-			"Tidying living areas",
+			"Tidying living areas as listed by the provider",
 		],
 		excludes: [
-			"Specialist carpet or curtain deep cleans unless listed",
-			"Materials not included in the provider price unless stated",
+			"Specialist carpet or sofa shampoo unless listed",
+			"Cleaning supplies not included unless the listing says so",
 		],
 		pricingNote:
-			"Prices vary by home size and package. Browse listings for “from” rates, then confirm details when you book.",
+			"Cleaning prices in Addis Ababa vary by home size, hours, and package. Browse “from” rates on each listing, then confirm the scope when you book.",
+		keywords: [
+			"cleaning service Addis Ababa",
+			"cleaning services Addis Ababa",
+			"home cleaning Addis Ababa",
+			"house cleaning Addis Ababa",
+			"office cleaning Addis Ababa",
+			"maid cleaning Addis Ababa",
+			"apartment cleaning Ethiopia",
+			"Zemen cleaning",
+		],
 		faqs: [
 			{
-				question: "How do I book a cleaner or maid in Addis Ababa?",
+				question: "How do I book a cleaning service in Addis Ababa?",
 				answer:
-					"Browse cleaning listings on Zemen Service, choose a provider, and book through the website or app. You can also call our short code or WhatsApp for help.",
+					"Browse cleaning listings on Zemen Service, choose a verified cleaner, and book through the website or app. You can also call short code 8323 or WhatsApp for help.",
+			},
+			{
+				question: "Which areas of Addis Ababa do cleaners cover?",
+				answer:
+					"Providers serve homes and offices across Addis Ababa. Share your location when you book so we can match you with available cleaners nearby.",
 			},
 			{
 				question: "Are cleaning providers verified?",
 				answer:
 					"Yes. Providers go through identity checks, document review, and ongoing supervision after placement.",
+			},
+			{
+				question: "Can I book regular or one-time home cleaning?",
+				answer:
+					"Yes. Many listings offer one-time visits; some also offer recurring schedules. Check the provider listing for the options that fit your home.",
 			},
 		],
 	},
@@ -100,15 +121,15 @@ const CATEGORY_COPY: Record<string, CategorySeoCopy> = {
 		],
 	},
 	babysitting: {
-		title: "Premium Babysitting Services in Addis Ababa",
-		h1: "Trusted Babysitting Services in Addis Ababa",
+		title: "Nanny & Babysitting Services in Ethiopia | Addis Ababa",
+		h1: "Nanny Suppliers and Babysitting in Addis Ababa, Ethiopia",
 		description:
-			"Find trusted babysitting and childcare professionals in Addis Ababa, Ethiopia. Book verified support through Zemen Service.",
+			"Find nanny suppliers in Ethiopia and trusted babysitting near you in Addis Ababa. Book verified childcare professionals through Zemen Service.",
 		intro:
-			"Book babysitting support from vetted providers in Addis Ababa. Childcare-related providers may require additional checks such as documented experience and medical clearance where applicable.",
+			"Looking for nanny suppliers in Ethiopia? Zemen Service connects families in Addis Ababa with verified nannies and babysitters near you — with identity checks, experience review, and medical clearance where applicable for childcare roles.",
 		offered: [
-			"Babysitting and childcare support",
-			"Verified provider profiles",
+			"Nanny and babysitting support in Ethiopia",
+			"Verified childcare provider profiles",
 			"Training and experience checks where available",
 			"Ongoing supervision after placement",
 		],
@@ -122,47 +143,99 @@ const CATEGORY_COPY: Record<string, CategorySeoCopy> = {
 		],
 		pricingNote:
 			"Rates depend on hours and number of children. Check each listing’s price and confirm details when you book.",
+		keywords: [
+			"nanny suppliers in Ethiopia",
+			"nanny suppliers Ethiopia",
+			"nanny Addis Ababa",
+			"babysitting Addis Ababa",
+			"nanny agency Ethiopia",
+			"childcare Addis Ababa",
+			"babysitter near me Addis Ababa",
+			"Zemen nanny",
+		],
 		faqs: [
 			{
-				question: "How does Zemen Service vet babysitters?",
+				question: "Where can I find nanny suppliers in Ethiopia?",
+				answer:
+					"Book verified nannies and babysitters on Zemen Service across Addis Ababa, Ethiopia. Browse Babysitting listings, compare profiles, and book through the website, app, short code 8323, or WhatsApp.",
+			},
+			{
+				question: "How does Zemen Service vet babysitters and nannies?",
 				answer:
 					"We verify identity and documents, review training or work history where available, require medical checkup for childcare where applicable, and continue monitoring after placement.",
 			},
 		],
 	},
 	nanny: {
-		title: "Premium Nanny Services in Addis Ababa",
-		h1: "Trusted Nanny Services in Addis Ababa",
+		title: "Nanny Suppliers in Ethiopia | Trusted Nannies Addis Ababa",
+		h1: "Nanny Suppliers in Ethiopia",
 		description:
-			"Book trusted nanny and childcare support in Addis Ababa, Ethiopia through verified Zemen Service professionals.",
+			"Find nanny suppliers in Ethiopia and book trusted nannies in Addis Ababa through verified Zemen Service professionals.",
 		intro:
-			"Find nanny and childcare support from vetted professionals in Addis Ababa, with clear booking and follow-up through Zemen Service.",
+			"Zemen Service is a trusted place to find nanny suppliers in Ethiopia. Browse verified nannies near you in Addis Ababa with clear booking and follow-up support.",
 		offered: [
-			"Nanny and childcare support",
+			"Nanny suppliers and childcare support",
 			"Document and identity checks",
 			"Experience verification where available",
 			"Customer support after booking",
 		],
-		faqs: [],
-	},
-	plumbing: {
-		title: "Premium Plumbing Services in Addis Ababa",
-		h1: "Trusted Plumbing Services in Addis Ababa",
-		description:
-			"Book trusted plumbers in Addis Ababa, Ethiopia for repairs, installations, and home plumbing work through Zemen Service.",
-		intro:
-			"Find verified plumbing professionals in Addis Ababa for leaks, fittings, and other home plumbing needs. Book online or through the Zemen Service call center.",
-		offered: [
-			"Home plumbing repairs",
-			"Fittings and maintenance help",
-			"Verified local plumbers",
-			"Clear booking and follow-up",
+		keywords: [
+			"nanny suppliers in Ethiopia",
+			"nanny suppliers Ethiopia",
+			"nanny Addis Ababa",
+			"nanny agency Ethiopia",
 		],
 		faqs: [
 			{
+				question: "How do I hire a nanny in Ethiopia through Zemen?",
+				answer:
+					"Open Babysitting or nanny-related listings on Zemen Service, choose a verified provider, and book online or via the app. Call 8323 or WhatsApp if you want help matching a nanny near you in Addis Ababa.",
+			},
+		],
+	},
+	plumbing: {
+		title: "Plumbing Company in Addis Ababa | Verified Plumbers",
+		h1: "Plumbing Company Services in Addis Ababa",
+		description:
+			"Need a plumbing company in Addis Ababa, Ethiopia? Book verified plumbers for leaks, pipe repairs, fittings, and home plumbing work through Zemen Service.",
+		intro:
+			"Looking for a plumbing company near you in Addis Ababa? Zemen Service connects you with verified plumbers for emergency leaks, blocked drains, fittings, toilet and sink repairs, and other home plumbing jobs — with clear listing prices before you book.",
+		offered: [
+			"Plumbing company-style home repairs",
+			"Leak detection and pipe fixes",
+			"Fittings, taps, and maintenance help",
+			"Verified local plumbers",
+		],
+		includes: [
+			"Diagnosis and repair as listed by the provider",
+			"Common residential plumbing tasks",
+		],
+		excludes: [
+			"Major civil works or new building plumbing unless listed",
+			"Parts cost unless included in the listing price",
+		],
+		pricingNote:
+			"Plumbing prices vary by job type and parts. Compare listing rates, then confirm the scope when you book.",
+		keywords: [
+			"plumbing company",
+			"plumbing company Addis Ababa",
+			"plumbing company near me",
+			"plumber Addis Ababa",
+			"plumbing services Addis Ababa",
+			"emergency plumber Addis Ababa",
+			"pipe repair Ethiopia",
+			"Zemen plumbing",
+		],
+		faqs: [
+			{
+				question: "How do I book a plumbing company in Addis Ababa?",
+				answer:
+					"Browse Plumber listings on Zemen Service, compare verified providers, and book through the website or app. You can also call short code 8323 or WhatsApp for help finding a plumber near you.",
+			},
+			{
 				question: "How quickly can I book a plumber?",
 				answer:
-					"Browse available plumbing listings on Zemen Service and book a time that works for you through the app or website.",
+					"Many plumbing listings can be booked for the same week. Share your location and the issue (leak, blockage, fitting) so we can match available plumbers nearby.",
 			},
 		],
 	},
@@ -196,18 +269,82 @@ const CATEGORY_COPY: Record<string, CategorySeoCopy> = {
 		faqs: [],
 	},
 	moving: {
-		title: "Premium Moving Services in Addis Ababa",
-		h1: "Trusted Moving Services in Addis Ababa",
+		title: "Movers in Addis Ababa | Furniture Moving Services",
+		h1: "Trusted Movers in Addis Ababa",
 		description:
-			"Book trusted moving help in Addis Ababa, Ethiopia for home and local moves through Zemen Service.",
+			"Book verified movers in Addis Ababa, Ethiopia for furniture moving, house moves, and local relocation. Compare listings and book with Zemen Service.",
 		intro:
-			"Find verified moving professionals in Addis Ababa for packing and relocation support through Zemen Service.",
+			"Looking for movers in Addis Ababa? Zemen Service connects you with verified furniture movers and relocation help for apartments, houses, and local moves across the city — including Bole, CMC, Kazanchis, Sarbet, and Ayat.",
 		offered: [
-			"Local moving help",
-			"Packing and relocation support",
+			"Furniture movers in Addis Ababa",
+			"House and apartment moving",
+			"Local relocation and loading help",
+			"Verified providers with clear booking",
+		],
+		includes: [
+			"Loading and unloading furniture",
+			"Local transport support for home moves",
+			"Careful handling of household items",
+		],
+		excludes: [
+			"Long-distance intercity moves unless listed by the provider",
+			"Specialty crane or heavy industrial lifting unless stated",
+		],
+		pricingNote:
+			"Moving prices vary by volume, floors, and distance within Addis Ababa. Compare listing rates, then confirm details when you book.",
+		keywords: [
+			"movers Addis Ababa",
+			"furniture movers Addis Ababa",
+			"house movers Addis Ababa",
+			"moving company Addis Ababa",
+			"relocation Addis Ababa",
+			"furniture moving Ethiopia",
+			"Zemen movers",
+		],
+		faqs: [
+			{
+				question: "How do I book movers in Addis Ababa?",
+				answer:
+					"Browse furniture moving listings on Zemen Service, choose a verified mover, and book through the website or app. You can also call short code 8323 or WhatsApp for help.",
+			},
+			{
+				question: "Do Zemen movers cover all of Addis Ababa?",
+				answer:
+					"Yes. Providers serve neighborhoods across Addis Ababa. Share your pickup and drop-off locations when you book so we can match you with available movers nearby.",
+			},
+			{
+				question: "Are movers on Zemen Service verified?",
+				answer:
+					"Yes. Providers go through identity and document checks before they can take jobs, and we support you after the booking.",
+			},
+		],
+	},
+	logistics: {
+		title: "Logistics & Movers in Addis Ababa",
+		h1: "Logistics and Moving Services in Addis Ababa",
+		description:
+			"Book movers, furniture moving, and packing help in Addis Ababa, Ethiopia through verified Zemen Service providers.",
+		intro:
+			"From furniture movers to packing support, find verified logistics professionals in Addis Ababa on Zemen Service for smoother local moves.",
+		offered: [
+			"Furniture movers",
+			"Packing and moving help",
+			"Local relocation support",
 			"Verified providers",
 		],
-		faqs: [],
+		keywords: [
+			"movers Addis Ababa",
+			"logistics Addis Ababa",
+			"furniture moving Addis Ababa",
+			"packing and moving Ethiopia",
+		],
+		faqs: [
+			{
+				question: "What logistics services can I book on Zemen?",
+				answer:
+					"You can book furniture moving and home equipment packing and moving through verified providers in Addis Ababa.",
+			},
+		],
 	},
 	beauty: {
 		title: "Premium Beauty Services in Addis Ababa",
@@ -224,18 +361,109 @@ const CATEGORY_COPY: Record<string, CategorySeoCopy> = {
 		faqs: [],
 	},
 	security: {
-		title: "Premium Security Services in Addis Ababa",
-		h1: "Trusted Security Services in Addis Ababa",
+		title: "Home Security Services in Addis Ababa",
+		h1: "Trusted Home Security Services in Addis Ababa",
 		description:
-			"Find trusted security-related service professionals in Addis Ababa, Ethiopia through Zemen Service.",
+			"Find verified security professionals in Addis Ababa, Ethiopia for CCTV, cameras, and related home protection through Zemen Service.",
 		intro:
-			"Browse verified security-related providers available on Zemen Service in Addis Ababa.",
+			"Browse verified security-related providers on Zemen Service in Addis Ababa — including CCTV and camera installation where listed.",
 		offered: [
-			"Security-related home services",
+			"CCTV and security camera support",
 			"Verified provider profiles",
 			"Booking through Zemen Service",
 		],
-		faqs: [],
+		keywords: [
+			"security camera Addis Ababa",
+			"CCTV Addis Ababa",
+			"home security Addis Ababa",
+		],
+		faqs: [
+			{
+				question: "Can I book CCTV or security camera installation on Zemen?",
+				answer:
+					"Yes. Open Technical services and choose CCTV Installation to browse verified installers in Addis Ababa.",
+			},
+		],
+	},
+	"cctv-installation": {
+		title: "Security Camera & CCTV Installation in Addis Ababa",
+		h1: "CCTV and Security Camera Installation in Addis Ababa",
+		description:
+			"Book verified CCTV and security camera installation in Addis Ababa, Ethiopia. Get help with camera placement, recording setup, and remote viewing through Zemen Service.",
+		intro:
+			"Protect your home or business with CCTV and security camera installation in Addis Ababa. Zemen Service connects you with verified technicians for IP camera systems, NVR setup, cabling, and remote phone viewing — from a clear site plan through handover.",
+		offered: [
+			"Security camera and CCTV installation",
+			"Camera placement and coverage planning",
+			"NVR recording and remote viewing setup",
+			"Verified local technicians",
+		],
+		includes: [
+			"Site assessment and camera positioning guidance",
+			"Mounting and cabling as listed by the provider",
+			"Recorder setup and basic user handover",
+		],
+		excludes: [
+			"Camera hardware brand unless stated in the listing",
+			"Ongoing monitoring center fees unless offered",
+			"Electric fence or access control unless separately booked",
+		],
+		pricingNote:
+			"CCTV prices in Addis Ababa usually depend on camera count, cable runs, and recorder storage. Compare listing rates, then confirm a site survey when you book.",
+		keywords: [
+			"security camera Addis Ababa",
+			"CCTV installation Addis Ababa",
+			"CCTV camera Addis Ababa",
+			"security camera installation Ethiopia",
+			"IP camera installation Addis Ababa",
+			"home CCTV Addis Ababa",
+			"surveillance camera Addis Ababa",
+			"Zemen CCTV",
+		],
+		faqs: [
+			{
+				question: "How do I book CCTV or security camera installation in Addis Ababa?",
+				answer:
+					"Open CCTV Installation on Zemen Service, compare verified technicians, and book through the website or app. You can also call 8323 or WhatsApp for help.",
+			},
+			{
+				question: "Do installers set up remote viewing on my phone?",
+				answer:
+					"Many CCTV listings include NVR setup and remote viewing configuration. Confirm what is included in the provider listing before you book.",
+			},
+			{
+				question: "Is CCTV installation available for homes and businesses?",
+				answer:
+					"Yes. Providers serve residential compounds and commercial spaces across Addis Ababa. Share your property type and camera needs when you request a booking.",
+			},
+		],
+	},
+	technical: {
+		title: "Technical Services in Addis Ababa | CCTV, WiFi & IT",
+		h1: "Technical Services in Addis Ababa",
+		description:
+			"Book verified technical professionals in Addis Ababa, Ethiopia for CCTV installation, WiFi and network setup, intercom, IT support, and more with Zemen Service.",
+		intro:
+			"From security camera installation to WiFi and IT support, find verified technical professionals in Addis Ababa on Zemen Service.",
+		offered: [
+			"CCTV and security camera installation",
+			"WiFi and network setup",
+			"Intercom and IT support",
+			"Verified local technicians",
+		],
+		keywords: [
+			"CCTV installation Addis Ababa",
+			"security camera Addis Ababa",
+			"WiFi setup Addis Ababa",
+			"IT support Addis Ababa",
+		],
+		faqs: [
+			{
+				question: "What technical services can I book on Zemen?",
+				answer:
+					"Browse Technical listings for CCTV installation, WiFi and network setup, intercom, IT support, and other skilled trades available in Addis Ababa.",
+			},
+		],
 	},
 	nursing: {
 		title: "Premium Home Nursing Services in Addis Ababa",
@@ -280,16 +508,17 @@ const CATEGORY_COPY: Record<string, CategorySeoCopy> = {
 		faqs: [],
 	},
 	housemaid: {
-		title: "Premium Housemaid & Maid Services in Addis Ababa",
-		h1: "Trusted Housemaid & Domestic Help in Addis Ababa",
+		title: "Maid Agency Near Me | Housemaid Services Addis Ababa",
+		h1: "Maid Agency and Housemaid Services in Addis Ababa",
 		description:
-			"Book trusted housemaid, maid, and domestic help professionals in Addis Ababa, Ethiopia through Zemen Service.",
+			"Looking for a maid agency near you in Addis Ababa, Ethiopia? Book verified housemaids and domestic help through Zemen Service — identity-checked providers with clear listing prices.",
 		intro:
-			"Find verified housemaid and domestic help support for your home in Addis Ababa—everyday cleaning, home care, and reliable in-home help. Providers are reviewed before they can take jobs.",
+			"Searching “maid agency near me”? Zemen Service is a trusted maid and housemaid platform in Addis Ababa, Ethiopia. Compare verified domestic help for everyday cleaning, home care, and reliable in-home support — then book online, in the app, or by phone.",
 		offered: [
+			"Maid agency-style matching in Addis Ababa",
 			"Housemaid and domestic help",
-			"Home support from verified providers",
-			"Clear booking through app, web, or call center",
+			"Verified local providers",
+			"Booking via app, website, or call center",
 		],
 		includes: [
 			"In-home domestic help for the booked hours",
@@ -301,21 +530,36 @@ const CATEGORY_COPY: Record<string, CategorySeoCopy> = {
 		],
 		pricingNote:
 			"Compare listing prices for daily or hourly housemaid support, then confirm scope when you book.",
+		keywords: [
+			"maid agency near me",
+			"maid agency Addis Ababa",
+			"maid agency Ethiopia",
+			"housemaid Addis Ababa",
+			"maid services Addis Ababa",
+			"domestic help near me",
+			"የቤት ሰራተኛ አዲስ አበባ",
+			"Zemen maid agency",
+		],
 		faqs: [
+			{
+				question: "Is Zemen Service a maid agency near me in Addis Ababa?",
+				answer:
+					"Zemen Service is a home services platform that works like a modern maid agency: you browse verified housemaids near you in Addis Ababa, compare listings, and book with clear support after placement.",
+			},
 			{
 				question: "How do I book a housemaid in Addis Ababa?",
 				answer:
-					"Browse domestic help listings on Zemen Service, choose a housemaid or home-support provider, and book through the website or app. You can also call or WhatsApp us for help.",
+					"Browse Housemaid listings on Zemen Service, choose a verified provider, and book through the website or app. You can also call short code 8323 or WhatsApp for help.",
 			},
 		],
 	},
 	"office-cleaning": {
-		title: "Premium Office Cleaning in Addis Ababa",
-		h1: "Trusted Office Cleaning Services in Addis Ababa",
+		title: "Office Cleaning Service in Addis Ababa",
+		h1: "Office Cleaning Services in Addis Ababa",
 		description:
-			"Book trusted office cleaning and recurring workplace cleaning in Addis Ababa, Ethiopia through Zemen Service.",
+			"Book office cleaning services in Addis Ababa, Ethiopia for workplaces, shared desks, and commercial spaces through verified Zemen Service cleaners.",
 		intro:
-			"Find verified office cleaning professionals in Addis Ababa for one-time or recurring workplace cleans. Book through Zemen Service with clear support.",
+			"Keep your workplace presentable with office cleaning services in Addis Ababa. Book verified cleaners for one-time or recurring office cleans through Zemen Service.",
 		offered: [
 			"Office and workplace cleaning",
 			"Recurring cleaning options where available",
@@ -331,29 +575,47 @@ const CATEGORY_COPY: Record<string, CategorySeoCopy> = {
 		],
 		pricingNote:
 			"Workplace size and frequency drive price. Check each listing’s rate before you book.",
+		keywords: [
+			"office cleaning Addis Ababa",
+			"cleaning service Addis Ababa",
+			"commercial cleaning Ethiopia",
+		],
 		faqs: [
 			{
-				question: "Can I book recurring office cleaning?",
+				question: "Can I book recurring office cleaning in Addis Ababa?",
 				answer:
 					"Yes. Browse office cleaning listings on Zemen Service and choose a schedule that fits your workplace when the provider offers recurring options.",
 			},
 		],
 	},
 	maid: {
-		title: "Premium Maid Services in Addis Ababa",
-		h1: "Trusted Maid Services in Addis Ababa",
+		title: "Maid Agency Near Me | Maid Services Addis Ababa, Ethiopia",
+		h1: "Maid Services and Maid Agency in Addis Ababa",
 		description:
-			"Book trusted maid services and domestic help in Addis Ababa, Ethiopia through Zemen Service.",
+			"Find a maid agency near you in Addis Ababa, Ethiopia. Book trusted maid services and domestic help with verified Zemen Service providers.",
 		intro:
-			"Find verified maid and domestic help professionals for your home in Addis Ababa. Book with clear pricing on each listing.",
+			"Need a maid agency near you? Book verified maid and domestic help professionals in Addis Ababa through Zemen Service, with clear pricing on each listing.",
 		offered: [
+			"Maid agency matching in Addis Ababa",
 			"Maid and domestic help",
 			"Home cleaning support",
 			"Verified local providers",
 		],
 		pricingNote:
 			"Listing prices vary by hours and duties. Confirm details when you book.",
-		faqs: [],
+		keywords: [
+			"maid agency near me",
+			"maid agency Addis Ababa",
+			"maid services Addis Ababa",
+			"housemaid Ethiopia",
+		],
+		faqs: [
+			{
+				question: "How do I find a maid agency near me in Ethiopia?",
+				answer:
+					"Open Housemaid on Zemen Service to browse verified maids near you in Addis Ababa. Book online or call 8323 / WhatsApp for placement help.",
+			},
+		],
 	},
 	painting: {
 		title: "Premium House Painting in Addis Ababa",
@@ -384,57 +646,158 @@ const CATEGORY_COPY: Record<string, CategorySeoCopy> = {
 		faqs: [],
 	},
 	"deep-cleaning": {
-		title: "Premium Deep Cleaning in Addis Ababa",
-		h1: "Deep Cleaning Services in Addis Ababa",
+		title: "Kitchen Deep Cleaning Services Near Me | Addis Ababa",
+		h1: "Kitchen Deep Cleaning Services Near You in Addis Ababa",
 		description:
-			"Book one-time deep cleaning in Addis Ababa, Ethiopia for move-in, move-out, and post-construction cleans from verified Zemen Service cleaners.",
+			"Book kitchen deep cleaning services near you in Addis Ababa, Ethiopia. Verified cleaners for kitchens, bathrooms, move-in, move-out, and post-construction deep cleans with Zemen Service.",
 		intro:
-			"Deep cleaning goes beyond a regular visit: inside cabinets and appliances, scrubbed bathrooms and kitchens, and detailed floors. Book verified cleaners in Addis Ababa for a one-time reset of your home.",
+			"Searching for kitchen deep cleaning services near you? Zemen Service matches you with verified deep cleaners in Addis Ababa for grease-heavy kitchens, bathrooms, cabinets, appliance exteriors, move-in and move-out jobs, and post-construction cleanup.",
 		offered: [
+			"Kitchen deep cleaning near you in Addis Ababa",
+			"Bathroom deep cleans and detailed surfaces",
 			"Move-in and move-out cleaning",
 			"Post-construction and renovation cleanup",
-			"Kitchen and bathroom deep cleans",
-			"Booking via app, website, or call center",
+		],
+		includes: [
+			"Kitchen counters, sinks, cabinets, and appliance exteriors as listed",
+			"Detailed bathroom scrubbing",
+			"Floors and high-touch surfaces",
+		],
+		excludes: [
+			"Exterior window cleaning at height unless listed",
+			"Hazardous construction waste removal unless stated",
 		],
 		pricingNote:
-			"Deep cleans are priced by home size and condition. Compare listing prices, then confirm the scope when you book.",
+			"Deep cleans are priced by home size, kitchen condition, and scope. Compare listing prices, then confirm kitchen and bathroom details when you book.",
+		keywords: [
+			"kitchen deep cleaning services near me",
+			"kitchen deep cleaning Addis Ababa",
+			"deep cleaning near me",
+			"deep cleaning Addis Ababa",
+			"kitchen cleaning Addis Ababa",
+			"move out cleaning Addis Ababa",
+			"post construction cleaning Addis Ababa",
+			"Zemen deep cleaning",
+		],
 		faqs: [
+			{
+				question: "Can I book kitchen deep cleaning services near me in Addis Ababa?",
+				answer:
+					"Yes. Open Deep Cleaning on Zemen Service, share your location, and book a verified cleaner for a detailed kitchen clean near you in Addis Ababa.",
+			},
 			{
 				question: "How is deep cleaning different from regular cleaning?",
 				answer:
-					"Regular cleaning keeps a home tidy week to week. Deep cleaning is a longer, one-time job that covers areas regular visits skip, such as inside appliances, cabinets, and grout.",
+					"Regular cleaning keeps a home tidy week to week. Deep cleaning is a longer, one-time job that covers areas regular visits skip — including kitchen grease, inside cabinets, appliance exteriors, and bathroom grout.",
+			},
+			{
+				question: "Do you offer post-construction cleaning in Addis Ababa?",
+				answer:
+					"Yes. Choose a deep cleaning listing and describe renovation dust or debris when you book so the provider can confirm the right scope.",
 			},
 		],
 	},
 	"packing-moving": {
-		title: "Premium Packing & Moving Help in Addis Ababa",
-		h1: "Home Packing and Moving Services in Addis Ababa",
+		title: "Packers and Movers in Addis Ababa | Home Equipment Moving",
+		h1: "Packers and Movers in Addis Ababa",
 		description:
-			"Book verified packers and movers in Addis Ababa, Ethiopia to pack, move, and unpack home equipment safely through Zemen Service.",
+			"Book packers and movers in Addis Ababa, Ethiopia to wrap, load, move, and unpack home equipment safely with verified Zemen Service providers.",
 		intro:
-			"Get help packing and moving household equipment across Addis Ababa. Verified providers handle wrapping, loading, and setup so your move goes smoothly.",
+			"Need packers and movers in Addis Ababa? Get verified help packing household equipment, loading trucks, and unpacking at your new place — so your move stays organized from start to finish.",
 		offered: [
 			"Packing and wrapping household items",
 			"Loading, transport, and unloading",
 			"Unpacking and setup support",
-			"Verified local providers",
+			"Verified local movers and packers",
 		],
-		faqs: [],
+		includes: [
+			"Packing materials handling as listed by the provider",
+			"Careful wrapping of fragile items",
+			"Move-day loading and unloading support",
+		],
+		excludes: [
+			"Purchase of all packing materials unless included in the listing",
+			"Storage warehouse fees unless offered by the provider",
+		],
+		pricingNote:
+			"Packing and moving rates depend on item volume and distance within Addis Ababa. Check each listing before you book.",
+		keywords: [
+			"packers and movers Addis Ababa",
+			"movers Addis Ababa",
+			"home packing Addis Ababa",
+			"equipment moving Ethiopia",
+		],
+		faqs: [
+			{
+				question: "Can movers pack my belongings in Addis Ababa?",
+				answer:
+					"Yes. Choose a packing and moving listing on Zemen Service for wrapping, loading, and unpacking support from verified providers.",
+			},
+			{
+				question: "How far in advance should I book movers?",
+				answer:
+					"Book as early as you can for busy weekends. Same-week moves are often available — share your date and locations when you request a booking.",
+			},
+		],
 	},
 	"ac-repair": {
-		title: "Premium AC Repair & Service in Addis Ababa",
-		h1: "Air Conditioner Repair and Service in Addis Ababa",
+		title: "AC Repair Service in Addis Ababa | Air Conditioner Fix & Service",
+		h1: "Air Conditioning Repair Services in Addis Ababa",
 		description:
-			"Book verified technicians in Addis Ababa, Ethiopia for air conditioner installation, repair, and regular servicing through Zemen Service.",
+			"Book air conditioning repair services in Addis Ababa, Ethiopia. Verified technicians for AC not cooling, gas refill, cleaning, servicing, and split AC installation through Zemen Service.",
 		intro:
-			"Keep your air conditioner running well. Book verified technicians in Addis Ababa for AC repairs, gas refills, cleaning, and installation.",
+			"Need an air conditioning repair service in Addis Ababa? Zemen Service connects you with verified AC technicians for units that are not cooling, unusual noise, leaks, gas refill, filter and coil cleaning, and split AC installation — at home or at the office across neighborhoods like Bole, CMC, Kazanchis, Sarbet, and Ayat.",
 		offered: [
-			"AC repair and troubleshooting",
-			"Cleaning and regular servicing",
-			"Installation support",
-			"Verified local technicians",
+			"Air conditioning repair and troubleshooting",
+			"Gas refill and refrigerant checks",
+			"AC cleaning and preventive servicing",
+			"Split AC installation support",
 		],
-		faqs: [],
+		includes: [
+			"Diagnosis of cooling, airflow, and electrical issues as listed",
+			"Filter cleaning and basic maintenance where offered",
+			"Installation or relocation help when the listing includes it",
+		],
+		excludes: [
+			"Spare parts and refrigerant cost unless stated in the listing",
+			"Large commercial chillers or VRF projects unless the provider offers them",
+			"Warranty work covered by the manufacturer unless arranged separately",
+		],
+		pricingNote:
+			"AC repair prices in Addis Ababa usually depend on the fault, spare parts, and whether gas refill or a full service is needed. Compare listing rates, then confirm the diagnosis when you book.",
+		keywords: [
+			"air conditioning repair service Addis Ababa",
+			"AC repair Addis Ababa",
+			"air conditioner repair Addis Ababa",
+			"AC service Addis Ababa",
+			"AC gas refill Addis Ababa",
+			"split AC installation Addis Ababa",
+			"AC cleaning Addis Ababa",
+			"HVAC repair Ethiopia",
+			"Zemen AC repair",
+		],
+		faqs: [
+			{
+				question: "How do I book an air conditioning repair service in Addis Ababa?",
+				answer:
+					"Open AC Repair & Service on Zemen Service, compare verified technicians, and book through the website or app. You can also call short code 8323 or WhatsApp for help.",
+			},
+			{
+				question: "My AC is not cooling — can a technician come to my home?",
+				answer:
+					"Yes. Share your location and symptoms when you book. Providers serve homes and offices across Addis Ababa and can diagnose issues like weak cooling, noise, or leaks.",
+			},
+			{
+				question: "Do you offer AC gas refill, cleaning, and installation?",
+				answer:
+					"Many listings cover repair, gas refill, cleaning/servicing, and split AC installation. Check what each provider includes before you confirm the booking.",
+			},
+			{
+				question: "How often should I service my air conditioner?",
+				answer:
+					"A preventive service once or twice a year helps cooling and power use. Book AC Repair & Service on Zemen when you need a routine clean or an urgent fix.",
+			},
+		],
 	},
 	"appliance-repair": {
 		title: "Premium Appliance Repair in Addis Ababa",
@@ -478,15 +841,19 @@ const COPY_ALIASES: Record<string, string> = {
 	"domestic-help/cooking-service": "cooking",
 	"domestic-help/housemaid": "housemaid",
 	"domestic-help/babysitting": "babysitting",
+	"domestic-help/nanny": "nanny",
 	"domestic-help/deep-cleaning": "deep-cleaning",
 	"maintenance/plumber": "plumbing",
 	"maintenance/electrician": "electrician",
 	"maintenance/general-handyman": "handyman",
 	"maintenance/ac-repair-and-service": "ac-repair",
 	"maintenance/appliance-repair": "appliance-repair",
+	logistics: "logistics",
 	"logistics/furniture-moving": "moving",
 	"logistics/home-equipment-packing-and-moving": "packing-moving",
 	"art-and-design/painting": "painting",
+	technical: "technical",
+	"technical/cctv-installation": "cctv-installation",
 };
 
 function matchCategoryCopy(path: string): CategorySeoCopy | null {
@@ -570,6 +937,7 @@ export function buildPageMetadata(input: {
 	title: string;
 	description: string;
 	path: string;
+	keywords?: string[];
 }): Metadata {
 	const absoluteTitle = input.title.includes(BRAND_NAME)
 		? input.title
@@ -582,6 +950,7 @@ export function buildPageMetadata(input: {
 			absolute: absoluteTitle,
 		},
 		description: input.description,
+		...(input.keywords?.length ? { keywords: input.keywords } : {}),
 		alternates: {
 			canonical: canonicalPath,
 		},

@@ -28,8 +28,9 @@ export const PRIORITY_SERVICE_LINKS = [
 	{ label: "Babysitting", href: "/services/domestic-help/babysitting" },
 	{ label: "Plumbing", href: "/services/maintenance/plumber" },
 	{ label: "Electrical", href: "/services/maintenance/electrician" },
-	{ label: "Painting", href: "/services/art-and-design/painting" },
-	{ label: "Moving", href: "/services/logistics/furniture-moving" },
+	{ label: "AC Repair", href: "/services/maintenance/ac-repair-and-service" },
+	{ label: "CCTV", href: "/services/technical/cctv-installation" },
+	{ label: "Movers", href: "/services/logistics/furniture-moving" },
 ] as const;
 
 export const SPONSORS = [
@@ -46,7 +47,47 @@ export const HOME_FAQS = [
 	{
 		question: "What is Zemen Service?",
 		answer:
-			"Zemen Service is a premium home services platform in Addis Ababa, Ethiopia. You can book verified professionals for cleaning, housemaid and domestic help, cooking, babysitting, plumbing, electrical work, painting, moving, beauty, and home nursing.",
+			"Zemen Service is a premium home services platform in Addis Ababa, Ethiopia. You can book verified professionals for cleaning, housemaid and domestic help, cooking, babysitting, plumbing, electrical work, CCTV and security cameras, movers and furniture moving, beauty, and home nursing.",
+	},
+	{
+		question: "How do I book a cleaning service in Addis Ababa?",
+		answer:
+			"Browse Cleaning on Zemen Service, compare verified cleaners for home or office, and book through the website or app. You can also call short code 8323 or WhatsApp for help.",
+	},
+	{
+		question: "Do you offer kitchen deep cleaning services near me?",
+		answer:
+			"Yes. Open Deep Cleaning on Zemen Service to book kitchen and home deep cleans near you in Addis Ababa — including grease-heavy kitchens, bathrooms, and move-in or move-out jobs.",
+	},
+	{
+		question: "Is Zemen a maid agency near me in Addis Ababa?",
+		answer:
+			"Zemen Service works like a modern maid agency: browse verified housemaids near you in Addis Ababa, compare listings, and book with ongoing support after placement.",
+	},
+	{
+		question: "Where can I find nanny suppliers in Ethiopia?",
+		answer:
+			"Book verified nannies and babysitters on Zemen Service across Addis Ababa, Ethiopia. Open Babysitting, compare profiles, and book online or via short code 8323 / WhatsApp.",
+	},
+	{
+		question: "How do I book a plumbing company in Addis Ababa?",
+		answer:
+			"Open Plumber under Maintenance on Zemen Service to book verified plumbers for leaks, fittings, and home plumbing jobs near you in Addis Ababa.",
+	},
+	{
+		question: "Can I book CCTV or security camera installation in Addis Ababa?",
+		answer:
+			"Yes. Open CCTV Installation under Technical services to book verified technicians for security camera setup, NVR recording, and remote viewing across Addis Ababa.",
+	},
+	{
+		question: "How do I book an air conditioning repair service in Addis Ababa?",
+		answer:
+			"Open AC Repair & Service under Maintenance on Zemen Service. Book verified technicians for AC not cooling, gas refill, cleaning, servicing, or split AC installation through the website, app, short code 8323, or WhatsApp.",
+	},
+	{
+		question: "Can I book movers in Addis Ababa with Zemen?",
+		answer:
+			"Yes. Book verified furniture movers and packing-and-moving help across Addis Ababa on Zemen Service. Compare listings, then book through the website, app, short code 8323, or WhatsApp.",
 	},
 	{
 		question: "Which areas of Addis Ababa do you serve?",

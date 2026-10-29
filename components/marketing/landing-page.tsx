@@ -311,8 +311,8 @@ export function LandingPage({
 
 						<p className="mt-3 max-w-md text-base leading-relaxed text-[#3d5240] animate-[marketing-fade-up_0.9s_ease_0.14s_both]">
 							Book verified professionals for cleaning, housemaid and domestic
-							help, cooking, babysitting, repairs, moving, beauty, and home
-							nursing across Addis Ababa.
+							help, cooking, babysitting, AC repair, CCTV, movers, beauty, and
+							home nursing across Addis Ababa.
 						</p>
 
 						<div className="mt-8 flex flex-wrap items-center gap-3 animate-[marketing-fade-up_0.95s_ease_0.2s_both]">
@@ -388,7 +388,7 @@ export function LandingPage({
 							</h2>
 							<p className="mt-1.5 max-w-xl text-sm text-[#3d5240]">
 								Explore cleaning, cooking, domestic help, repairs, maintenance,
-								moving, beauty, care, and more from verified providers.
+								movers, beauty, care, and more from verified providers.
 							</p>
 						</div>
 						<Link
