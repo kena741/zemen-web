@@ -41,6 +41,7 @@ export async function generateMetadata({
 		subcategory.subCategoryName,
 		subcategory.slug,
 		category.categoryName,
+		category.slug,
 	);
 	return buildPageMetadata({
 		title: copy.title,
@@ -67,6 +68,7 @@ export default async function ServiceSubCategoryPage({
 		subcategory.subCategoryName,
 		subcategory.slug,
 		category.categoryName,
+		category.slug,
 	);
 	const relatedSubs = siblings
 		.filter((item) => item.id !== subcategory.id)

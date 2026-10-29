@@ -19,16 +19,17 @@ export const TRUST_STATS = [
 /**
  * Priority specialty links for footer / home SEO.
  * Nested paths follow Option A: /services/{category}/{subcategory}.
+ * Slugs must match live subcategories; old guesses are 301'd in next.config.ts.
  */
 export const PRIORITY_SERVICE_LINKS = [
-	{ label: "Cleaning", href: "/services/domestic-help/cleaning" },
+	{ label: "Cleaning", href: "/services/domestic-help/cleaning-service" },
 	{ label: "Housemaid", href: "/services/domestic-help/housemaid" },
-	{ label: "Cooking", href: "/services/domestic-help/cooking" },
+	{ label: "Cooking", href: "/services/domestic-help/cooking-service" },
 	{ label: "Babysitting", href: "/services/domestic-help/babysitting" },
-	{ label: "Plumbing", href: "/services/maintenance/plumbing" },
-	{ label: "Electrical", href: "/services/maintenance/electrical" },
+	{ label: "Plumbing", href: "/services/maintenance/plumber" },
+	{ label: "Electrical", href: "/services/maintenance/electrician" },
 	{ label: "Painting", href: "/services/art-and-design/painting" },
-	{ label: "Moving", href: "/services/logistics/moving" },
+	{ label: "Moving", href: "/services/logistics/furniture-moving" },
 ] as const;
 
 export const SPONSORS = [

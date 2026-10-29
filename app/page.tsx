@@ -28,7 +28,7 @@ export const metadata: Metadata = {
 	openGraph: buildOpenGraph({
 		title: SEO_TITLE_DEFAULT,
 		description: SEO_OG_DESCRIPTION,
-		path: "https://www.zemenservice.com",
+		path: "/",
 	}),
 	twitter: buildTwitter({
 		title: SEO_TITLE_DEFAULT,

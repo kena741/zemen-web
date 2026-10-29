@@ -9,7 +9,7 @@ import {
 } from "@/services/catalog/publicCatalog";
 
 export const metadata: Metadata = buildPageMetadata({
-	title: "Premium Home Services in Addis Ababa, Ethiopia",
+	title: "Home Help Across Addis Ababa, Ethiopia",
 	description:
 		"Find premium, verified home service professionals across Addis Ababa, Ethiopia — Bole, CMC, Kazanchis, Sarbet, Ayat and beyond. Book cleaning, cooking, babysitting, plumbing, electrical, and more with Zemen Service.",
 	path: "/locations/addis-ababa",

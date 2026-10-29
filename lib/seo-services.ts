@@ -383,6 +383,74 @@ const CATEGORY_COPY: Record<string, CategorySeoCopy> = {
 		],
 		faqs: [],
 	},
+	"deep-cleaning": {
+		title: "Premium Deep Cleaning in Addis Ababa",
+		h1: "Deep Cleaning Services in Addis Ababa",
+		description:
+			"Book one-time deep cleaning in Addis Ababa, Ethiopia for move-in, move-out, and post-construction cleans from verified Zemen Service cleaners.",
+		intro:
+			"Deep cleaning goes beyond a regular visit: inside cabinets and appliances, scrubbed bathrooms and kitchens, and detailed floors. Book verified cleaners in Addis Ababa for a one-time reset of your home.",
+		offered: [
+			"Move-in and move-out cleaning",
+			"Post-construction and renovation cleanup",
+			"Kitchen and bathroom deep cleans",
+			"Booking via app, website, or call center",
+		],
+		pricingNote:
+			"Deep cleans are priced by home size and condition. Compare listing prices, then confirm the scope when you book.",
+		faqs: [
+			{
+				question: "How is deep cleaning different from regular cleaning?",
+				answer:
+					"Regular cleaning keeps a home tidy week to week. Deep cleaning is a longer, one-time job that covers areas regular visits skip, such as inside appliances, cabinets, and grout.",
+			},
+		],
+	},
+	"packing-moving": {
+		title: "Premium Packing & Moving Help in Addis Ababa",
+		h1: "Home Packing and Moving Services in Addis Ababa",
+		description:
+			"Book verified packers and movers in Addis Ababa, Ethiopia to pack, move, and unpack home equipment safely through Zemen Service.",
+		intro:
+			"Get help packing and moving household equipment across Addis Ababa. Verified providers handle wrapping, loading, and setup so your move goes smoothly.",
+		offered: [
+			"Packing and wrapping household items",
+			"Loading, transport, and unloading",
+			"Unpacking and setup support",
+			"Verified local providers",
+		],
+		faqs: [],
+	},
+	"ac-repair": {
+		title: "Premium AC Repair & Service in Addis Ababa",
+		h1: "Air Conditioner Repair and Service in Addis Ababa",
+		description:
+			"Book verified technicians in Addis Ababa, Ethiopia for air conditioner installation, repair, and regular servicing through Zemen Service.",
+		intro:
+			"Keep your air conditioner running well. Book verified technicians in Addis Ababa for AC repairs, gas refills, cleaning, and installation.",
+		offered: [
+			"AC repair and troubleshooting",
+			"Cleaning and regular servicing",
+			"Installation support",
+			"Verified local technicians",
+		],
+		faqs: [],
+	},
+	"appliance-repair": {
+		title: "Premium Appliance Repair in Addis Ababa",
+		h1: "Home Appliance Repair in Addis Ababa",
+		description:
+			"Book verified technicians in Addis Ababa, Ethiopia to repair fridges, washing machines, stoves, and other home appliances through Zemen Service.",
+		intro:
+			"Find verified technicians in Addis Ababa for refrigerator, washing machine, stove, and other household appliance repairs.",
+		offered: [
+			"Refrigerator and freezer repair",
+			"Washing machine repair",
+			"Stove and oven repair",
+			"Verified local technicians",
+		],
+		faqs: [],
+	},
 	domestic: {
 		title: "Premium Domestic Help in Addis Ababa",
 		h1: "Trusted Domestic Help in Addis Ababa",
@@ -399,27 +467,51 @@ const CATEGORY_COPY: Record<string, CategorySeoCopy> = {
 	},
 };
 
-function matchCategoryCopy(slug: string, categoryName: string): CategorySeoCopy | null {
-	const key = slug.toLowerCase();
-	const name = categoryName.toLowerCase();
-	for (const [token, copy] of Object.entries(CATEGORY_COPY)) {
-		if (key === token || key.includes(token) || name.includes(token)) {
-			return copy;
-		}
-	}
-	return null;
+/**
+ * Live catalog slugs that reuse a copy entry under a different key.
+ * Keys are `category` or `category/subcategory` slugs, matched exactly so
+ * sibling pages (e.g. cleaning vs. deep cleaning) never share titles.
+ */
+const COPY_ALIASES: Record<string, string> = {
+	"domestic-help": "domestic",
+	"domestic-help/cleaning-service": "cleaning",
+	"domestic-help/cooking-service": "cooking",
+	"domestic-help/housemaid": "housemaid",
+	"domestic-help/babysitting": "babysitting",
+	"domestic-help/deep-cleaning": "deep-cleaning",
+	"maintenance/plumber": "plumbing",
+	"maintenance/electrician": "electrician",
+	"maintenance/general-handyman": "handyman",
+	"maintenance/ac-repair-and-service": "ac-repair",
+	"maintenance/appliance-repair": "appliance-repair",
+	"logistics/furniture-moving": "moving",
+	"logistics/home-equipment-packing-and-moving": "packing-moving",
+	"art-and-design/painting": "painting",
+};
+
+function matchCategoryCopy(path: string): CategorySeoCopy | null {
+	const key = path.toLowerCase();
+	const copyKey = COPY_ALIASES[key] ?? key;
+	return CATEGORY_COPY[copyKey] ?? null;
+}
+
+/** "Laundry Service" → "Laundry Service", "Calligraphy" → "Calligraphy Services". */
+function withServicesSuffix(label: string): string {
+	const trimmed = label.trim();
+	const name = trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
+	return /\bservices?$/i.test(name) ? name : `${name} Services`;
 }
 
 export function getCategorySeoCopy(
 	categoryName: string,
 	slug: string,
 ): CategorySeoCopy {
-	const matched = matchCategoryCopy(slug, categoryName);
+	const matched = matchCategoryCopy(slug);
 	if (matched) return matched;
 
 	return {
-		title: `Premium ${categoryName} Services in Addis Ababa`,
-		h1: `Trusted ${categoryName} Services in Addis Ababa`,
+		title: `Premium ${withServicesSuffix(categoryName)} in Addis Ababa`,
+		h1: `Trusted ${withServicesSuffix(categoryName)} in Addis Ababa`,
 		description: `Find and book premium, verified ${categoryName.toLowerCase()} professionals in Addis Ababa, Ethiopia through ${BRAND_NAME}.`,
 		intro: `Browse verified ${categoryName.toLowerCase()} professionals available on ${BRAND_NAME} in Addis Ababa. Book through the website, app, or call center.`,
 		offered: [
@@ -442,16 +534,17 @@ export function getSubCategorySeoCopy(
 	subCategoryName: string,
 	subSlug: string,
 	parentCategoryName: string,
+	parentSlug: string,
 ): CategorySeoCopy {
-	const matched = matchCategoryCopy(subSlug, subCategoryName);
+	const matched = matchCategoryCopy(`${parentSlug}/${subSlug}`);
 	if (matched) return matched;
 
 	const label = subCategoryName.trim() || parentCategoryName;
 	const parent = parentCategoryName.trim() || "home services";
 
 	return {
-		title: `Premium ${label} Services in Addis Ababa`,
-		h1: `Trusted ${label} Services in Addis Ababa`,
+		title: `Premium ${withServicesSuffix(label)} in Addis Ababa`,
+		h1: `Trusted ${withServicesSuffix(label)} in Addis Ababa`,
 		description: `Find and book premium, verified ${label.toLowerCase()} professionals in Addis Ababa, Ethiopia under ${parent} through ${BRAND_NAME}.`,
 		intro: `Browse verified ${label.toLowerCase()} professionals in Addis Ababa on ${BRAND_NAME}. This is part of our ${parent.toLowerCase()} offering. Book through the website, app, or call center.`,
 		offered: [

@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { BRAND_NAME } from "@/lib/brand";
 
 /** Public marketing domain used in sitemap, robots, canonicals, and OG. */
-export const SEO_SITE_ORIGIN = "https://www.zemenservice.com";
+export const SEO_SITE_ORIGIN = "https://zemenservice.com";
 
 /** Canonical production origin for metadata, sitemap, and robots. */
 export function getMetadataBaseUrl(): URL {
@@ -21,7 +21,12 @@ export function getMetadataBaseUrl(): URL {
 		return new URL(SEO_SITE_ORIGIN);
 	}
 
-	return new URL(normalized);
+	// www redirects to the apex (next.config.ts), so it must never be canonical.
+	const url = new URL(normalized);
+	if (url.hostname === `www.${new URL(SEO_SITE_ORIGIN).hostname}`) {
+		return new URL(SEO_SITE_ORIGIN);
+	}
+	return url;
 }
 
 export const SEO_TITLE_DEFAULT =

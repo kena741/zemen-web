@@ -56,19 +56,14 @@ export const metadata: Metadata = {
 	openGraph: buildOpenGraph({
 		title: SEO_TITLE_DEFAULT,
 		description: SEO_OG_DESCRIPTION,
-		path: "https://www.zemenservice.com",
+		path: "/",
 	}),
 	twitter: buildTwitter({
 		title: SEO_TITLE_DEFAULT,
 		description: SEO_TWITTER_DESCRIPTION,
 	}),
-	icons: {
-		icon: [
-			{ url: "/favicon.png", sizes: "32x32", type: "image/png" },
-			{ url: "/app-icon.png", sizes: "1024x1024", type: "image/png" },
-		],
-		apple: [{ url: "/apple-icon.png", sizes: "180x180", type: "image/png" }],
-	},
+	// Icons come from app/favicon.ico, app/icon.png and app/apple-icon.png
+	// (file-based metadata overrides an `icons` field here).
 	appleWebApp: {
 		capable: true,
 		title: BRAND_NAME,
