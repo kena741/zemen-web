@@ -3,6 +3,7 @@ import { SHORT_CODE, WHATSAPP_DISPLAY } from "@/lib/marketing";
 import {
 	getMetadataBaseUrl,
 	SEO_DESCRIPTION,
+	SEO_GEO,
 	SEO_TITLE_DEFAULT,
 } from "@/lib/seo";
 
@@ -18,11 +19,34 @@ export function OrganizationJsonLd() {
 				url: base,
 				logo: `${base}/app-icon.png`,
 				description: SEO_DESCRIPTION,
+				slogan: "Premium home services in Addis Ababa, Ethiopia",
 				sameAs: ["https://t.me/zemenservicediscussion"],
+				address: {
+					"@type": "PostalAddress",
+					addressLocality: "Addis Ababa",
+					addressRegion: "Addis Ababa",
+					addressCountry: "ET",
+				},
+				knowsAbout: [
+					"Home cleaning",
+					"Housemaid and domestic help",
+					"Home cooking",
+					"Babysitting and nanny services",
+					"Plumbing",
+					"Electrical repair",
+					"Home repair and handyman services",
+					"Moving services",
+					"Home nursing",
+				],
 				areaServed: [
 					{
 						"@type": "City",
 						name: "Addis Ababa",
+						geo: {
+							"@type": "GeoCoordinates",
+							latitude: SEO_GEO.latitude,
+							longitude: SEO_GEO.longitude,
+						},
 					},
 					{
 						"@type": "Country",
@@ -53,7 +77,7 @@ export function OrganizationJsonLd() {
 				name: BRAND_NAME,
 				description: SEO_DESCRIPTION,
 				publisher: { "@id": `${base}/#organization` },
-				inLanguage: "en",
+				inLanguage: ["en", "am"],
 			},
 			{
 				"@type": "WebPage",

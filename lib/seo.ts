@@ -25,30 +25,63 @@ export function getMetadataBaseUrl(): URL {
 }
 
 export const SEO_TITLE_DEFAULT =
-	"Zemen Service | Trusted Home Services in Addis Ababa";
+	"Zemen Service | Premium Home Services in Addis Ababa, Ethiopia";
 
 export const SEO_DESCRIPTION =
-	"Find trusted and verified service professionals in Addis Ababa. Book cleaning, cooking, babysitting, plumbing, electrical, repairs, moving, beauty, nursing, and more.";
+	"Premium, verified home service professionals in Addis Ababa, Ethiopia. Book cleaning, housemaids, cooks, babysitters, nannies, plumbers, electricians, repairs, moving, beauty, and home nursing.";
 
 export const SEO_OG_DESCRIPTION =
-	"Find trusted and verified service professionals in Addis Ababa. Book the service you need with Zemen Service.";
+	"Premium, verified home service professionals in Addis Ababa, Ethiopia. Book the service you need with Zemen Service.";
 
 export const SEO_TWITTER_DESCRIPTION =
-	"Find trusted and verified service professionals in Addis Ababa.";
+	"Premium, verified home services in Addis Ababa, Ethiopia.";
 
 export const SEO_KEYWORDS = [
+	"premium home services Addis Ababa",
+	"premium home services Ethiopia",
 	"home services Addis Ababa",
 	"home services Ethiopia",
+	"Ethiopian home services app",
 	"cleaning services Addis Ababa",
+	"premium cleaning services Ethiopia",
 	"maid services Addis Ababa",
+	"housemaid Addis Ababa",
+	"domestic help Ethiopia",
 	"cooking services Addis Ababa",
+	"home cook Addis Ababa",
 	"babysitting Addis Ababa",
+	"nanny Addis Ababa",
 	"plumber Addis Ababa",
 	"electrician Addis Ababa",
 	"handyman Addis Ababa",
 	"home repair Addis Ababa",
+	"moving services Addis Ababa",
+	"home nursing Addis Ababa",
+	"verified service providers Ethiopia",
+	"Bole Addis Ababa home services",
+	"የቤት ሰራተኛ አዲስ አበባ",
+	"የጽዳት አገልግሎት አዲስ አበባ",
+	"ሞግዚት አዲስ አበባ",
+	"የቧንቧ ሰራተኛ አዲስ አበባ",
+	"ኤሌክትሪሻን አዲስ አበባ",
 	"Zemen Service",
 ] as const;
+
+/** Approximate city-centre coordinates for Addis Ababa (geo meta + JSON-LD). */
+export const SEO_GEO = {
+	region: "ET-AA",
+	placename: "Addis Ababa, Ethiopia",
+	latitude: 9.03,
+	longitude: 38.74,
+} as const;
+
+/** Local-SEO meta tags (geo.*, ICBM) read by some search engines and directories. */
+export const SEO_GEO_META: Record<string, string> = {
+	"geo.region": SEO_GEO.region,
+	"geo.placename": SEO_GEO.placename,
+	"geo.position": `${SEO_GEO.latitude};${SEO_GEO.longitude}`,
+	ICBM: `${SEO_GEO.latitude}, ${SEO_GEO.longitude}`,
+};
 
 export const OG_IMAGE_PATH = "/og-image.jpg";
 
@@ -73,13 +106,14 @@ export function buildOpenGraph({
 		url: path,
 		siteName: BRAND_NAME,
 		type: "website",
-		locale: "en_US",
+		locale: "en_ET",
+		alternateLocale: ["am_ET"],
 		images: [
 			{
 				url: OG_IMAGE_PATH,
 				width: 1200,
 				height: 630,
-				alt: "Zemen Service - Trusted Home Services",
+				alt: "Zemen Service - Premium Home Services in Addis Ababa, Ethiopia",
 			},
 		],
 	};

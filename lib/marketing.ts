@@ -39,3 +39,35 @@ export const SPONSORS = [
 	{ src: "/marketing/partners/ibex.png", alt: "Ibex" },
 	{ src: "/marketing/partners/zulu.png", alt: "Zulu" },
 ] as const;
+
+/** Home page FAQ — rendered on the page and emitted as FAQPage JSON-LD. */
+export const HOME_FAQS = [
+	{
+		question: "What is Zemen Service?",
+		answer:
+			"Zemen Service is a premium home services platform in Addis Ababa, Ethiopia. You can book verified professionals for cleaning, housemaid and domestic help, cooking, babysitting, plumbing, electrical work, painting, moving, beauty, and home nursing.",
+	},
+	{
+		question: "Which areas of Addis Ababa do you serve?",
+		answer:
+			"Zemen Service providers work across Addis Ababa. When you book, share your location and we match you with an available verified provider nearby.",
+	},
+	{
+		question: "How are Zemen Service providers vetted?",
+		answer:
+			"Every provider goes through identity and document checks, a skills review for their service category, and verification of training or work history. Childcare providers also complete a medical checkup, and we keep supervising performance after placement.",
+	},
+	{
+		question: "How do I book a home service?",
+		answer: `Browse services on the website or the Zemen Service app, choose a listing, and book. You can also call our short code ${SHORT_CODE} or message us on WhatsApp and our team will book for you.`,
+	},
+	{
+		question: "How do I pay?",
+		answer:
+			"You can pay securely in the app or on the website using local payment options such as Telebirr, CBE, and Chapa. Listing prices are shown before you book.",
+	},
+	{
+		question: "What if I am not satisfied with a service?",
+		answer: `Contact our support team by calling ${SHORT_CODE} or on WhatsApp. We follow up on every booking and work with you and the provider to make it right.`,
+	},
+] as const;

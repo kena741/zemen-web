@@ -78,7 +78,7 @@ export function ServicesHubView({
 				<div className="mx-auto max-w-6xl px-4 sm:px-6">
 					<MarketingBreadcrumbs items={crumbs} />
 					<h1 className="mt-4 max-w-3xl text-[clamp(1.85rem,4vw,2.75rem)] font-bold tracking-tight text-[#0f1a0c]">
-						Home Services in Addis Ababa
+						Premium Home Services in Addis Ababa
 					</h1>
 					<p className="mt-4 max-w-2xl text-[15px] leading-relaxed text-[#3d5240]">
 						Browse trusted service categories on {BRAND_NAME}. Book verified
@@ -817,7 +817,7 @@ export function LocationAddisView({
 						]}
 					/>
 					<h1 className="mt-4 max-w-3xl text-[clamp(1.85rem,4vw,2.75rem)] font-bold tracking-tight text-[#0f1a0c]">
-						Home Services in Addis Ababa
+						Premium Home Services in Addis Ababa
 					</h1>
 					<p className="mt-4 max-w-2xl text-[15px] leading-relaxed text-[#3d5240]">
 						{BRAND_NAME} connects households in Addis Ababa with verified local

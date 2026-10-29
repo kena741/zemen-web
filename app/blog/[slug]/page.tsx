@@ -2,6 +2,11 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { BlogPostPage } from "@/components/marketing/blog-pages";
+import {
+	blogPostingJsonLd,
+	breadcrumbJsonLd,
+	JsonLd,
+} from "@/components/marketing/seo-json-ld";
 import { BRAND_NAME } from "@/lib/brand";
 import { buildOpenGraph, buildTwitter } from "@/lib/seo";
 import {
@@ -40,11 +45,19 @@ export async function generateMetadata({
 		alternates: {
 			canonical: `/blog/${post.slug}`,
 		},
-		openGraph: buildOpenGraph({
-			title: `${post.title} | ${BRAND_NAME}`,
-			description,
-			path: `/blog/${post.slug}`,
-		}),
+		openGraph: {
+			...buildOpenGraph({
+				title: `${post.title} | ${BRAND_NAME}`,
+				description,
+				path: `/blog/${post.slug}`,
+			}),
+			type: "article",
+			publishedTime: post.publishedAt ?? undefined,
+			modifiedTime: post.updatedAt,
+			...(post.coverImage
+				? { images: [{ url: post.coverImage, alt: post.title }] }
+				: {}),
+		},
 		twitter: buildTwitter({
 			title: `${post.title} | ${BRAND_NAME}`,
 			description,
@@ -57,5 +70,19 @@ export default async function BlogSlugPage({ params }: PageProps) {
 	const post = await fetchPublishedBlogPostBySlug(slug);
 	if (!post) notFound();
 	const comments = await fetchApprovedBlogComments(post.id);
-	return <BlogPostPage post={post} comments={comments} />;
+	return (
+		<>
+			<JsonLd
+				data={[
+					blogPostingJsonLd(post),
+					breadcrumbJsonLd([
+						{ name: "Home", path: "/" },
+						{ name: "Blog", path: "/blog" },
+						{ name: post.title, path: `/blog/${post.slug}` },
+					]),
+				]}
+			/>
+			<BlogPostPage post={post} comments={comments} />
+		</>
+	);
 }

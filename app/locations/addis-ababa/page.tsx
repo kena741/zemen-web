@@ -9,9 +9,9 @@ import {
 } from "@/services/catalog/publicCatalog";
 
 export const metadata: Metadata = buildPageMetadata({
-	title: "Home Services in Addis Ababa",
+	title: "Premium Home Services in Addis Ababa, Ethiopia",
 	description:
-		"Find trusted home service professionals in Addis Ababa. Book cleaning, cooking, babysitting, plumbing, electrical, and more with Zemen Service.",
+		"Find premium, verified home service professionals across Addis Ababa, Ethiopia — Bole, CMC, Kazanchis, Sarbet, Ayat and beyond. Book cleaning, cooking, babysitting, plumbing, electrical, and more with Zemen Service.",
 	path: "/locations/addis-ababa",
 });
 

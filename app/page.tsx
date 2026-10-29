@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 
 import { LandingHeroImage } from "@/components/marketing/landing-hero-image";
 import { LandingPage } from "@/components/marketing/landing-page";
+import { faqJsonLd, JsonLd } from "@/components/marketing/seo-json-ld";
+import { HOME_FAQS } from "@/lib/marketing";
 import {
 	buildOpenGraph,
 	buildTwitter,
@@ -10,7 +12,10 @@ import {
 	SEO_TITLE_DEFAULT,
 	SEO_TWITTER_DESCRIPTION,
 } from "@/lib/seo";
-import { fetchPublicCategories } from "@/services/catalog/publicCatalog";
+import {
+	fetchPublicCategories,
+	fetchPublicFeaturedServices,
+} from "@/services/catalog/publicCatalog";
 
 export const metadata: Metadata = {
 	title: {
@@ -34,18 +39,26 @@ export const metadata: Metadata = {
 export const revalidate = 3600;
 
 export default async function Home() {
-	const categories = await fetchPublicCategories();
+	const [categories, services] = await Promise.all([
+		fetchPublicCategories(),
+		fetchPublicFeaturedServices(8),
+	]);
+	const faq = faqJsonLd([...HOME_FAQS]);
 
 	return (
-		<LandingPage
-			heroImage={<LandingHeroImage />}
-			initialCategories={categories.map((c) => ({
-				id: c.id,
-				categoryName: c.categoryName,
-				image: c.image,
-				active: c.active,
-				slug: c.slug,
-			}))}
-		/>
+		<>
+			{faq ? <JsonLd data={faq} /> : null}
+			<LandingPage
+				heroImage={<LandingHeroImage />}
+				initialServices={services}
+				initialCategories={categories.map((c) => ({
+					id: c.id,
+					categoryName: c.categoryName,
+					image: c.image,
+					active: c.active,
+					slug: c.slug,
+				}))}
+			/>
+		</>
 	);
 }

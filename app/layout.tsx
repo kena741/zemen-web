@@ -10,6 +10,7 @@ import {
 	buildTwitter,
 	getMetadataBaseUrl,
 	SEO_DESCRIPTION,
+	SEO_GEO_META,
 	SEO_KEYWORDS,
 	SEO_OG_DESCRIPTION,
 	SEO_TITLE_DEFAULT,
@@ -44,6 +45,13 @@ export const metadata: Metadata = {
 	category: "home services",
 	alternates: {
 		canonical: "/",
+	},
+	other: SEO_GEO_META,
+	verification: {
+		google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION || undefined,
+		other: process.env.NEXT_PUBLIC_BING_SITE_VERIFICATION
+			? { "msvalidate.01": process.env.NEXT_PUBLIC_BING_SITE_VERIFICATION }
+			: undefined,
 	},
 	openGraph: buildOpenGraph({
 		title: SEO_TITLE_DEFAULT,

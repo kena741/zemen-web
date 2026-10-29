@@ -5,22 +5,22 @@ import { BRAND_NAME } from "@/lib/brand";
 import { buildOpenGraph, buildTwitter } from "@/lib/seo";
 import { fetchPublishedBlogPosts } from "@/services/blog/publicBlog";
 
-const TITLE = "Blog";
-const DESCRIPTION = `Tips, guides, and updates on home services in Addis Ababa from ${BRAND_NAME}.`;
+const TITLE = `Home Service Tips & Guides for Addis Ababa | ${BRAND_NAME}`;
+const DESCRIPTION = `Practical tips, guides, and news on cleaning, housemaids, cooking, childcare, and home repairs in Addis Ababa, Ethiopia from the ${BRAND_NAME} blog.`;
 
 export const metadata: Metadata = {
-	title: TITLE,
+	title: { absolute: TITLE },
 	description: DESCRIPTION,
 	alternates: {
 		canonical: "/blog",
 	},
 	openGraph: buildOpenGraph({
-		title: `${TITLE} | ${BRAND_NAME}`,
+		title: TITLE,
 		description: DESCRIPTION,
 		path: "/blog",
 	}),
 	twitter: buildTwitter({
-		title: `${TITLE} | ${BRAND_NAME}`,
+		title: TITLE,
 		description: DESCRIPTION,
 	}),
 };

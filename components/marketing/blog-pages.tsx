@@ -1,16 +1,20 @@
 import Image from "next/image";
 import Link from "next/link";
 import {
-	ArrowLeftIcon,
 	ArrowRightIcon,
 	EyeIcon,
 	HeartIcon,
 } from "lucide-react";
 
 import { BlogEngagement } from "@/components/marketing/blog-engagement";
+import { MarketingBreadcrumbs } from "@/components/marketing/breadcrumbs";
 import { MarketingShell } from "@/components/marketing/site-chrome";
 import { BRAND_NAME } from "@/lib/brand";
-import { SHORT_CODE, WHATSAPP_URL } from "@/lib/marketing";
+import {
+	PRIORITY_SERVICE_LINKS,
+	SHORT_CODE,
+	WHATSAPP_URL,
+} from "@/lib/marketing";
 import type {
 	PublicBlogComment,
 	PublicBlogPost,
@@ -89,14 +93,15 @@ export function BlogIndexPage({ posts }: { posts: PublicBlogPost[] }) {
 				<div className="relative mx-auto max-w-6xl px-4 py-14 sm:px-6 sm:py-20">
 					<header className="max-w-2xl">
 						<p className="text-xs font-semibold tracking-[0.14em] text-[#1f5a0b] uppercase">
-							{BRAND_NAME}
+							{BRAND_NAME} Blog
 						</p>
 						<h1 className="mt-3 text-4xl font-semibold tracking-tight text-[#0f1a0c] sm:text-5xl">
-							Blog
+							Home service tips &amp; guides
 						</h1>
 						<p className="mt-4 text-lg leading-relaxed text-[#52634c]">
-							Practical guides and updates for better home services in Addis
-							Ababa.
+							Practical advice on cleaning, housemaids, cooking, childcare, and
+							home repairs in Addis Ababa, Ethiopia, plus news from the{" "}
+							{BRAND_NAME} team.
 						</p>
 					</header>
 
@@ -126,7 +131,7 @@ export function BlogIndexPage({ posts }: { posts: PublicBlogPost[] }) {
 											{featured.coverImage ? (
 												<Image
 													src={featured.coverImage}
-													alt=""
+													alt={featured.title}
 													fill
 													priority
 													sizes="(max-width: 1024px) 100vw, 50vw"
@@ -187,7 +192,7 @@ export function BlogIndexPage({ posts }: { posts: PublicBlogPost[] }) {
 														{post.coverImage ? (
 															<Image
 																src={post.coverImage}
-																alt=""
+																alt={post.title}
 																fill
 																sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
 																className="object-cover transition duration-500 ease-out group-hover:scale-[1.03]"
@@ -239,6 +244,8 @@ export function BlogPostPage({
 	comments: PublicBlogComment[];
 }) {
 	const minutes = readingMinutes(post.contentHtml, post.excerpt);
+	// The page title is the only <h1>; demote any headings authored as h1 in the CMS.
+	const contentHtml = post.contentHtml.replace(/<(\/?)h1\b/gi, "<$1h2");
 
 	return (
 		<MarketingShell active="blog">
@@ -249,13 +256,14 @@ export function BlogPostPage({
 						className="pointer-events-none absolute -top-24 right-0 size-72 rounded-full bg-[#c8e6b8]/40 blur-3xl"
 					/>
 					<div className="relative mx-auto max-w-3xl px-4 pt-10 pb-12 sm:px-6 sm:pt-14 sm:pb-16">
-						<Link
-							href="/blog"
-							className="inline-flex items-center gap-2 text-sm font-medium text-[#1f5a0b] transition hover:gap-2.5"
-						>
-							<ArrowLeftIcon className="size-4" aria-hidden />
-							All articles
-						</Link>
+						<MarketingBreadcrumbs
+							items={[
+								{ label: "Home", href: "/" },
+								{ label: "Blog", href: "/blog" },
+								{ label: post.title },
+							]}
+							className="[&_li:last-child]:hidden sm:[&_li:last-child]:inline-flex"
+						/>
 
 						<header className="mt-8 space-y-5">
 							<PostMeta
@@ -280,7 +288,7 @@ export function BlogPostPage({
 						<div className="relative -mt-2 aspect-[16/9] overflow-hidden bg-[#e8f5e3] sm:aspect-[2/1] sm:-mt-6">
 							<Image
 								src={post.coverImage}
-								alt=""
+								alt={post.title}
 								fill
 								priority
 								sizes="(max-width: 896px) 100vw, 896px"
@@ -293,7 +301,7 @@ export function BlogPostPage({
 				<div className="mx-auto max-w-3xl px-4 py-12 sm:px-6 sm:py-16">
 					<div
 						className="blog-prose"
-						dangerouslySetInnerHTML={{ __html: post.contentHtml }}
+						dangerouslySetInnerHTML={{ __html: contentHtml }}
 					/>
 
 					<BlogEngagement
@@ -309,9 +317,21 @@ export function BlogPostPage({
 							Need help at home?
 						</p>
 						<p className="mt-2 max-w-md text-base leading-relaxed text-[#52634c]">
-							Book trusted cleaning, cooking, babysitting, and skilled services
-							with {BRAND_NAME}.
+							Book premium, verified home services in Addis Ababa with{" "}
+							{BRAND_NAME}.
 						</p>
+						<ul className="mt-5 flex flex-wrap gap-2">
+							{PRIORITY_SERVICE_LINKS.map((item) => (
+								<li key={item.href}>
+									<Link
+										href={item.href}
+										className="inline-flex rounded-full bg-[#f7faf5] px-3.5 py-1.5 text-sm font-medium text-[#1f5a0b] ring-1 ring-[#d7e3d2] transition hover:bg-white"
+									>
+										{item.label}
+									</Link>
+								</li>
+							))}
+						</ul>
 						<div className="mt-6 flex flex-wrap gap-3">
 							<a
 								href={`tel:${SHORT_CODE}`}

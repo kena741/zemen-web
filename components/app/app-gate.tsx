@@ -20,7 +20,14 @@ const BYPASS = [
 ];
 
 /** Public marketing/SEO routes: render immediately for crawlers and users. */
-const PUBLIC_SEO = ["/", "/about", "/services", "/locations", "/legal"];
+const PUBLIC_SEO = [
+	"/",
+	"/about",
+	"/services",
+	"/locations",
+	"/legal",
+	"/blog",
+];
 
 function isBypass(pathname: string | null): boolean {
 	if (!pathname) return false;

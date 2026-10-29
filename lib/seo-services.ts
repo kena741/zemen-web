@@ -32,10 +32,10 @@ export type CategorySeoCopy = {
 /** Enrichment keyed by slug tokens. Used only when matching category exists in DB. */
 const CATEGORY_COPY: Record<string, CategorySeoCopy> = {
 	cleaning: {
-		title: "Home Cleaning & Maid Services in Addis Ababa",
+		title: "Premium Home Cleaning & Maid Services in Addis Ababa",
 		h1: "Trusted Home Cleaning Services in Addis Ababa",
 		description:
-			"Book trusted home cleaning and maid services in Addis Ababa for apartments, houses, and offices with Zemen Service.",
+			"Book trusted home cleaning and maid services in Addis Ababa, Ethiopia for apartments, houses, and offices with Zemen Service.",
 		intro:
 			"Book verified cleaning and maid professionals in Addis Ababa for regular home cleaning, deep cleans, and office spaces. Providers on Zemen Service are reviewed before they can take jobs.",
 		offered: [
@@ -69,10 +69,10 @@ const CATEGORY_COPY: Record<string, CategorySeoCopy> = {
 		],
 	},
 	cooking: {
-		title: "Cooking & Home Cook Services in Addis Ababa",
+		title: "Premium Cooking & Home Cook Services in Addis Ababa",
 		h1: "Trusted Cooking Services in Addis Ababa",
 		description:
-			"Book trusted cooking and home cook professionals in Addis Ababa for everyday meals and catering support through Zemen Service.",
+			"Book trusted cooking and home cook professionals in Addis Ababa, Ethiopia for everyday meals and catering support through Zemen Service.",
 		intro:
 			"Find verified cooking professionals for home meals and kitchen help in Addis Ababa. See listing prices before you book, with support through Zemen Service.",
 		offered: [
@@ -100,10 +100,10 @@ const CATEGORY_COPY: Record<string, CategorySeoCopy> = {
 		],
 	},
 	babysitting: {
-		title: "Babysitting Services in Addis Ababa",
+		title: "Premium Babysitting Services in Addis Ababa",
 		h1: "Trusted Babysitting Services in Addis Ababa",
 		description:
-			"Find trusted babysitting and childcare professionals in Addis Ababa. Book verified support through Zemen Service.",
+			"Find trusted babysitting and childcare professionals in Addis Ababa, Ethiopia. Book verified support through Zemen Service.",
 		intro:
 			"Book babysitting support from vetted providers in Addis Ababa. Childcare-related providers may require additional checks such as documented experience and medical clearance where applicable.",
 		offered: [
@@ -131,10 +131,10 @@ const CATEGORY_COPY: Record<string, CategorySeoCopy> = {
 		],
 	},
 	nanny: {
-		title: "Nanny Services in Addis Ababa",
+		title: "Premium Nanny Services in Addis Ababa",
 		h1: "Trusted Nanny Services in Addis Ababa",
 		description:
-			"Book trusted nanny and childcare support in Addis Ababa through verified Zemen Service professionals.",
+			"Book trusted nanny and childcare support in Addis Ababa, Ethiopia through verified Zemen Service professionals.",
 		intro:
 			"Find nanny and childcare support from vetted professionals in Addis Ababa, with clear booking and follow-up through Zemen Service.",
 		offered: [
@@ -146,10 +146,10 @@ const CATEGORY_COPY: Record<string, CategorySeoCopy> = {
 		faqs: [],
 	},
 	plumbing: {
-		title: "Plumbing Services in Addis Ababa",
+		title: "Premium Plumbing Services in Addis Ababa",
 		h1: "Trusted Plumbing Services in Addis Ababa",
 		description:
-			"Book trusted plumbers in Addis Ababa for repairs, installations, and home plumbing work through Zemen Service.",
+			"Book trusted plumbers in Addis Ababa, Ethiopia for repairs, installations, and home plumbing work through Zemen Service.",
 		intro:
 			"Find verified plumbing professionals in Addis Ababa for leaks, fittings, and other home plumbing needs. Book online or through the Zemen Service call center.",
 		offered: [
@@ -167,10 +167,10 @@ const CATEGORY_COPY: Record<string, CategorySeoCopy> = {
 		],
 	},
 	electrical: {
-		title: "Electricians in Addis Ababa",
+		title: "Premium Electricians in Addis Ababa",
 		h1: "Trusted Electrical Services in Addis Ababa",
 		description:
-			"Find trusted electricians in Addis Ababa for home electrical repairs and installations with Zemen Service.",
+			"Find trusted electricians in Addis Ababa, Ethiopia for home electrical repairs and installations with Zemen Service.",
 		intro:
 			"Book verified electrical professionals in Addis Ababa for home repairs and related work, with vetted providers and clear booking support.",
 		offered: [
@@ -182,10 +182,10 @@ const CATEGORY_COPY: Record<string, CategorySeoCopy> = {
 		faqs: [],
 	},
 	electrician: {
-		title: "Electricians in Addis Ababa",
+		title: "Premium Electricians in Addis Ababa",
 		h1: "Trusted Electricians in Addis Ababa",
 		description:
-			"Book trusted electricians in Addis Ababa for home electrical work through Zemen Service.",
+			"Book trusted electricians in Addis Ababa, Ethiopia for home electrical work through Zemen Service.",
 		intro:
 			"Find verified electricians for home electrical needs in Addis Ababa and book through Zemen Service.",
 		offered: [
@@ -196,10 +196,10 @@ const CATEGORY_COPY: Record<string, CategorySeoCopy> = {
 		faqs: [],
 	},
 	moving: {
-		title: "Moving Services in Addis Ababa",
+		title: "Premium Moving Services in Addis Ababa",
 		h1: "Trusted Moving Services in Addis Ababa",
 		description:
-			"Book trusted moving help in Addis Ababa for home and local moves through Zemen Service.",
+			"Book trusted moving help in Addis Ababa, Ethiopia for home and local moves through Zemen Service.",
 		intro:
 			"Find verified moving professionals in Addis Ababa for packing and relocation support through Zemen Service.",
 		offered: [
@@ -210,10 +210,10 @@ const CATEGORY_COPY: Record<string, CategorySeoCopy> = {
 		faqs: [],
 	},
 	beauty: {
-		title: "Beauty Services in Addis Ababa",
+		title: "Premium Beauty Services in Addis Ababa",
 		h1: "Trusted Beauty Services in Addis Ababa",
 		description:
-			"Book trusted beauty professionals in Addis Ababa through Zemen Service.",
+			"Book trusted beauty professionals in Addis Ababa, Ethiopia through Zemen Service.",
 		intro:
 			"Find verified beauty service professionals in Addis Ababa and book with clear support through Zemen Service.",
 		offered: [
@@ -224,10 +224,10 @@ const CATEGORY_COPY: Record<string, CategorySeoCopy> = {
 		faqs: [],
 	},
 	security: {
-		title: "Security Services in Addis Ababa",
+		title: "Premium Security Services in Addis Ababa",
 		h1: "Trusted Security Services in Addis Ababa",
 		description:
-			"Find trusted security-related service professionals in Addis Ababa through Zemen Service.",
+			"Find trusted security-related service professionals in Addis Ababa, Ethiopia through Zemen Service.",
 		intro:
 			"Browse verified security-related providers available on Zemen Service in Addis Ababa.",
 		offered: [
@@ -238,10 +238,10 @@ const CATEGORY_COPY: Record<string, CategorySeoCopy> = {
 		faqs: [],
 	},
 	nursing: {
-		title: "Home Nursing Services in Addis Ababa",
+		title: "Premium Home Nursing Services in Addis Ababa",
 		h1: "Trusted Home Nursing Services in Addis Ababa",
 		description:
-			"Book trusted home nursing and care support in Addis Ababa through verified Zemen Service professionals.",
+			"Book trusted home nursing and care support in Addis Ababa, Ethiopia through verified Zemen Service professionals.",
 		intro:
 			"Find vetted home nursing and care-related professionals in Addis Ababa where available on Zemen Service.",
 		offered: [
@@ -252,10 +252,10 @@ const CATEGORY_COPY: Record<string, CategorySeoCopy> = {
 		faqs: [],
 	},
 	repair: {
-		title: "Home Repair Services in Addis Ababa",
+		title: "Premium Home Repair Services in Addis Ababa",
 		h1: "Trusted Home Repair Services in Addis Ababa",
 		description:
-			"Book trusted home repair professionals in Addis Ababa through Zemen Service.",
+			"Book trusted home repair professionals in Addis Ababa, Ethiopia through Zemen Service.",
 		intro:
 			"Find verified repair and handyman support for common home needs in Addis Ababa.",
 		offered: [
@@ -266,10 +266,10 @@ const CATEGORY_COPY: Record<string, CategorySeoCopy> = {
 		faqs: [],
 	},
 	handyman: {
-		title: "Handyman Services in Addis Ababa",
+		title: "Premium Handyman Services in Addis Ababa",
 		h1: "Trusted Handyman Services in Addis Ababa",
 		description:
-			"Book trusted handyman professionals in Addis Ababa through Zemen Service.",
+			"Book trusted handyman professionals in Addis Ababa, Ethiopia through Zemen Service.",
 		intro:
 			"Find verified handyman support for everyday home fixes in Addis Ababa.",
 		offered: [
@@ -280,10 +280,10 @@ const CATEGORY_COPY: Record<string, CategorySeoCopy> = {
 		faqs: [],
 	},
 	housemaid: {
-		title: "Housemaid & Maid Services in Addis Ababa",
+		title: "Premium Housemaid & Maid Services in Addis Ababa",
 		h1: "Trusted Housemaid & Domestic Help in Addis Ababa",
 		description:
-			"Book trusted housemaid, maid, and domestic help professionals in Addis Ababa through Zemen Service.",
+			"Book trusted housemaid, maid, and domestic help professionals in Addis Ababa, Ethiopia through Zemen Service.",
 		intro:
 			"Find verified housemaid and domestic help support for your home in Addis Ababa—everyday cleaning, home care, and reliable in-home help. Providers are reviewed before they can take jobs.",
 		offered: [
@@ -310,10 +310,10 @@ const CATEGORY_COPY: Record<string, CategorySeoCopy> = {
 		],
 	},
 	"office-cleaning": {
-		title: "Office Cleaning in Addis Ababa",
+		title: "Premium Office Cleaning in Addis Ababa",
 		h1: "Trusted Office Cleaning Services in Addis Ababa",
 		description:
-			"Book trusted office cleaning and recurring workplace cleaning in Addis Ababa through Zemen Service.",
+			"Book trusted office cleaning and recurring workplace cleaning in Addis Ababa, Ethiopia through Zemen Service.",
 		intro:
 			"Find verified office cleaning professionals in Addis Ababa for one-time or recurring workplace cleans. Book through Zemen Service with clear support.",
 		offered: [
@@ -340,10 +340,10 @@ const CATEGORY_COPY: Record<string, CategorySeoCopy> = {
 		],
 	},
 	maid: {
-		title: "Maid Services in Addis Ababa",
+		title: "Premium Maid Services in Addis Ababa",
 		h1: "Trusted Maid Services in Addis Ababa",
 		description:
-			"Book trusted maid services and domestic help in Addis Ababa through Zemen Service.",
+			"Book trusted maid services and domestic help in Addis Ababa, Ethiopia through Zemen Service.",
 		intro:
 			"Find verified maid and domestic help professionals for your home in Addis Ababa. Book with clear pricing on each listing.",
 		offered: [
@@ -356,10 +356,10 @@ const CATEGORY_COPY: Record<string, CategorySeoCopy> = {
 		faqs: [],
 	},
 	painting: {
-		title: "House Painting in Addis Ababa",
+		title: "Premium House Painting in Addis Ababa",
 		h1: "Trusted House Painters in Addis Ababa",
 		description:
-			"Book trusted house painting professionals in Addis Ababa through Zemen Service.",
+			"Book trusted house painting professionals in Addis Ababa, Ethiopia through Zemen Service.",
 		intro:
 			"Find verified painters for home interiors and exteriors in Addis Ababa. Book through Zemen Service with vetted local professionals.",
 		offered: [
@@ -370,10 +370,10 @@ const CATEGORY_COPY: Record<string, CategorySeoCopy> = {
 		faqs: [],
 	},
 	"mural-art": {
-		title: "Mural Artists in Addis Ababa",
+		title: "Premium Mural Artists in Addis Ababa",
 		h1: "Trusted Mural Artists in Addis Ababa",
 		description:
-			"Book trusted mural artists in Addis Ababa for walls, daycare spaces, and custom art through Zemen Service.",
+			"Book trusted mural artists in Addis Ababa, Ethiopia for walls, daycare spaces, and custom art through Zemen Service.",
 		intro:
 			"Find verified mural and wall-painting professionals in Addis Ababa for homes, daycare rooms, and custom projects.",
 		offered: [
@@ -384,10 +384,10 @@ const CATEGORY_COPY: Record<string, CategorySeoCopy> = {
 		faqs: [],
 	},
 	domestic: {
-		title: "Domestic Help in Addis Ababa",
+		title: "Premium Domestic Help in Addis Ababa",
 		h1: "Trusted Domestic Help in Addis Ababa",
 		description:
-			"Book trusted domestic help and housemaid services in Addis Ababa through Zemen Service.",
+			"Book trusted domestic help and housemaid services in Addis Ababa, Ethiopia through Zemen Service.",
 		intro:
 			"Find verified domestic help professionals for your home in Addis Ababa through Zemen Service.",
 		offered: [
@@ -418,9 +418,9 @@ export function getCategorySeoCopy(
 	if (matched) return matched;
 
 	return {
-		title: `${categoryName} Services in Addis Ababa`,
+		title: `Premium ${categoryName} Services in Addis Ababa`,
 		h1: `Trusted ${categoryName} Services in Addis Ababa`,
-		description: `Find and book trusted ${categoryName.toLowerCase()} professionals in Addis Ababa through ${BRAND_NAME}.`,
+		description: `Find and book premium, verified ${categoryName.toLowerCase()} professionals in Addis Ababa, Ethiopia through ${BRAND_NAME}.`,
 		intro: `Browse verified ${categoryName.toLowerCase()} professionals available on ${BRAND_NAME} in Addis Ababa. Book through the website, app, or call center.`,
 		offered: [
 			`${categoryName} professionals in Addis Ababa`,
@@ -450,9 +450,9 @@ export function getSubCategorySeoCopy(
 	const parent = parentCategoryName.trim() || "home services";
 
 	return {
-		title: `${label} Services in Addis Ababa`,
+		title: `Premium ${label} Services in Addis Ababa`,
 		h1: `Trusted ${label} Services in Addis Ababa`,
-		description: `Find and book trusted ${label.toLowerCase()} professionals in Addis Ababa under ${parent} through ${BRAND_NAME}.`,
+		description: `Find and book premium, verified ${label.toLowerCase()} professionals in Addis Ababa, Ethiopia under ${parent} through ${BRAND_NAME}.`,
 		intro: `Browse verified ${label.toLowerCase()} professionals in Addis Ababa on ${BRAND_NAME}. This is part of our ${parent.toLowerCase()} offering. Book through the website, app, or call center.`,
 		offered: [
 			`${label} professionals in Addis Ababa`,

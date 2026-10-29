@@ -4,7 +4,12 @@ import Image, { type StaticImageData } from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
-import { ArrowRightIcon, CheckIcon, PhoneIcon } from "lucide-react";
+import {
+	ArrowRightIcon,
+	CheckIcon,
+	ChevronDownIcon,
+	PhoneIcon,
+} from "lucide-react";
 
 import marketing1 from "@/assets/images/1.png";
 import marketing2 from "@/assets/images/2.png";
@@ -18,10 +23,13 @@ import why2 from "@/assets/images/optimized/why_2.jpg";
 import why3 from "@/assets/images/optimized/why_3.jpg";
 import why4 from "@/assets/images/optimized/why_4.jpg";
 import { MarketingShell } from "@/components/marketing/site-chrome";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { BRAND_NAME, homePathForMode } from "@/lib/brand";
 import { enableGuestBrowse } from "@/lib/guest";
 import {
+	APP_STORE_URL,
+	HOME_FAQS,
+	PLAY_STORE_URL,
 	PRIORITY_SERVICE_LINKS,
 	SHORT_CODE,
 	SPONSORS,
@@ -31,10 +39,6 @@ import {
 import { slugifyCategoryName } from "@/lib/seo-services";
 import { cn } from "@/lib/utils";
 import { formatAmount } from "@/services/bookings/types";
-import {
-	fetchCatalogServices,
-	fetchCategories,
-} from "@/services/catalog/catalogApi";
 import type { ProviderService, ServiceCategory } from "@/services/services/types";
 import { useAuth } from "@/store/useAuth";
 
@@ -172,9 +176,10 @@ function ServiceTile({
 	onOpen: () => void;
 }) {
 	const image = service.serviceImage[0];
+	const name = service.serviceName || "Service";
 	return (
-		<button
-			type="button"
+		<Link
+			href={`/service/services/${service.id}`}
 			onClick={onOpen}
 			className="group flex w-[200px] shrink-0 flex-col overflow-hidden rounded-2xl bg-white text-left shadow-[0_8px_30px_rgba(23,67,9,0.08)] ring-1 ring-black/5 transition hover:-translate-y-0.5 hover:shadow-[0_14px_40px_rgba(23,67,9,0.14)] sm:w-[220px]"
 		>
@@ -182,7 +187,7 @@ function ServiceTile({
 				{image ? (
 					<Image
 						src={image}
-						alt=""
+						alt={`${name} in Addis Ababa`}
 						fill
 						sizes="220px"
 						loading="lazy"
@@ -203,7 +208,7 @@ function ServiceTile({
 			</div>
 			<div className="flex flex-1 flex-col gap-1 p-3.5">
 				<p className="line-clamp-2 text-sm font-semibold leading-snug text-[#0f1a0c]">
-					{service.serviceName || "Service"}
+					{name}
 				</p>
 				<p className="text-xs text-muted-foreground">
 					{service.categoryName || service.subCategoryName || "Home service"}
@@ -212,24 +217,25 @@ function ServiceTile({
 					{formatAmount(service.price)}
 				</p>
 			</div>
-		</button>
+		</Link>
 	);
 }
 
 export function LandingPage({
 	initialCategories = [],
+	initialServices = [],
 	heroImage,
 }: {
 	initialCategories?: LandingCategory[];
+	/** Server-fetched listings so they are in the initial HTML for crawlers. */
+	initialServices?: ProviderService[];
 	/** Server-rendered LCP image (preload + fetchPriority). */
 	heroImage: ReactNode;
 }) {
 	const router = useRouter();
 	const { user, setMode } = useAuth();
-	const [services, setServices] = useState<ProviderService[]>([]);
-	const [categories, setCategories] =
-		useState<LandingCategory[]>(initialCategories);
-	const [loading, setLoading] = useState(true);
+	const categories = initialCategories;
+	const services = initialServices;
 	const [whyIndex, setWhyIndex] = useState(0);
 
 	useEffect(() => {
@@ -240,35 +246,8 @@ export function LandingPage({
 	useEffect(() => {
 		const id = window.setInterval(() => {
 			setWhyIndex((i) => (i + 1) % WHY_IMAGES.length);
-		}, 2000);
+		}, 4500);
 		return () => window.clearInterval(id);
-	}, []);
-
-	useEffect(() => {
-		let cancelled = false;
-		(async () => {
-			const [svc, cats] = await Promise.all([
-				fetchCatalogServices({ featuredOnly: true, limit: 8 }),
-				fetchCategories(),
-			]);
-			if (cancelled) return;
-			let list = svc.services;
-			if (list.length < 4) {
-				const more = await fetchCatalogServices({ limit: 12 });
-				list = more.services;
-			}
-			setServices(list.slice(0, 8));
-			setCategories(
-				cats.categories.map((c) => ({
-					...c,
-					slug: slugifyCategoryName(c.categoryName),
-				})),
-			);
-			setLoading(false);
-		})();
-		return () => {
-			cancelled = true;
-		};
 	}, []);
 
 	function categoryHref(category: LandingCategory) {
@@ -284,26 +263,10 @@ export function LandingPage({
 		return found ? categoryHref(found) : "/services";
 	}
 
-	function goCustomerLogin() {
-		setMode("service");
-		router.push("/login?mode=service");
-	}
-
-	function goProviderLogin() {
-		setMode("provider");
-		router.push("/login?mode=provider");
-	}
-
-	function browseServices() {
+	/** Listing links open the in-app catalog as a guest; the Link handles navigation. */
+	function openService() {
 		enableGuestBrowse();
 		setMode("service");
-		router.push("/service");
-	}
-
-	function openService(id: string) {
-		enableGuestBrowse();
-		setMode("service");
-		router.push(`/service/services/${id}`);
 	}
 
 	return (
@@ -347,49 +310,48 @@ export function LandingPage({
 						</p>
 
 						<h1 className="mt-5 max-w-lg text-[clamp(1.4rem,3.6vw,1.95rem)] font-semibold leading-snug tracking-tight text-[#142610] animate-[marketing-fade-up_0.85s_ease_0.08s_both]">
-							Home Services in Addis Ababa
+							Premium Home Services in Addis Ababa, Ethiopia
 						</h1>
 
 						<p className="mt-3 max-w-md text-base leading-relaxed text-[#3d5240] animate-[marketing-fade-up_0.9s_ease_0.14s_both]">
-							Book trusted professionals for cleaning, cooking, domestic help,
-							repairs, maintenance, moving, beauty, care, and other home
-							services across Addis Ababa.
+							Book verified professionals for cleaning, housemaid and domestic
+							help, cooking, babysitting, repairs, moving, beauty, and home
+							nursing across Addis Ababa.
 						</p>
 
 						<div className="mt-8 flex flex-wrap items-center gap-3 animate-[marketing-fade-up_0.95s_ease_0.2s_both]">
-							<button
-								type="button"
-								onClick={goCustomerLogin}
+							<Link
+								href="/services"
 								className={cn(
 									buttonVariants({ size: "lg" }),
 									"h-12 rounded-full px-7 text-[15px] shadow-[0_12px_32px_rgba(23,67,9,0.3)]",
 								)}
 							>
-								Get started
+								Browse services
 								<ArrowRightIcon className="ml-1.5 size-4" />
-							</button>
-							<button
-								type="button"
-								onClick={browseServices}
+							</Link>
+							<a
+								href={`tel:${SHORT_CODE}`}
 								className={cn(
 									buttonVariants({ variant: "outline", size: "lg" }),
 									"h-12 rounded-full border-primary/25 bg-white/90 px-6 text-[15px] backdrop-blur-sm",
 								)}
 							>
-								Browse services
-							</button>
+								<PhoneIcon className="mr-1.5 size-4" />
+								Call {SHORT_CODE}
+							</a>
 						</div>
 
-						<p className="mt-5 text-sm text-[#3d5240] animate-[marketing-fade-up_1s_ease_0.26s_both]">
-							Provider?{" "}
-							<button
-								type="button"
-								onClick={goProviderLogin}
-								className="font-semibold text-primary underline-offset-4 hover:underline"
-							>
-								Sign in to your dashboard
-							</button>
-						</p>
+						<ul className="mt-6 flex flex-wrap gap-x-5 gap-y-2 text-sm text-[#3d5240] animate-[marketing-fade-up_1s_ease_0.26s_both]">
+							{["Verified providers", "Clear upfront prices", "Support on every booking"].map(
+								(item) => (
+									<li key={item} className="inline-flex items-center gap-1.5">
+										<CheckIcon className="size-4 text-primary" strokeWidth={2.75} />
+										{item}
+									</li>
+								),
+							)}
+						</ul>
 					</div>
 				</div>
 			</section>
@@ -484,38 +446,27 @@ export function LandingPage({
 								Popular listings
 							</h3>
 							<p className="mt-1 text-sm text-muted-foreground">
-								Real listings from verified providers. Sign in to book.
+								Real listings from verified providers in Addis Ababa.
 							</p>
 						</div>
-						<button
-							type="button"
-							onClick={browseServices}
+						<Link
+							href="/service"
+							onClick={openService}
 							className="inline-flex items-center gap-1 text-sm font-semibold text-primary"
 						>
-							Browse in app
+							See all listings
 							<ArrowRightIcon className="size-3.5" />
-						</button>
+						</Link>
 					</div>
 
 					<div className="mt-5 -mx-4 flex gap-3 overflow-x-auto px-4 pb-2 scrollbar-none sm:mx-0 sm:px-0">
-						{loading ? (
-							Array.from({ length: 4 }).map((_, i) => (
-								<div
-									key={i}
-									className="h-[240px] w-[200px] shrink-0 animate-pulse rounded-2xl bg-muted sm:w-[220px]"
-								/>
-							))
-						) : services.length === 0 ? (
+						{services.length === 0 ? (
 							<p className="py-10 text-sm text-muted-foreground">
 								Services will appear here once providers publish listings.
 							</p>
 						) : (
 							services.map((s) => (
-								<ServiceTile
-									key={s.id}
-									service={s}
-									onOpen={() => openService(s.id)}
-								/>
+								<ServiceTile key={s.id} service={s} onOpen={openService} />
 							))
 						)}
 					</div>
@@ -598,17 +549,16 @@ export function LandingPage({
 							))}
 						</ul>
 						<div className="mt-8 flex flex-wrap gap-3">
-							<button
-								type="button"
-								onClick={goCustomerLogin}
+							<Link
+								href="/services"
 								className={cn(
 									buttonVariants({ size: "lg" }),
 									"h-11 rounded-full px-6",
 								)}
 							>
-								Get started
+								Browse services
 								<ArrowRightIcon className="ml-1.5 size-4" />
-							</button>
+							</Link>
 							<a
 								href={`tel:${SHORT_CODE}`}
 								className={cn(
@@ -802,8 +752,57 @@ export function LandingPage({
 				</div>
 			</section>
 
-			{/* Platforms CTA with auth visual strip */}
-			<section className="relative z-10 px-4 pb-14 sm:px-6 sm:pb-16">
+			{/* FAQ — mirrored as FAQPage JSON-LD in app/page.tsx */}
+			<section
+				id="faq"
+				className="relative z-10 scroll-mt-20 bg-white py-14 sm:py-16"
+			>
+				<div className="mx-auto grid max-w-6xl gap-10 px-4 sm:px-6 lg:grid-cols-[1fr_1.6fr] lg:gap-16">
+					<div>
+						<p className="text-xs font-semibold uppercase tracking-[0.14em] text-primary">
+							FAQ
+						</p>
+						<h2 className="mt-2 text-[clamp(1.65rem,3.5vw,2.15rem)] font-bold tracking-tight text-[#0f1a0c]">
+							Questions about home services in Addis Ababa
+						</h2>
+						<p className="mt-3 text-[15px] leading-relaxed text-[#3d5240]">
+							Can&apos;t find your answer? Call{" "}
+							<a
+								href={`tel:${SHORT_CODE}`}
+								className="font-semibold text-primary underline-offset-4 hover:underline"
+							>
+								{SHORT_CODE}
+							</a>{" "}
+							or message us on{" "}
+							<a
+								href={WHATSAPP_URL}
+								target="_blank"
+								rel="noreferrer"
+								className="font-semibold text-primary underline-offset-4 hover:underline"
+							>
+								WhatsApp
+							</a>
+							.
+						</p>
+					</div>
+					<div className="divide-y divide-black/8 border-y border-black/8">
+						{HOME_FAQS.map((faq) => (
+							<details key={faq.question} className="group py-1">
+								<summary className="flex cursor-pointer list-none items-center justify-between gap-4 py-4 text-left text-[15px] font-semibold text-[#0f1a0c] [&::-webkit-details-marker]:hidden">
+									{faq.question}
+									<ChevronDownIcon className="size-4 shrink-0 text-primary transition group-open:rotate-180" />
+								</summary>
+								<p className="pb-4 pr-8 text-sm leading-relaxed text-[#52634c]">
+									{faq.answer}
+								</p>
+							</details>
+						))}
+					</div>
+				</div>
+			</section>
+
+			{/* Closing CTA */}
+			<section className="relative z-10 bg-white px-4 pb-14 sm:px-6 sm:pb-16">
 				<div className="relative mx-auto max-w-6xl overflow-hidden rounded-[1.75rem] bg-[#174309]">
 					<div className="grid lg:grid-cols-2">
 						<div className="relative z-10 px-6 py-10 text-white sm:px-10 sm:py-12">
@@ -821,32 +820,60 @@ export function LandingPage({
 							</div>
 							<div className="relative max-w-md">
 								<p className="text-xs font-semibold uppercase tracking-[0.14em] text-white/70">
-									One platform
+									Ready when you are
 								</p>
 								<h2 className="mt-2 text-2xl font-bold tracking-tight text-white sm:text-3xl">
-									Customers book. Providers deliver.
+									Book premium home help in Addis Ababa
 								</h2>
 								<p className="mt-2 text-sm leading-relaxed text-white/80">
-									Sign in as a customer to book, or as a provider to manage
-									jobs. Same Zemen web app.
+									Browse verified providers online, use the {BRAND_NAME} app, or
+									call {SHORT_CODE} and we&apos;ll book for you.
 								</p>
 								<div className="mt-6 flex flex-wrap gap-3">
-									<Button
-										size="lg"
-										variant="secondary"
-										className="h-11 rounded-full bg-white text-primary hover:bg-white/90"
-										onClick={goCustomerLogin}
+									<Link
+										href="/services"
+										className="inline-flex h-11 items-center rounded-full bg-white px-6 text-sm font-semibold text-primary transition hover:bg-white/90"
 									>
-										Customer login
-									</Button>
-									<button
-										type="button"
-										onClick={goProviderLogin}
+										Browse services
+									</Link>
+									<a
+										href={WHATSAPP_URL}
+										target="_blank"
+										rel="noreferrer"
 										className="inline-flex h-11 items-center rounded-full border border-white/35 px-5 text-sm font-semibold text-white transition hover:bg-white/10"
 									>
-										Provider login
-									</button>
+										WhatsApp us
+									</a>
 								</div>
+								<div className="mt-6 flex flex-wrap items-center gap-2">
+									<a href={PLAY_STORE_URL} target="_blank" rel="noreferrer">
+										<Image
+											src="/marketing/google-play-badge.svg"
+											alt="Get Zemen Service on Google Play"
+											width={120}
+											height={36}
+											className="h-9 w-auto"
+										/>
+									</a>
+									<a href={APP_STORE_URL} target="_blank" rel="noreferrer">
+										<Image
+											src="/marketing/app-store-badge.svg"
+											alt="Download Zemen Service on the App Store"
+											width={108}
+											height={36}
+											className="h-9 w-auto"
+										/>
+									</a>
+								</div>
+								<p className="mt-6 text-sm text-white/70">
+									Are you a home service professional?{" "}
+									<Link
+										href="/signup?mode=provider"
+										className="font-semibold text-white underline-offset-4 hover:underline"
+									>
+										Join as a provider
+									</Link>
+								</p>
 							</div>
 						</div>
 						<div className="relative hidden min-h-[260px] lg:block">

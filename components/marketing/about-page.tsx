@@ -1,9 +1,6 @@
-"use client";
-
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { ArrowDownIcon, ArrowRightIcon, CheckIcon } from "lucide-react";
+import { ArrowDownIcon, ArrowRightIcon, CheckIcon, PhoneIcon } from "lucide-react";
 
 import marketing1 from "@/assets/images/1.png";
 import marketing2 from "@/assets/images/2.png";
@@ -13,9 +10,14 @@ import { buttonVariants } from "@/components/ui/button";
 import { MarketingShell } from "@/components/marketing/site-chrome";
 import { BRAND_NAME } from "@/lib/brand";
 import { SHORT_CODE, TRUST_STATS, WHATSAPP_URL } from "@/lib/marketing";
-import { enableGuestBrowse } from "@/lib/guest";
 import { cn } from "@/lib/utils";
-import { useAuth } from "@/store/useAuth";
+
+const ABOUT_IMAGES = [
+	{ image: marketing1, alt: "Zemen Service home professionals in Addis Ababa" },
+	{ image: marketing2, alt: "Verified domestic help and care in Addis Ababa" },
+	{ image: marketing3, alt: "Home repair and maintenance with Zemen Service" },
+	{ image: marketing4, alt: "Premium cleaning services in Addis Ababa, Ethiopia" },
+] as const;
 
 const TRUST_POINTS = [
 	{
@@ -87,20 +89,6 @@ const STORY = [
 ] as const;
 
 export function AboutPage() {
-	const router = useRouter();
-	const { setMode } = useAuth();
-
-	function goCustomerLogin() {
-		setMode("service");
-		router.push("/login?mode=service");
-	}
-
-	function browseServices() {
-		enableGuestBrowse();
-		setMode("service");
-		router.push("/service");
-	}
-
 	return (
 		<MarketingShell active="about">
 			{/* Hero */}
@@ -118,8 +106,11 @@ export function AboutPage() {
 						About {BRAND_NAME}
 					</p>
 					<h1 className="mt-4 max-w-3xl text-[clamp(2rem,5vw,3.25rem)] font-bold tracking-tight text-[#0f1a0c]">
-						What would it feel like to know your home is in good hands?
+						Premium home services in Addis Ababa, built on trust
 					</h1>
+					<p className="mt-4 max-w-2xl text-lg font-medium text-[#142610]">
+						What would it feel like to know your home is in good hands?
+					</p>
 					<p className="mt-5 max-w-2xl text-[16px] leading-relaxed text-[#3d5240]">
 						At {BRAND_NAME}, good service is more than getting the job done. It
 						is about feeling confident in who you welcome into your home,
@@ -193,9 +184,9 @@ export function AboutPage() {
 						</p>
 					</div>
 					<div className="grid grid-cols-2 gap-3">
-						{[marketing1, marketing2, marketing3, marketing4].map((img, i) => (
+						{ABOUT_IMAGES.map((img, i) => (
 							<div
-								key={i}
+								key={img.alt}
 								className={cn(
 									"relative overflow-hidden rounded-2xl bg-[#e8f5e3]",
 									i % 2 === 1 ? "mt-6" : "",
@@ -203,8 +194,8 @@ export function AboutPage() {
 								)}
 							>
 								<Image
-									src={img}
-									alt=""
+									src={img.image}
+									alt={img.alt}
 									fill
 									sizes="(max-width: 1024px) 45vw, 260px"
 									className="object-cover"
@@ -384,7 +375,7 @@ export function AboutPage() {
 							Ready to experience {BRAND_NAME}?
 						</p>
 						<h2 className="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">
-							Book trusted help for your home
+							Book premium, verified help for your home
 						</h2>
 						<p className="mt-2 text-sm leading-relaxed text-primary-foreground/80">
 							Start on the web, download the app, or call{" "}
@@ -406,36 +397,26 @@ export function AboutPage() {
 							.
 						</p>
 						<div className="mt-6 flex flex-wrap gap-3">
-							<button
-								type="button"
-								onClick={goCustomerLogin}
+							<Link
+								href="/services"
 								className={cn(
 									buttonVariants({ size: "lg", variant: "secondary" }),
 									"h-11 rounded-full bg-white px-6 text-primary hover:bg-white/90",
 								)}
 							>
-								Get started
-								<ArrowRightIcon className="ml-1.5 size-4" />
-							</button>
-							<button
-								type="button"
-								onClick={browseServices}
-								className={cn(
-									buttonVariants({ size: "lg", variant: "outline" }),
-									"h-11 rounded-full border-white/30 bg-transparent px-6 text-white hover:bg-white/10 hover:text-white",
-								)}
-							>
 								Browse services
-							</button>
-							<Link
-								href="/#why"
+								<ArrowRightIcon className="ml-1.5 size-4" />
+							</Link>
+							<a
+								href={`tel:${SHORT_CODE}`}
 								className={cn(
 									buttonVariants({ size: "lg", variant: "outline" }),
 									"h-11 rounded-full border-white/30 bg-transparent px-6 text-white hover:bg-white/10 hover:text-white",
 								)}
 							>
-								Why {BRAND_NAME}
-							</Link>
+								<PhoneIcon className="mr-1.5 size-4" />
+								Call {SHORT_CODE}
+							</a>
 						</div>
 					</div>
 				</div>
