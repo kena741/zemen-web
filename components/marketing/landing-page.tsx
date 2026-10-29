@@ -11,10 +11,6 @@ import {
 	PhoneIcon,
 } from "lucide-react";
 
-import marketing1 from "@/assets/images/1.png";
-import marketing2 from "@/assets/images/2.png";
-import marketing3 from "@/assets/images/3.png";
-import marketing4 from "@/assets/images/4.png";
 import appIcon from "@/assets/images/app_icon.png";
 import appIconSm from "@/assets/images/optimized/app_icon_sm.png";
 import authHero from "@/assets/images/optimized/auth_page_hero.jpg";
@@ -141,28 +137,28 @@ const HELP_WITH: {
 	{
 		title: "Home professionals",
 		desc: "Electricians, plumbers, painters, chefs, and more, booked in minutes.",
-		image: marketing1,
+		image: why1,
 		alt: "Zemen Service professionals in Addis Ababa",
 		match: ["maintenance", "electrical", "plumbing", "art"],
 	},
 	{
 		title: "Care & domestic help",
 		desc: "Trusted caregivers and home support from verified local providers.",
-		image: marketing2,
+		image: why2,
 		alt: "Domestic help and care with Zemen Service",
 		match: ["domestic", "care", "nursing", "babysit"],
 	},
 	{
 		title: "Repairs & maintenance",
 		desc: "The right professional at the right time for plumbing and fixes.",
-		image: marketing3,
+		image: why3,
 		alt: "Home repair and maintenance in Addis Ababa",
 		match: ["maintenance", "repair", "plumb"],
 	},
 	{
 		title: "Cleaning & quality",
 		desc: "Quality and cleanliness with trained experts through Zemen Service.",
-		image: marketing4,
+		image: why4,
 		alt: "Cleaning services in Addis Ababa",
 		match: ["cleaning", "domestic"],
 	},

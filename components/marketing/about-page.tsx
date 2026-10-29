@@ -2,10 +2,10 @@ import Image from "next/image";
 import Link from "next/link";
 import { ArrowDownIcon, ArrowRightIcon, CheckIcon, PhoneIcon } from "lucide-react";
 
-import marketing1 from "@/assets/images/1.png";
-import marketing2 from "@/assets/images/2.png";
-import marketing3 from "@/assets/images/3.png";
-import marketing4 from "@/assets/images/4.png";
+import marketing1 from "@/assets/images/optimized/why_1.jpg";
+import marketing2 from "@/assets/images/optimized/why_2.jpg";
+import marketing3 from "@/assets/images/optimized/why_3.jpg";
+import marketing4 from "@/assets/images/optimized/why_4.jpg";
 import { buttonVariants } from "@/components/ui/button";
 import { MarketingShell } from "@/components/marketing/site-chrome";
 import { BRAND_NAME } from "@/lib/brand";
