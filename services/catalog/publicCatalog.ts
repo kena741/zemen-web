@@ -12,7 +12,30 @@ export type PublicCategory = ServiceCategory & { slug: string };
 export type PublicSubCategory = ServiceSubCategory & {
 	slug: string;
 	categorySlug: string;
+	/** Set on virtual subcategories: listings come from another subcategory. */
+	listingSource?: { subCategoryId: string; keywords: string[] };
 };
+
+/**
+ * SEO landing pages for services that providers list inside a broader
+ * subcategory (e.g. sofa cleaning under Cleaning Service). They render like
+ * real subcategories but show only the source listings that mention a keyword.
+ */
+const VIRTUAL_SUBCATEGORIES: {
+	categorySlug: string;
+	slug: string;
+	subCategoryName: string;
+	sourceSlug: string;
+	keywords: string[];
+}[] = [
+	{
+		categorySlug: "domestic-help",
+		slug: "sofa-and-carpet-cleaning",
+		subCategoryName: "Sofa & Carpet Cleaning",
+		sourceSlug: "cleaning-service",
+		keywords: ["sofa", "couch", "carpet", "rug", "upholster", "majlis", "ሶፋ", "ምንጣፍ", "መጅሊስ"],
+	},
+];
 
 export async function fetchPublicCategories(): Promise<PublicCategory[]> {
 	const { data, error } = await getPublicSupabase()
@@ -63,7 +86,7 @@ export async function fetchPublicSubCategories(
 		return [];
 	}
 
-	return (data ?? []).map((row) => {
+	const subcategories: PublicSubCategory[] = (data ?? []).map((row) => {
 		const r = row as Record<string, unknown>;
 		const subCategoryName = String(r.subCategoryName ?? "Subcategory");
 		return {
@@ -74,6 +97,26 @@ export async function fetchPublicSubCategories(
 			categorySlug,
 		};
 	});
+
+	const virtual = VIRTUAL_SUBCATEGORIES.flatMap((item) => {
+		if (item.categorySlug !== categorySlug) return [];
+		const source = subcategories.find((sub) => sub.slug === item.sourceSlug);
+		if (!source) return [];
+		return [
+			{
+				id: `virtual:${item.slug}`,
+				categoryId: source.categoryId,
+				subCategoryName: item.subCategoryName,
+				slug: item.slug,
+				categorySlug,
+				listingSource: { subCategoryId: source.id, keywords: item.keywords },
+			},
+		];
+	});
+
+	return [...subcategories, ...virtual].sort((a, b) =>
+		a.subCategoryName.localeCompare(b.subCategoryName),
+	);
 }
 
 export async function fetchPublicSubCategoryBySlugs(
@@ -132,6 +175,24 @@ export async function fetchPublicServicesByCategory(
 	return (data ?? []).map((row) =>
 		mapServiceRow(row as Record<string, unknown>),
 	);
+}
+
+/** Listings for a subcategory page, filtering the source for virtual ones. */
+export async function fetchPublicServicesForSubCategory(
+	subcategory: PublicSubCategory,
+	limit = 12,
+): Promise<ProviderService[]> {
+	const source = subcategory.listingSource;
+	if (!source) return fetchPublicServicesBySubCategory(subcategory.id, limit);
+
+	const listings = await fetchPublicServicesBySubCategory(source.subCategoryId, 200);
+	const terms = source.keywords.map((term) => term.toLowerCase());
+	return listings
+		.filter((listing) => {
+			const text = `${listing.serviceName ?? ""} ${listing.description ?? ""}`.toLowerCase();
+			return terms.some((term) => text.includes(term));
+		})
+		.slice(0, limit);
 }
 
 export async function fetchPublicServicesBySubCategory(

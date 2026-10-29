@@ -13,7 +13,7 @@ import {
 import { buttonVariants } from "@/components/ui/button";
 import { BRAND_NAME } from "@/lib/brand";
 import { SHORT_CODE, WHATSAPP_URL } from "@/lib/marketing";
-import type { CategorySeoCopy } from "@/lib/seo-services";
+import { pricePackages, type CategorySeoCopy } from "@/lib/seo-services";
 import { cn } from "@/lib/utils";
 import type {
 	PublicCategory,
@@ -507,6 +507,7 @@ export function ServiceSubCategoryView({
 		{ label: subcategory.subCategoryName },
 	];
 	const faqSchema = faqJsonLd(copy.faqs);
+	const packages = copy.packages ? pricePackages(copy.packages, services) : [];
 
 	return (
 		<MarketingShell active="services">
@@ -606,6 +607,58 @@ export function ServiceSubCategoryView({
 					</div>
 				</div>
 			</section>
+
+			{packages.length > 0 ? (
+				<section className="border-t border-primary/8 bg-white py-12 sm:py-14">
+					<div className="mx-auto max-w-6xl px-4 sm:px-6">
+						<h2 className="text-2xl font-bold tracking-tight text-[#0f1a0c]">
+							{subcategory.subCategoryName} prices in Addis Ababa
+						</h2>
+						<p className="mt-2 max-w-2xl text-sm text-[#52634c]">
+							Starting prices from current verified listings on {BRAND_NAME}.
+						</p>
+						<ul className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+							{packages.map((pkg) => (
+								<li
+									key={pkg.name}
+									className="flex flex-col rounded-2xl bg-[#f7faf5] p-5 ring-1 ring-black/5"
+								>
+									<h3 className="text-[15px] font-semibold text-[#0f1a0c]">
+										{pkg.name}
+									</h3>
+									<p className="mt-2 text-xs font-medium uppercase tracking-[0.08em] text-[#52634c]">
+										From
+									</p>
+									<p className="text-xl font-bold tabular-nums text-primary">
+										{formatAmount(String(pkg.fromPrice))}
+									</p>
+									<p className="mt-2 flex-1 text-sm leading-relaxed text-[#3d5240]">
+										{pkg.description}
+									</p>
+									<p className="mt-3 text-xs text-[#52634c]">
+										{pkg.listingCount === 1
+											? "1 listing"
+											: `${pkg.listingCount} listings`}
+									</p>
+								</li>
+							))}
+						</ul>
+					</div>
+				</section>
+			) : null}
+
+			{copy.amharic ? (
+				<section lang="am" className="border-t border-primary/8 bg-[#f7faf5] py-10 sm:py-12">
+					<div className="mx-auto max-w-6xl px-4 sm:px-6">
+						<h2 className="text-xl font-bold tracking-tight text-[#0f1a0c]">
+							{copy.amharic.heading}
+						</h2>
+						<p className="mt-3 max-w-3xl text-[15px] leading-relaxed text-[#3d5240]">
+							{copy.amharic.body}
+						</p>
+					</div>
+				</section>
+			) : null}
 
 			{(copy.includes?.length ||
 				copy.excludes?.length ||

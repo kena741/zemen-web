@@ -8,7 +8,7 @@ import {
 } from "@/lib/seo-services";
 import {
 	fetchAllPublicSubCategoryParams,
-	fetchPublicServicesBySubCategory,
+	fetchPublicServicesForSubCategory,
 	fetchPublicSubCategories,
 	fetchPublicSubCategoryBySlugs,
 } from "@/services/catalog/publicCatalog";
@@ -62,7 +62,7 @@ export default async function ServiceSubCategoryPage({
 
 	const { category, subcategory } = match;
 	const [services, siblings] = await Promise.all([
-		fetchPublicServicesBySubCategory(subcategory.id, 12),
+		fetchPublicServicesForSubCategory(subcategory, 12),
 		fetchPublicSubCategories(category.id, category.slug),
 	]);
 	const copy = getSubCategorySeoCopy(

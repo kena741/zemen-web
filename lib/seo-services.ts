@@ -28,7 +28,53 @@ export type CategorySeoCopy = {
 	excludes?: string[];
 	pricingNote?: string;
 	keywords?: string[];
+	/**
+	 * Package cards priced from live listings: a listing belongs to a package
+	 * when its name contains one of `match` (case-insensitive). Packages with
+	 * no matching listing are hidden, so no price is ever made up.
+	 */
+	packages?: { name: string; description: string; match: string[] }[];
+	/** Amharic summary rendered with lang="am" for Amharic searches. */
+	amharic?: { heading: string; body: string };
 };
+
+export type PricedPackage = {
+	name: string;
+	description: string;
+	fromPrice: number;
+	listingCount: number;
+};
+
+function listingPrice(value: string | null): number | null {
+	const n = Number(String(value ?? "").replace(/[^0-9.]/g, ""));
+	return Number.isFinite(n) && n > 0 ? n : null;
+}
+
+/** Lowest live listing price per package; packages without listings are dropped. */
+export function pricePackages(
+	packages: NonNullable<CategorySeoCopy["packages"]>,
+	listings: { serviceName: string | null; price: string | null }[],
+): PricedPackage[] {
+	return packages.flatMap((pkg) => {
+		const terms = pkg.match.map((term) => term.toLowerCase());
+		const prices = listings
+			.filter((listing) => {
+				const name = (listing.serviceName ?? "").toLowerCase();
+				return terms.some((term) => name.includes(term));
+			})
+			.map((listing) => listingPrice(listing.price))
+			.filter((price): price is number => price != null);
+		if (prices.length === 0) return [];
+		return [
+			{
+				name: pkg.name,
+				description: pkg.description,
+				fromPrice: Math.min(...prices),
+				listingCount: prices.length,
+			},
+		];
+	});
+}
 
 /** Enrichment keyed by slug tokens. Used only when matching category exists in DB. */
 const CATEGORY_COPY: Record<string, CategorySeoCopy> = {
@@ -435,6 +481,169 @@ const CATEGORY_COPY: Record<string, CategorySeoCopy> = {
 				question: "Is CCTV installation available for homes and businesses?",
 				answer:
 					"Yes. Providers serve residential compounds and commercial spaces across Addis Ababa. Share your property type and camera needs when you request a booking.",
+			},
+		],
+	},
+	"ev-charger": {
+		title: "EV Charger Installation in Addis Ababa",
+		h1: "EV Charger Installation and Service in Addis Ababa",
+		description:
+			"Book verified technicians in Addis Ababa, Ethiopia for home EV charger installation, charger maintenance, electric vehicle inspection, and EV buying advice through Zemen Service.",
+		intro:
+			"Most electric vehicle owners in Addis Ababa charge at home, and a charger has to be installed properly. A charger that is wired wrongly can burn out, damage parts of your car, and create a fire risk. Book verified EV technicians to install a charger matched to your car and electricity meter, maintain an existing charger, inspect an EV before you buy, or get advice on which electric car suits you.",
+		offered: [
+			"Home EV charger installation matched to your car and meter",
+			"EV charger maintenance and safety checks",
+			"Electric vehicle inspection with diagnostic equipment",
+			"Advice on Full EV, Hybrid, Plug-in Hybrid, and Range Extender cars",
+		],
+		packages: [
+			{
+				name: "Charger installation",
+				description:
+					"A charger compatible with your car, wired correctly to your meter, installed with a warranty from the provider.",
+				match: ["installation", "ግጠማ"],
+			},
+			{
+				name: "Charger maintenance",
+				description:
+					"Checks of the electrical connections and charging performance so your charger keeps working safely.",
+				match: ["maintenance", "ጥገና"],
+			},
+			{
+				name: "EV inspection",
+				description:
+					"A diagnostic check of a new or used electric vehicle before you buy it, or of the car you already drive.",
+				match: ["inspection", "ፍተሻ"],
+			},
+			{
+				name: "EV consulting",
+				description:
+					"Help choosing between Full EV, Hybrid, Plug-in Hybrid, and Range Extender cars, plus usage and care advice.",
+				match: ["consult", "ማማከር"],
+			},
+		],
+		includes: [
+			"Charger installation matched to your car and electricity meter",
+			"Professional wiring with a provider warranty, as stated in the listing",
+			"Charger and connection checks on maintenance visits",
+		],
+		excludes: [
+			"The charger unit itself, unless the listing says it is supplied",
+			"Electricity meter upgrades from the utility",
+			"Mechanical car repairs outside the electric system",
+		],
+		pricingNote:
+			"Prices above are the lowest current listing price for each service. Your final price depends on the charger type, cable distance from your meter, and your building.",
+		amharic: {
+			heading: "የኤሌክትሪክ መኪና (EV) ቻርጀር ግጠማ በአዲስ አበባ",
+			body: "ለኤሌክትሪክ መኪናዎ ከቆጣሪዎ ጋር የሚጣጣም ቻርጀር ግጠማ፣ የቻርጀር ጥገና፣ የመኪና ፍተሻ እና የማማከር አገልግሎት ከተረጋገጡ ባለሙያዎች ያግኙ። በድረ-ገጹ ወይም በመተግበሪያው ይዘዙ፣ ወይም በ8323 ይደውሉ።",
+		},
+		keywords: [
+			"EV charger installation Addis Ababa",
+			"electric car charger installation Ethiopia",
+			"home EV charger Addis Ababa",
+			"EV charger Addis Ababa",
+			"electric vehicle inspection Addis Ababa",
+			"EV service Addis Ababa",
+			"የኤሌክትሪክ መኪና ቻርጀር ግጠማ",
+		],
+		faqs: [
+			{
+				question: "Can I install an EV charger at home in Addis Ababa?",
+				answer:
+					"Yes. Book Charger installation on Zemen Service and a verified technician installs a charger that matches your car and your electricity meter. Share your car model and where you park when you book.",
+			},
+			{
+				question: "Can I install a charger in an apartment or shared compound?",
+				answer:
+					"It depends on whether you have your own meter and a parking spot the cable can reach. Describe your building when you book, and the technician will confirm whether a charger line is possible before starting.",
+			},
+			{
+				question: "Why should a professional install my EV charger?",
+				answer:
+					"A charger installed the wrong way can burn out, damage parts of your car, and create a fire risk. Verified technicians install it to match your car and meter, with a warranty stated in the listing.",
+			},
+			{
+				question: "Can you inspect an electric car before I buy it?",
+				answer:
+					"Yes. Book EV inspection to have a new or used electric vehicle checked with proper diagnostic equipment before you buy, or to check the car you already drive.",
+			},
+		],
+	},
+	"sofa-carpet-cleaning": {
+		title: "Sofa & Carpet Cleaning in Addis Ababa",
+		h1: "Sofa and Carpet Cleaning in Addis Ababa",
+		description:
+			"Book verified sofa, carpet, and majlis cleaning in Addis Ababa, Ethiopia. Remove dust, stains, and dirt at home with Zemen Service. Book online or call 8323.",
+		intro:
+			"Sofas and carpets hold dust, stains, and dirt that regular cleaning leaves behind. Book verified cleaners in Addis Ababa to clean your sofa, carpets, or a full majlis seating area at home, so your furniture is clean, fresh, and ready to use again.",
+		offered: [
+			"Sofa cleaning at your home",
+			"Carpet and rug cleaning",
+			"Majlis cleaning: sofas, carpets, and the seating area",
+			"Booking via app, website, or call center",
+		],
+		packages: [
+			{
+				name: "Sofa cleaning",
+				description:
+					"Dust, stain, and dirt removal for your sofa so it is clean and comfortable again.",
+				match: ["sofa", "ሶፋ"],
+			},
+			{
+				name: "Carpet cleaning",
+				description:
+					"Dust, stain, and dirt removal for carpets and rugs. Check the listing for how the price is measured.",
+				match: ["carpet", "ምንጣፍ"],
+			},
+			{
+				name: "Majlis cleaning",
+				description:
+					"Cleaning for a full majlis area: the sofas, the carpets, and the room around them.",
+				match: ["majlis", "መጅሊስ"],
+			},
+		],
+		includes: [
+			"Removing dust, stains, and dirt from the booked items",
+			"Cleaning at your home in Addis Ababa",
+		],
+		excludes: [
+			"Sofa or furniture repair (book a carpenter instead)",
+			"Guaranteed removal of every old or set-in stain, unless the listing says so",
+			"Curtain cleaning, unless listed separately",
+		],
+		pricingNote:
+			"Prices above are the lowest current listing price for each service. Carpet prices can depend on size, so confirm whether a listing is priced per carpet or per area before you book.",
+		amharic: {
+			heading: "የሶፋ እና የምንጣፍ ጽዳት በአዲስ አበባ",
+			body: "የሶፋ፣ የምንጣፍ እና የመጅሊስ ጽዳት አገልግሎት ከተረጋገጡ ባለሙያዎች ያግኙ። አቧራ፣ እድፍ እና ቆሻሻን በማስወገድ ሶፋዎን እና ምንጣፍዎን ንፁህ እና ምቹ እናደርጋለን። በድረ-ገጹ ወይም በመተግበሪያው ይዘዙ፣ ወይም በ8323 ይደውሉ።",
+		},
+		keywords: [
+			"sofa cleaning Addis Ababa",
+			"carpet cleaning Addis Ababa",
+			"sofa and carpet cleaning Addis Ababa",
+			"upholstery cleaning Addis Ababa",
+			"rug cleaning Addis Ababa",
+			"majlis cleaning Addis Ababa",
+			"የሶፋ ጽዳት",
+			"የምንጣፍ ጽዳት",
+		],
+		faqs: [
+			{
+				question: "How do I book sofa or carpet cleaning in Addis Ababa?",
+				answer:
+					"Choose a sofa, carpet, or majlis cleaning listing on Zemen Service and book through the website or app. You can also call 8323 or message us on WhatsApp.",
+			},
+			{
+				question: "Do cleaners come to my home?",
+				answer:
+					"Yes. Sofa and carpet cleaning is done at your home in Addis Ababa. Tell the provider how many seats or carpets you have when you book.",
+			},
+			{
+				question: "How long until my sofa or carpet is dry?",
+				answer:
+					"It depends on the fabric and the cleaning method. Ask the provider when you book so you can plan when to use the room again.",
 			},
 		],
 	},
@@ -854,6 +1063,8 @@ const COPY_ALIASES: Record<string, string> = {
 	"art-and-design/painting": "painting",
 	technical: "technical",
 	"technical/cctv-installation": "cctv-installation",
+	"technical/ev-service": "ev-charger",
+	"domestic-help/sofa-and-carpet-cleaning": "sofa-carpet-cleaning",
 };
 
 function matchCategoryCopy(path: string): CategorySeoCopy | null {

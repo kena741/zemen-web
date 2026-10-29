@@ -59,6 +59,11 @@ const LEGACY_SERVICE_REDIRECTS: [string, string][] = [
 	["/ac-repair-addis-ababa", "/services/maintenance/ac-repair-and-service"],
 	["/services/ac-repair", "/services/maintenance/ac-repair-and-service"],
 	["/services/maintenance/ac-repair", "/services/maintenance/ac-repair-and-service"],
+	["/sofa-cleaning", "/services/domestic-help/sofa-and-carpet-cleaning"],
+	["/carpet-cleaning", "/services/domestic-help/sofa-and-carpet-cleaning"],
+	["/sofa-and-carpet-cleaning", "/services/domestic-help/sofa-and-carpet-cleaning"],
+	["/ev-charger", "/services/technical/ev-service"],
+	["/ev-charger-installation", "/services/technical/ev-service"],
 ];
 
 const nextConfig: NextConfig = {
