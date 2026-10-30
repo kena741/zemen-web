@@ -134,3 +134,25 @@ export function blogPostingJsonLd(post: {
 		about: { "@type": "City", name: "Addis Ababa" },
 	};
 }
+
+export function videoJsonLd(video: {
+	title: string;
+	description: string;
+	src: string;
+	poster: string;
+	uploadDate: string;
+	durationSeconds: number;
+}): Record<string, unknown> {
+	const base = getMetadataBaseUrl().origin;
+	return {
+		"@context": "https://schema.org",
+		"@type": "VideoObject",
+		name: video.title,
+		description: video.description,
+		thumbnailUrl: `${base}${video.poster}`,
+		contentUrl: `${base}${video.src}`,
+		uploadDate: video.uploadDate,
+		duration: `PT${Math.round(video.durationSeconds)}S`,
+		publisher: { "@id": `${base}/#organization` },
+	};
+}

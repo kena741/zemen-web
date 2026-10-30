@@ -9,7 +9,13 @@ import {
 	faqJsonLd,
 	JsonLd,
 	serviceJsonLd,
+	videoJsonLd,
 } from "@/components/marketing/seo-json-ld";
+import {
+	categoryIcon,
+	ServiceHero,
+	type ServiceHeroMedia,
+} from "@/components/marketing/service-hero";
 import { buttonVariants } from "@/components/ui/button";
 import { BRAND_NAME } from "@/lib/brand";
 import { SHORT_CODE, WHATSAPP_URL } from "@/lib/marketing";
@@ -54,6 +60,40 @@ function BookingCta({ className }: { className?: string }) {
 			</a>
 		</div>
 	);
+}
+
+const GENERIC_SLUG_WORDS = new Set(["service", "services", "and", "help"]);
+
+/** Siblings sharing a slug word come first (e.g. sofa cleaning → deep cleaning). */
+function rankRelated(current: string, siblings: PublicSubCategory[]): PublicSubCategory[] {
+	const words = new Set(current.split("-").filter((word) => !GENERIC_SLUG_WORDS.has(word)));
+	const score = (slug: string) => slug.split("-").filter((word) => words.has(word)).length;
+	return [...siblings].sort((a, b) => score(b.slug) - score(a.slug));
+}
+
+function capitalize(label: string): string {
+	return label.charAt(0).toUpperCase() + label.slice(1);
+}
+
+/** Photo card for the hero: the first listing with a photo, else the fallback image. */
+function listingPhotoMedia(
+	services: ProviderService[],
+	fallback: { src: string | null; alt: string; title: string },
+): ServiceHeroMedia | null {
+	const listing = services.find((service) => service.serviceImage[0]);
+	if (listing) {
+		const title = listing.serviceName || fallback.title;
+		return {
+			kind: "image",
+			src: listing.serviceImage[0],
+			alt: `${title} in Addis Ababa`,
+			title,
+			detail: listing.price ? formatAmount(listing.price) : undefined,
+		};
+	}
+	return fallback.src
+		? { kind: "image", src: fallback.src, alt: fallback.alt, title: fallback.title }
+		: null;
 }
 
 export function ServicesHubView({
@@ -204,35 +244,22 @@ export function ServiceCategoryView({
 			/>
 			{faqSchema ? <JsonLd data={faqSchema} /> : null}
 
-			<section className="bg-[#eef5ea] py-12 sm:py-14">
-				<div className="mx-auto max-w-6xl px-4 sm:px-6">
-					<MarketingBreadcrumbs items={crumbs} />
-					<div className="mt-5 grid gap-8 lg:grid-cols-[1.2fr_0.8fr] lg:items-start">
-						<div>
-							<h1 className="max-w-3xl text-[clamp(1.75rem,4vw,2.6rem)] font-bold tracking-tight text-[#0f1a0c]">
-								{copy.h1}
-							</h1>
-							<p className="mt-4 max-w-2xl text-[15px] leading-relaxed text-[#3d5240]">
-								{copy.intro}
-							</p>
-							<BookingCta className="mt-7" />
-						</div>
-						{category.image ? (
-							<div className="relative aspect-[4/3] overflow-hidden rounded-[1.5rem] bg-[#e8f5e3] shadow-[0_16px_40px_rgba(23,67,9,0.1)]">
-								<Image
-									src={category.image}
-									alt={`${category.categoryName} services in Addis Ababa`}
-									fill
-									sizes="(max-width: 1024px) 100vw, 520px"
-									loading="lazy"
-									quality={70}
-									className="object-cover"
-								/>
-							</div>
-						) : null}
-					</div>
-				</div>
-			</section>
+			<ServiceHero
+				crumbs={crumbs}
+				heading={copy.h1}
+				intro={copy.intro}
+				primaryCta="Find a provider"
+				chips={subcategories.slice(0, 3).map((item) => ({
+					label: capitalize(item.subCategoryName),
+					icon: categoryIcon(category.slug),
+					href: `/services/${category.slug}/${item.slug}`,
+				}))}
+				media={listingPhotoMedia(services, {
+					src: category.image,
+					alt: `${category.categoryName} services in Addis Ababa`,
+					title: category.categoryName,
+				})}
+			/>
 
 			{subcategories.length > 0 ? (
 				<section className="border-b border-primary/8 bg-white py-10 sm:py-12">
@@ -365,7 +392,10 @@ export function ServiceCategoryView({
 				</section>
 			)}
 
-			<section className="border-y border-primary/8 bg-[#f4f8f1] py-12 sm:py-14">
+			<section
+				id="listings"
+				className="scroll-mt-20 border-y border-primary/8 bg-[#f4f8f1] py-12 sm:py-14"
+			>
 				<div className="mx-auto max-w-6xl px-4 sm:px-6">
 					<h2 className="text-2xl font-bold tracking-tight text-[#0f1a0c]">
 						Public {category.categoryName.toLowerCase()} listings
@@ -527,24 +557,44 @@ export function ServiceSubCategoryView({
 				})}
 			/>
 			{faqSchema ? <JsonLd data={faqSchema} /> : null}
+			{copy.video ? (
+				<JsonLd data={videoJsonLd({ ...copy.video, description: copy.description })} />
+			) : null}
 
-			<section className="bg-[#eef5ea] py-12 sm:py-14">
-				<div className="mx-auto max-w-6xl px-4 sm:px-6">
-					<MarketingBreadcrumbs items={crumbs} />
-					<div className="mt-5 max-w-3xl">
-						<p className="text-xs font-semibold uppercase tracking-[0.14em] text-primary">
-							{category.categoryName}
-						</p>
-						<h1 className="mt-2 text-[clamp(1.75rem,4vw,2.6rem)] font-bold tracking-tight text-[#0f1a0c]">
-							{copy.h1}
-						</h1>
-						<p className="mt-4 text-[15px] leading-relaxed text-[#3d5240]">
-							{copy.intro}
-						</p>
-						<BookingCta className="mt-7" />
-					</div>
-				</div>
-			</section>
+			{copy.hero ? (
+				<ServiceHero
+					crumbs={crumbs}
+					location={copy.hero.location}
+					slogan={copy.hero.slogan}
+					heading={copy.hero.heading}
+					intro={copy.hero.intro}
+					primaryCta={copy.hero.primaryCta}
+					chips={copy.hero.chips}
+					trust={copy.hero.trust}
+					media={copy.video ? { kind: "video", video: copy.video } : null}
+				/>
+			) : (
+				<ServiceHero
+					crumbs={crumbs}
+					heading={copy.h1}
+					intro={copy.intro}
+					primaryCta="Find a provider"
+					chips={rankRelated(subcategory.slug, relatedSubs).slice(0, 3).map((item) => ({
+						label: capitalize(item.subCategoryName),
+						icon: categoryIcon(category.slug),
+						href: `/services/${category.slug}/${item.slug}`,
+					}))}
+					media={
+						copy.video
+							? { kind: "video", video: copy.video }
+							: listingPhotoMedia(services, {
+									src: category.image,
+									alt: `${subcategory.subCategoryName} in Addis Ababa`,
+									title: capitalize(subcategory.subCategoryName),
+								})
+					}
+				/>
+			)}
 
 			<section className="bg-white py-12 sm:py-14">
 				<div className="mx-auto grid max-w-6xl gap-10 px-4 sm:px-6 lg:grid-cols-2">
@@ -709,7 +759,10 @@ export function ServiceSubCategoryView({
 				</section>
 			)}
 
-			<section className="border-y border-primary/8 bg-[#f4f8f1] py-12 sm:py-14">
+			<section
+				id="listings"
+				className="scroll-mt-20 border-y border-primary/8 bg-[#f4f8f1] py-12 sm:py-14"
+			>
 				<div className="mx-auto max-w-6xl px-4 sm:px-6">
 					<h2 className="text-2xl font-bold tracking-tight text-[#0f1a0c]">
 						Public {subcategory.subCategoryName.toLowerCase()} listings

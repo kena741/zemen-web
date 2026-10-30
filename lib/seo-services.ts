@@ -16,6 +16,15 @@ export function slugifyCategoryName(name: string): string {
 		.replace(/^-+|-+$/g, "");
 }
 
+export type ServiceIconName =
+	| "spray"
+	| "home"
+	| "building"
+	| "wrench"
+	| "truck"
+	| "paintbrush"
+	| "plug";
+
 export type CategorySeoCopy = {
 	title: string;
 	h1: string;
@@ -36,6 +45,30 @@ export type CategorySeoCopy = {
 	packages?: { name: string; description: string; match: string[] }[];
 	/** Amharic summary rendered with lang="am" for Amharic searches. */
 	amharic?: { heading: string; body: string };
+	/** Vertical (9:16) video shown in the page hero; files live in public/. */
+	video?: {
+		src: string;
+		poster: string;
+		title: string;
+		caption: string;
+		/** ISO 8601 date, for structured data and the video sitemap. */
+		uploadDate: string;
+		durationSeconds: number;
+	};
+	/**
+	 * Designed hero (needs `video`): big slogan, keyword H1, service chips,
+	 * CTAs and trust points. Replaces only the standard hero section.
+	 */
+	hero?: {
+		location: string;
+		slogan: [string, string];
+		/** Rendered as the page H1, so keep the search keywords here. */
+		heading: string;
+		intro: string;
+		primaryCta: string;
+		chips: { label: string; icon: ServiceIconName; href: string }[];
+		trust: string[];
+	};
 };
 
 export type PricedPackage = {
@@ -83,6 +116,28 @@ const CATEGORY_COPY: Record<string, CategorySeoCopy> = {
 		h1: "Cleaning Services in Addis Ababa",
 		description:
 			"Book a trusted cleaning service in Addis Ababa, Ethiopia for homes, apartments, and offices. Compare verified cleaners on Zemen Service and book online, in the app, or by phone.",
+		hero: {
+			location: "Addis Ababa, Ethiopia",
+			slogan: ["A cleaner space.", "A lighter day."],
+			heading: "Home & office cleaning in Addis Ababa",
+			intro:
+				"Book verified professionals for deep cleaning, regular upkeep, and a fresh start. See prices before you book.",
+			primaryCta: "Find a cleaner",
+			chips: [
+				{ label: "Deep cleaning", icon: "spray", href: "/services/domestic-help/deep-cleaning" },
+				{ label: "Home cleaning", icon: "home", href: "#listings" },
+				{ label: "Office cleaning", icon: "building", href: "#listings" },
+			],
+			trust: ["Verified professionals", "Clear pricing", "One-time or regular"],
+		},
+		video: {
+			src: "/marketing/video/cleaning.mp4",
+			poster: "/marketing/video/cleaning-poster.jpg",
+			title: "Zemen Service providers cleaning homes and offices in Addis Ababa",
+			caption: "See our cleaners in action",
+			uploadDate: "2026-10-30",
+			durationSeconds: 47,
+		},
 		intro:
 			"Need a cleaning service in Addis Ababa? Zemen Service connects you with verified home and office cleaners for regular cleans, deep cleans, and one-time help across neighborhoods like Bole, CMC, Kazanchis, Sarbet, and Ayat. See listing prices before you book.",
 		offered: [
@@ -1071,6 +1126,11 @@ function matchCategoryCopy(path: string): CategorySeoCopy | null {
 	const key = path.toLowerCase();
 	const copyKey = COPY_ALIASES[key] ?? key;
 	return CATEGORY_COPY[copyKey] ?? null;
+}
+
+/** Hand-written copy for a `category` or `category/subcategory` path, if any. */
+export function getSeoCopyForPath(path: string): CategorySeoCopy | null {
+	return matchCategoryCopy(path);
 }
 
 /** "Laundry Service" → "Laundry Service", "Calligraphy" → "Calligraphy Services". */

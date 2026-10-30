@@ -1,6 +1,7 @@
 import type { MetadataRoute } from "next";
 
 import { getMetadataBaseUrl } from "@/lib/seo";
+import { getSeoCopyForPath } from "@/lib/seo-services";
 import { fetchPublishedBlogSlugs } from "@/services/blog/publicBlog";
 import {
 	fetchAllPublicSubCategoryParams,
@@ -67,12 +68,31 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 			priority: 0.7,
 		}));
 		const pairs = await fetchAllPublicSubCategoryParams();
-		subcategoryRoutes = pairs.map(({ slug, subSlug }) => ({
-			url: `${base}/services/${slug}/${subSlug}`,
-			lastModified: now,
-			changeFrequency: "weekly" as const,
-			priority: 0.65,
-		}));
+		subcategoryRoutes = pairs.map(({ slug, subSlug }) => {
+			const copy = getSeoCopyForPath(`${slug}/${subSlug}`);
+			const video = copy?.video;
+			return {
+				url: `${base}/services/${slug}/${subSlug}`,
+				lastModified: now,
+				changeFrequency: "weekly" as const,
+				priority: 0.65,
+				...(video && copy
+					? {
+							videos: [
+								{
+									title: video.title,
+									description: copy.description,
+									thumbnail_loc: `${base}${video.poster}`,
+									content_loc: `${base}${video.src}`,
+									duration: video.durationSeconds,
+									publication_date: video.uploadDate,
+									family_friendly: "yes" as const,
+								},
+							],
+						}
+					: {}),
+			};
+		});
 	} catch (error) {
 		console.error("sitemap categories", error);
 	}
