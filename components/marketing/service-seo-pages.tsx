@@ -75,6 +75,32 @@ function capitalize(label: string): string {
 	return label.charAt(0).toUpperCase() + label.slice(1);
 }
 
+/** "From ETB 1,500" for the cheapest priced listing, if any. */
+function fromPrice(services: ProviderService[]): string | undefined {
+	const prices = services
+		.map((service) => Number(String(service.price ?? "").replace(/[^0-9.]/g, "")))
+		.filter((price) => Number.isFinite(price) && price > 0);
+	return prices.length ? `From ${formatAmount(Math.min(...prices))}` : undefined;
+}
+
+/** Hero photo: the page's own image if set, else a listing photo. */
+function heroPhotoMedia(
+	copy: CategorySeoCopy,
+	services: ProviderService[],
+	fallback: { src: string | null; alt: string; title: string },
+): ServiceHeroMedia | null {
+	if (copy.heroImage) {
+		return {
+			kind: "image",
+			src: copy.heroImage.src,
+			alt: copy.heroImage.alt,
+			title: copy.heroImage.caption,
+			detail: fromPrice(services),
+		};
+	}
+	return listingPhotoMedia(services, fallback);
+}
+
 /** Photo card for the hero: the first listing with a photo, else the fallback image. */
 function listingPhotoMedia(
 	services: ProviderService[],
@@ -254,7 +280,7 @@ export function ServiceCategoryView({
 					icon: categoryIcon(category.slug),
 					href: `/services/${category.slug}/${item.slug}`,
 				}))}
-				media={listingPhotoMedia(services, {
+				media={heroPhotoMedia(copy, services, {
 					src: category.image,
 					alt: `${category.categoryName} services in Addis Ababa`,
 					title: category.categoryName,
@@ -587,7 +613,7 @@ export function ServiceSubCategoryView({
 					media={
 						copy.video
 							? { kind: "video", video: copy.video }
-							: listingPhotoMedia(services, {
+							: heroPhotoMedia(copy, services, {
 									src: category.image,
 									alt: `${subcategory.subCategoryName} in Addis Ababa`,
 									title: capitalize(subcategory.subCategoryName),

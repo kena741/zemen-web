@@ -45,6 +45,8 @@ export type CategorySeoCopy = {
 	packages?: { name: string; description: string; match: string[] }[];
 	/** Amharic summary rendered with lang="am" for Amharic searches. */
 	amharic?: { heading: string; body: string };
+	/** 4:5 photo for the hero when there's no video; file lives in public/. */
+	heroImage?: { src: string; alt: string; caption: string };
 	/** Vertical (9:16) video shown in the page hero; files live in public/. */
 	video?: {
 		src: string;
@@ -191,6 +193,11 @@ const CATEGORY_COPY: Record<string, CategorySeoCopy> = {
 		],
 	},
 	cooking: {
+		heroImage: {
+			src: "/marketing/services/cooking.jpg",
+			alt: "Cook in a green chef's hat stirring a pot of wot beside a basket of injera",
+			caption: "Home cooking by verified cooks",
+		},
 		title: "Premium Cooking & Home Cook Services in Addis Ababa",
 		h1: "Trusted Cooking Services in Addis Ababa",
 		description:
