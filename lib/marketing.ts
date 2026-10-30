@@ -20,7 +20,7 @@ export const OFFICE = {
 	/** Opens the Google Business Profile, with directions on mobile. */
 	mapsUrl: "https://maps.app.goo.gl/3ujnZT2s7MborZtK9",
 	embedUrl:
-		"https://www.google.com/maps?q=8.998705,38.786986&z=17&hl=en&output=embed",
+		"https://www.google.com/maps?q=8.998705,38.786986&z=18&hl=en&output=embed",
 } as const;
 
 /** Public trust metrics for marketing / SEO surfaces. */

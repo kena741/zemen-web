@@ -14,6 +14,7 @@ import marketing2 from "@/assets/images/optimized/why_2.jpg";
 import marketing3 from "@/assets/images/optimized/why_3.jpg";
 import marketing4 from "@/assets/images/optimized/why_4.jpg";
 import { buttonVariants } from "@/components/ui/button";
+import { OfficeMap } from "@/components/marketing/office-map";
 import { MarketingShell } from "@/components/marketing/site-chrome";
 import { BRAND_NAME } from "@/lib/brand";
 import { OFFICE, SHORT_CODE, TRUST_STATS, WHATSAPP_URL } from "@/lib/marketing";
@@ -438,16 +439,7 @@ export function AboutPage() {
 							</a>
 						</div>
 					</div>
-					<div className="relative aspect-[4/3] w-full overflow-hidden rounded-[1.5rem] bg-[#e8f5e3] shadow-[0_18px_48px_rgba(23,67,9,0.12)] ring-1 ring-black/5 sm:aspect-[16/10]">
-						<iframe
-							src={OFFICE.embedUrl}
-							title={`Map of the ${BRAND_NAME} office at ${OFFICE.building}, ${OFFICE.city}`}
-							className="absolute inset-0 size-full border-0"
-							loading="lazy"
-							referrerPolicy="no-referrer-when-downgrade"
-							allowFullScreen
-						/>
-					</div>
+					<OfficeMap className="aspect-[4/3] w-full rounded-[1.5rem] shadow-[0_18px_48px_rgba(23,67,9,0.12)] ring-1 ring-black/5 sm:aspect-[16/10]" />
 				</div>
 			</section>
 
