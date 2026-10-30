@@ -1,5 +1,5 @@
 import { BRAND_NAME } from "@/lib/brand";
-import { SHORT_CODE, WHATSAPP_DISPLAY } from "@/lib/marketing";
+import { OFFICE, SHORT_CODE, WHATSAPP_DISPLAY } from "@/lib/marketing";
 import {
 	getMetadataBaseUrl,
 	SEO_DESCRIPTION,
@@ -23,9 +23,21 @@ export function OrganizationJsonLd() {
 				sameAs: ["https://t.me/zemenservicediscussion"],
 				address: {
 					"@type": "PostalAddress",
-					addressLocality: "Addis Ababa",
-					addressRegion: "Addis Ababa",
+					streetAddress: OFFICE.building,
+					addressLocality: OFFICE.city,
+					addressRegion: OFFICE.city,
+					postalCode: OFFICE.postalCode,
 					addressCountry: "ET",
+				},
+				location: {
+					"@type": "Place",
+					name: `${BRAND_NAME} office, ${OFFICE.building}`,
+					hasMap: OFFICE.mapsUrl,
+					geo: {
+						"@type": "GeoCoordinates",
+						latitude: SEO_GEO.latitude,
+						longitude: SEO_GEO.longitude,
+					},
 				},
 				knowsAbout: [
 					"Home cleaning",
@@ -52,11 +64,6 @@ export function OrganizationJsonLd() {
 					{
 						"@type": "City",
 						name: "Addis Ababa",
-						geo: {
-							"@type": "GeoCoordinates",
-							latitude: SEO_GEO.latitude,
-							longitude: SEO_GEO.longitude,
-						},
 					},
 					{
 						"@type": "Country",

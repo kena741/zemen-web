@@ -3,12 +3,19 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useState, type ReactNode } from "react";
-import { ChevronDownIcon, MenuIcon, PhoneIcon, XIcon } from "lucide-react";
+import {
+	ChevronDownIcon,
+	MapPinIcon,
+	MenuIcon,
+	PhoneIcon,
+	XIcon,
+} from "lucide-react";
 
 import appIcon from "@/assets/images/app_icon.png";
 import { BRAND_NAME } from "@/lib/brand";
 import {
 	APP_STORE_URL,
+	OFFICE,
 	PLAY_STORE_URL,
 	PRIORITY_SERVICE_LINKS,
 	SHORT_CODE,
@@ -260,6 +267,20 @@ export function MarketingFooter() {
 					<p className="max-w-[16rem] text-sm leading-snug text-white/65">
 						Premium, verified home services in Addis Ababa, Ethiopia.
 					</p>
+					<a
+						href={OFFICE.mapsUrl}
+						target="_blank"
+						rel="noopener noreferrer"
+						className="group flex max-w-[17rem] items-start gap-2 text-sm leading-snug text-white/80 transition hover:text-white"
+					>
+						<MapPinIcon className="mt-0.5 size-4 shrink-0 text-white/60" aria-hidden />
+						<span>
+							{OFFICE.building}, {OFFICE.city}
+							<span className="mt-0.5 block text-xs font-semibold text-white/60 underline-offset-4 group-hover:underline">
+								Get directions
+							</span>
+						</span>
+					</a>
 					<div className="flex flex-wrap items-center gap-2 pt-1">
 						<a
 							href={`tel:${SHORT_CODE}`}
@@ -321,6 +342,11 @@ export function MarketingFooter() {
 						<li>
 							<Link href="/about" className="transition hover:text-white">
 								About
+							</Link>
+						</li>
+						<li>
+							<Link href="/about#office" className="transition hover:text-white">
+								Our office
 							</Link>
 						</li>
 						<li>

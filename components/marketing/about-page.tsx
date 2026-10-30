@@ -1,6 +1,13 @@
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowDownIcon, ArrowRightIcon, CheckIcon, PhoneIcon } from "lucide-react";
+import {
+	ArrowDownIcon,
+	ArrowRightIcon,
+	CheckIcon,
+	MapPinIcon,
+	NavigationIcon,
+	PhoneIcon,
+} from "lucide-react";
 
 import marketing1 from "@/assets/images/optimized/why_1.jpg";
 import marketing2 from "@/assets/images/optimized/why_2.jpg";
@@ -9,7 +16,7 @@ import marketing4 from "@/assets/images/optimized/why_4.jpg";
 import { buttonVariants } from "@/components/ui/button";
 import { MarketingShell } from "@/components/marketing/site-chrome";
 import { BRAND_NAME } from "@/lib/brand";
-import { SHORT_CODE, TRUST_STATS, WHATSAPP_URL } from "@/lib/marketing";
+import { OFFICE, SHORT_CODE, TRUST_STATS, WHATSAPP_URL } from "@/lib/marketing";
 import { cn } from "@/lib/utils";
 
 const ABOUT_IMAGES = [
@@ -364,6 +371,83 @@ export function AboutPage() {
 							</li>
 						))}
 					</ul>
+				</div>
+			</section>
+
+			{/* Office */}
+			<section
+				id="office"
+				className="scroll-mt-20 border-t border-primary/8 bg-[#f4f8f1] py-14 sm:py-16"
+			>
+				<div className="mx-auto grid max-w-6xl items-center gap-8 px-4 sm:px-6 lg:grid-cols-[1fr_1.4fr] lg:gap-12">
+					<div>
+						<p className="text-xs font-semibold uppercase tracking-[0.14em] text-primary">
+							Visit us
+						</p>
+						<h2 className="mt-2 text-[clamp(1.6rem,3.5vw,2.2rem)] font-bold tracking-tight text-[#0f1a0c]">
+							Our office in Addis Ababa
+						</h2>
+						<p className="mt-4 text-[15px] leading-relaxed text-[#3d5240]">
+							Meet the {BRAND_NAME} team in person, or call us first and we&apos;ll
+							help you over the phone.
+						</p>
+						<address className="mt-6 flex items-start gap-3 not-italic">
+							<span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-white shadow-sm ring-1 ring-primary/15">
+								<MapPinIcon className="size-5 text-primary" />
+							</span>
+							<span className="text-[15px] leading-relaxed text-[#142610]">
+								<span className="block font-semibold">{BRAND_NAME}</span>
+								{OFFICE.building}
+								<br />
+								{OFFICE.city} {OFFICE.postalCode}, {OFFICE.country}
+							</span>
+						</address>
+						<div className="mt-7 flex flex-wrap gap-3">
+							<a
+								href={OFFICE.mapsUrl}
+								target="_blank"
+								rel="noopener noreferrer"
+								className={cn(
+									buttonVariants({ size: "lg" }),
+									"h-11 rounded-full px-6",
+								)}
+							>
+								<NavigationIcon className="mr-1.5 size-4" />
+								Get directions
+							</a>
+							<a
+								href={`tel:${SHORT_CODE}`}
+								className={cn(
+									buttonVariants({ variant: "outline", size: "lg" }),
+									"h-11 rounded-full border-primary/25 bg-white px-5",
+								)}
+							>
+								<PhoneIcon className="mr-1.5 size-4" />
+								Call {SHORT_CODE}
+							</a>
+							<a
+								href={WHATSAPP_URL}
+								target="_blank"
+								rel="noopener noreferrer"
+								className={cn(
+									buttonVariants({ variant: "outline", size: "lg" }),
+									"h-11 rounded-full border-[#25D366]/40 bg-white px-5 text-[#128C7E]",
+								)}
+							>
+								WhatsApp
+							</a>
+						</div>
+					</div>
+					<div className="relative aspect-[4/3] w-full overflow-hidden rounded-[1.5rem] bg-[#e8f5e3] shadow-[0_18px_48px_rgba(23,67,9,0.12)] ring-1 ring-black/5 sm:aspect-[16/10]">
+						<iframe
+							src={OFFICE.embedUrl}
+							title={`Map of the ${BRAND_NAME} office at ${OFFICE.building}, ${OFFICE.city}`}
+							className="absolute inset-0 size-full border-0"
+							loading="lazy"
+							referrerPolicy="no-referrer-when-downgrade"
+							allowFullScreen
+						/>
+					</div>
 				</div>
 			</section>
 

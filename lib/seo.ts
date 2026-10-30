@@ -110,12 +110,12 @@ export const SEO_KEYWORDS = [
 	"Zemen AC repair Addis Ababa",
 ] as const;
 
-/** Approximate city-centre coordinates for Addis Ababa (geo meta + JSON-LD). */
+/** Office location (Alemnesh Plaza) for geo meta + JSON-LD; see OFFICE in lib/marketing. */
 export const SEO_GEO = {
 	region: "ET-AA",
 	placename: "Addis Ababa, Ethiopia",
-	latitude: 9.03,
-	longitude: 38.74,
+	latitude: 8.998705,
+	longitude: 38.786986,
 } as const;
 
 /** Local-SEO meta tags (geo.*, ICBM) read by some search engines and directories. */

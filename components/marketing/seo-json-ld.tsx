@@ -1,5 +1,5 @@
 import { BRAND_NAME } from "@/lib/brand";
-import { SHORT_CODE } from "@/lib/marketing";
+import { OFFICE, SHORT_CODE } from "@/lib/marketing";
 import { getMetadataBaseUrl, SEO_DESCRIPTION, SEO_GEO } from "@/lib/seo";
 
 const AREA_SERVED = [
@@ -88,10 +88,13 @@ export function localBusinessJsonLd(): Record<string, unknown> {
 		telephone: SHORT_CODE,
 		parentOrganization: { "@id": `${base}/#organization` },
 		areaServed: AREA_SERVED,
+		hasMap: OFFICE.mapsUrl,
 		address: {
 			"@type": "PostalAddress",
-			addressLocality: "Addis Ababa",
-			addressRegion: "Addis Ababa",
+			streetAddress: OFFICE.building,
+			addressLocality: OFFICE.city,
+			addressRegion: OFFICE.city,
+			postalCode: OFFICE.postalCode,
 			addressCountry: "ET",
 		},
 		geo: {

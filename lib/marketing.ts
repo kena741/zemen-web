@@ -9,6 +9,20 @@ export const PLAY_STORE_URL =
 export const APP_STORE_URL =
 	"https://apps.apple.com/us/app/zemen-service/id6763512421";
 
+/** Head office, matching the Zemen Service Google Business Profile. */
+export const OFFICE = {
+	building: "Alemnesh Plaza",
+	city: "Addis Ababa",
+	postalCode: "1000",
+	country: "Ethiopia",
+	latitude: 8.998705,
+	longitude: 38.786986,
+	/** Opens the Google Business Profile, with directions on mobile. */
+	mapsUrl: "https://maps.app.goo.gl/3ujnZT2s7MborZtK9",
+	embedUrl:
+		"https://www.google.com/maps?q=8.998705,38.786986&z=17&hl=en&output=embed",
+} as const;
+
 /** Public trust metrics for marketing / SEO surfaces. */
 export const TRUST_STATS = [
 	{ value: "1.5+", label: "Years of experience" },
