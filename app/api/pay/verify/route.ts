@@ -1,11 +1,18 @@
 import { NextResponse } from "next/server";
 
 import {
+	finalizeBookingChapaPayment,
+	verifyAndCreditWallet as verifyAndCreditWalletChapa,
+	verifyFeaturedRequestPayment as verifyFeaturedRequestPaymentChapa,
+	verifyProviderActivation as verifyProviderActivationChapa,
+	verifyServiceTierPayment as verifyServiceTierPaymentChapa,
+} from "@/services/payments/chapaServer";
+import {
 	finalizeBookingTelebirrPayment,
-	verifyAndCreditWallet,
-	verifyFeaturedRequestPayment,
-	verifyProviderActivation,
-	verifyServiceTierPayment,
+	verifyAndCreditWallet as verifyAndCreditWalletTelebirr,
+	verifyFeaturedRequestPayment as verifyFeaturedRequestPaymentTelebirr,
+	verifyProviderActivation as verifyProviderActivationTelebirr,
+	verifyServiceTierPayment as verifyServiceTierPaymentTelebirr,
 } from "@/services/payments/telebirrServer";
 import {
 	getAuthUserFromRequest,
@@ -20,6 +27,7 @@ interface VerifyBody {
 	tx_ref?: string;
 	purpose?: string;
 	amount?: string;
+	gateway?: "chapa" | "telebirr";
 	accountType?: "customer" | "provider";
 	providerId?: string;
 	bookingId?: string;
@@ -57,6 +65,7 @@ export async function POST(request: Request) {
 
 		const purpose = (body.purpose ?? "wallet").trim();
 		const amount = (body.amount ?? "0").trim();
+		const gateway = body.gateway === "chapa" ? "chapa" : "telebirr";
 		const admin = getSupabaseAdmin();
 
 		const maxAttempts = 3;
@@ -77,13 +86,22 @@ export async function POST(request: Request) {
 							? (await resolveProviderIdForAuthUser(admin, auth.userId)) ||
 								auth.userId
 							: auth.userId);
-					result = await verifyAndCreditWallet({
-						admin,
-						txRef,
-						fallbackAmount: amount,
-						userId,
-						accountType,
-					});
+					result =
+						gateway === "chapa"
+							? await verifyAndCreditWalletChapa({
+									admin,
+									txRef,
+									fallbackAmount: amount,
+									userId,
+									accountType,
+								})
+							: await verifyAndCreditWalletTelebirr({
+									admin,
+									txRef,
+									fallbackAmount: amount,
+									userId,
+									accountType,
+								});
 					break;
 				}
 				case "activation": {
@@ -96,12 +114,19 @@ export async function POST(request: Request) {
 							{ status: 404 },
 						);
 					}
-					result = await verifyProviderActivation({
-						admin,
-						txRef,
-						providerId,
-						amount,
-					});
+					result =
+						gateway === "chapa"
+							? await verifyProviderActivationChapa({
+									txRef,
+									providerId,
+									amount,
+								})
+							: await verifyProviderActivationTelebirr({
+									admin,
+									txRef,
+									providerId,
+									amount,
+								});
 					break;
 				}
 				case "booking": {
@@ -136,12 +161,20 @@ export async function POST(request: Request) {
 					if (bookingCustomerId !== auth.userId) {
 						return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 					}
-					result = await finalizeBookingTelebirrPayment({
-						admin,
-						txRef,
-						bookingId,
-						fallbackAmount: amount,
-					});
+					result =
+						gateway === "chapa"
+							? await finalizeBookingChapaPayment({
+									admin,
+									txRef,
+									bookingId,
+									fallbackAmount: amount,
+								})
+							: await finalizeBookingTelebirrPayment({
+									admin,
+									txRef,
+									bookingId,
+									fallbackAmount: amount,
+								});
 					if (result.ok && body.nextCycle) {
 						const advanced = await advanceRecurringBookingPeriod({
 							admin,
@@ -163,15 +196,25 @@ export async function POST(request: Request) {
 							{ status: 404 },
 						);
 					}
-					result = await verifyServiceTierPayment({
-						admin,
-						txRef,
-						providerId,
-						userId: auth.userId,
-						fromTierMax: Number(body.fromTierMax ?? 0),
-						toTierMax: Number(body.toTierMax ?? 0),
-						amount,
-					});
+					result =
+						gateway === "chapa"
+							? await verifyServiceTierPaymentChapa({
+									txRef,
+									providerId,
+									userId: auth.userId,
+									fromTierMax: Number(body.fromTierMax ?? 0),
+									toTierMax: Number(body.toTierMax ?? 0),
+									amount,
+								})
+							: await verifyServiceTierPaymentTelebirr({
+									admin,
+									txRef,
+									providerId,
+									userId: auth.userId,
+									fromTierMax: Number(body.fromTierMax ?? 0),
+									toTierMax: Number(body.toTierMax ?? 0),
+									amount,
+								});
 					break;
 				}
 				case "featured": {
@@ -185,14 +228,23 @@ export async function POST(request: Request) {
 							{ status: 400 },
 						);
 					}
-					result = await verifyFeaturedRequestPayment({
-						admin,
-						txRef,
-						providerId,
-						userId: auth.userId,
-						amount,
-						serviceId,
-					});
+					result =
+						gateway === "chapa"
+							? await verifyFeaturedRequestPaymentChapa({
+									txRef,
+									providerId,
+									userId: auth.userId,
+									amount,
+									serviceId,
+								})
+							: await verifyFeaturedRequestPaymentTelebirr({
+									admin,
+									txRef,
+									providerId,
+									userId: auth.userId,
+									amount,
+									serviceId,
+								});
 					break;
 				}
 				default:
@@ -206,6 +258,7 @@ export async function POST(request: Request) {
 				return NextResponse.json({
 					status: "success",
 					purpose,
+					gateway,
 					tx_ref: txRef,
 				});
 			}
