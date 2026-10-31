@@ -64,7 +64,7 @@ export const en = {
 	forceUpdateDefaultBody:
 		"A newer version of Zemen Web is required. Please refresh or use the mobile app.",
 	walletTopUp: "Top up wallet",
-	payWithChapa: "Pay with Telebirr",
+	payWithChapa: "Pay with Chapa",
 	payWithTelebirr: "Pay with Telebirr",
 	language: "Language",
 	theme: "Theme",
@@ -329,7 +329,7 @@ export const en = {
 	providerUpgradeShort: "Upgrade",
 	providerOneTime: "One-time",
 	providerChoosePaymentMethod: "Choose payment method",
-	providerChapaPayHint: "Pay securely with Telebirr",
+	providerChapaPayHint: "Pay securely with Chapa",
 	providerTelebirrPayHint: "Pay securely with Telebirr",
 	providerAmountToPay: "Amount to pay",
 	providerProceedToPay: "Proceed to Pay",
@@ -517,7 +517,7 @@ export const en = {
 	bookServiceInsufficientWallet:
 		"Wallet balance is insufficient for this booking.",
 	bookServiceWalletFailed: "Wallet payment failed",
-	bookServiceChapaFailed: "Could not start Telebirr payment",
+	bookServiceChapaFailed: "Could not start Chapa payment",
 	bookServiceTelebirrFailed: "Could not start Telebirr payment",
 
 	serviceAbout: "About this service",
@@ -613,7 +613,7 @@ export const en = {
 
 	paymentCash: "Cash",
 	paymentWallet: "Wallet",
-	paymentChapa: "Telebirr",
+	paymentChapa: "Chapa",
 	paymentTelebirr: "Telebirr",
 
 	commonViewAll: "View all",
@@ -884,7 +884,7 @@ export const en = {
 	bookingNextCycleNotice:
 		"Payment for the next {period} is due. Pay now to keep the service active.",
 	bookingPayWithWallet: "Pay with wallet",
-	bookingPayWithChapa: "Pay with Telebirr",
+	bookingPayWithChapa: "Pay with Chapa",
 	bookingPayWithTelebirr: "Pay with Telebirr",
 	bookingConfirmPayTitle: "Confirm payment",
 	bookingDueNow: "Due now",
