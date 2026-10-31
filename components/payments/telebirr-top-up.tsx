@@ -33,6 +33,3 @@ export function TelebirrTopUp({
 		/>
 	);
 }
-
-/** @deprecated Use TelebirrTopUp */
-export const ChapaTopUp = TelebirrTopUp;

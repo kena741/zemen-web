@@ -80,6 +80,7 @@ export function TelebirrCheckout({
 			userId,
 			accountType,
 			amount: payAmount,
+			gateway: "telebirr",
 			providerId,
 			bookingId,
 			serviceId,
@@ -181,7 +182,3 @@ export function TelebirrCheckout({
 		</div>
 	);
 }
-
-/** @deprecated Use TelebirrCheckout */
-export const ChapaCheckout = TelebirrCheckout;
-export type ChapaCheckoutProps = TelebirrCheckoutProps;
