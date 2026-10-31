@@ -5,11 +5,14 @@ export type PaymentPurpose =
 	| "tier"
 	| "featured";
 
+export type PaymentGateway = "chapa" | "telebirr";
+
 export interface PaymentPending {
 	purpose: PaymentPurpose;
 	userId: string;
 	accountType: "customer" | "provider";
 	amount: string;
+	gateway?: PaymentGateway;
 	txRef?: string;
 	providerId?: string;
 	bookingId?: string;

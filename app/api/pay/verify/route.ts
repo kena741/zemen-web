@@ -2,11 +2,18 @@ import { NextResponse } from "next/server";
 
 import {
 	finalizeBookingChapaPayment,
-	verifyAndCreditWallet,
-	verifyFeaturedRequestPayment,
-	verifyProviderActivation,
-	verifyServiceTierPayment,
+	verifyAndCreditWallet as verifyAndCreditWalletChapa,
+	verifyFeaturedRequestPayment as verifyFeaturedRequestPaymentChapa,
+	verifyProviderActivation as verifyProviderActivationChapa,
+	verifyServiceTierPayment as verifyServiceTierPaymentChapa,
 } from "@/services/payments/chapaServer";
+import {
+	finalizeBookingTelebirrPayment,
+	verifyAndCreditWallet as verifyAndCreditWalletTelebirr,
+	verifyFeaturedRequestPayment as verifyFeaturedRequestPaymentTelebirr,
+	verifyProviderActivation as verifyProviderActivationTelebirr,
+	verifyServiceTierPayment as verifyServiceTierPaymentTelebirr,
+} from "@/services/payments/telebirrServer";
 import {
 	getAuthUserFromRequest,
 	getSupabaseAdmin,
@@ -20,6 +27,7 @@ interface VerifyBody {
 	tx_ref?: string;
 	purpose?: string;
 	amount?: string;
+	gateway?: "chapa" | "telebirr";
 	accountType?: "customer" | "provider";
 	providerId?: string;
 	bookingId?: string;
@@ -39,18 +47,25 @@ async function sleep(ms: number) {
 export async function POST(request: Request) {
 	const auth = await getAuthUserFromRequest(request);
 	if (!auth.userId) {
-		return NextResponse.json({ error: auth.error ?? "Unauthorized" }, { status: 401 });
+		return NextResponse.json(
+			{ error: auth.error ?? "Unauthorized" },
+			{ status: 401 },
+		);
 	}
 
 	try {
 		const body = (await request.json()) as VerifyBody;
 		const txRef = (body.tx_ref ?? "").trim();
 		if (!txRef) {
-			return NextResponse.json({ error: "tx_ref is required" }, { status: 400 });
+			return NextResponse.json(
+				{ error: "tx_ref is required" },
+				{ status: 400 },
+			);
 		}
 
 		const purpose = (body.purpose ?? "wallet").trim();
 		const amount = (body.amount ?? "0").trim();
+		const gateway = body.gateway === "chapa" ? "chapa" : "telebirr";
 		const admin = getSupabaseAdmin();
 
 		const maxAttempts = 3;
@@ -71,13 +86,22 @@ export async function POST(request: Request) {
 							? (await resolveProviderIdForAuthUser(admin, auth.userId)) ||
 								auth.userId
 							: auth.userId);
-					result = await verifyAndCreditWallet({
-						admin,
-						txRef,
-						fallbackAmount: amount,
-						userId,
-						accountType,
-					});
+					result =
+						gateway === "chapa"
+							? await verifyAndCreditWalletChapa({
+									admin,
+									txRef,
+									fallbackAmount: amount,
+									userId,
+									accountType,
+								})
+							: await verifyAndCreditWalletTelebirr({
+									admin,
+									txRef,
+									fallbackAmount: amount,
+									userId,
+									accountType,
+								});
 					break;
 				}
 				case "activation": {
@@ -85,19 +109,33 @@ export async function POST(request: Request) {
 						body.providerId?.trim() ||
 						(await resolveProviderIdForAuthUser(admin, auth.userId));
 					if (!providerId) {
-						return NextResponse.json({ error: "Provider not found" }, { status: 404 });
+						return NextResponse.json(
+							{ error: "Provider not found" },
+							{ status: 404 },
+						);
 					}
-					result = await verifyProviderActivation({
-						txRef,
-						providerId,
-						amount,
-					});
+					result =
+						gateway === "chapa"
+							? await verifyProviderActivationChapa({
+									txRef,
+									providerId,
+									amount,
+								})
+							: await verifyProviderActivationTelebirr({
+									admin,
+									txRef,
+									providerId,
+									amount,
+								});
 					break;
 				}
 				case "booking": {
 					const bookingId = (body.bookingId ?? "").trim();
 					if (!bookingId) {
-						return NextResponse.json({ error: "bookingId is required" }, { status: 400 });
+						return NextResponse.json(
+							{ error: "bookingId is required" },
+							{ status: 400 },
+						);
 					}
 					const { data: booking, error: bookingError } = await admin
 						.from("booked_service")
@@ -123,12 +161,20 @@ export async function POST(request: Request) {
 					if (bookingCustomerId !== auth.userId) {
 						return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 					}
-					result = await finalizeBookingChapaPayment({
-						admin,
-						txRef,
-						bookingId,
-						fallbackAmount: amount,
-					});
+					result =
+						gateway === "chapa"
+							? await finalizeBookingChapaPayment({
+									admin,
+									txRef,
+									bookingId,
+									fallbackAmount: amount,
+								})
+							: await finalizeBookingTelebirrPayment({
+									admin,
+									txRef,
+									bookingId,
+									fallbackAmount: amount,
+								});
 					if (result.ok && body.nextCycle) {
 						const advanced = await advanceRecurringBookingPeriod({
 							admin,
@@ -145,16 +191,30 @@ export async function POST(request: Request) {
 						body.providerId?.trim() ||
 						(await resolveProviderIdForAuthUser(admin, auth.userId));
 					if (!providerId) {
-						return NextResponse.json({ error: "Provider not found" }, { status: 404 });
+						return NextResponse.json(
+							{ error: "Provider not found" },
+							{ status: 404 },
+						);
 					}
-					result = await verifyServiceTierPayment({
-						txRef,
-						providerId,
-						userId: auth.userId,
-						fromTierMax: Number(body.fromTierMax ?? 0),
-						toTierMax: Number(body.toTierMax ?? 0),
-						amount,
-					});
+					result =
+						gateway === "chapa"
+							? await verifyServiceTierPaymentChapa({
+									txRef,
+									providerId,
+									userId: auth.userId,
+									fromTierMax: Number(body.fromTierMax ?? 0),
+									toTierMax: Number(body.toTierMax ?? 0),
+									amount,
+								})
+							: await verifyServiceTierPaymentTelebirr({
+									admin,
+									txRef,
+									providerId,
+									userId: auth.userId,
+									fromTierMax: Number(body.fromTierMax ?? 0),
+									toTierMax: Number(body.toTierMax ?? 0),
+									amount,
+								});
 					break;
 				}
 				case "featured": {
@@ -168,21 +228,39 @@ export async function POST(request: Request) {
 							{ status: 400 },
 						);
 					}
-					result = await verifyFeaturedRequestPayment({
-						txRef,
-						providerId,
-						userId: auth.userId,
-						amount,
-						serviceId,
-					});
+					result =
+						gateway === "chapa"
+							? await verifyFeaturedRequestPaymentChapa({
+									txRef,
+									providerId,
+									userId: auth.userId,
+									amount,
+									serviceId,
+								})
+							: await verifyFeaturedRequestPaymentTelebirr({
+									admin,
+									txRef,
+									providerId,
+									userId: auth.userId,
+									amount,
+									serviceId,
+								});
 					break;
 				}
 				default:
-					return NextResponse.json({ error: "Unknown payment purpose" }, { status: 400 });
+					return NextResponse.json(
+						{ error: "Unknown payment purpose" },
+						{ status: 400 },
+					);
 			}
 
 			if (result.ok) {
-				return NextResponse.json({ status: "success", purpose, tx_ref: txRef });
+				return NextResponse.json({
+					status: "success",
+					purpose,
+					gateway,
+					tx_ref: txRef,
+				});
 			}
 
 			lastError = result.error;
@@ -195,7 +273,8 @@ export async function POST(request: Request) {
 			{ status: pending ? 202 : 402 },
 		);
 	} catch (error: unknown) {
-		const message = error instanceof Error ? error.message : "Unexpected error";
+		const message =
+			error instanceof Error ? error.message : "Unexpected error";
 		return NextResponse.json({ error: message }, { status: 500 });
 	}
 }

@@ -24,7 +24,7 @@ export interface PaymentMethodsConfig {
 export async function fetchPaymentMethodsConfig(): Promise<PaymentMethodsConfig> {
 	const defaults: PaymentMethodsConfig = {
 		chapaEnabled: true,
-		telebirrEnabled: false,
+		telebirrEnabled: true,
 		flutterWaveEnabled: false,
 		telebirrName: "Telebirr",
 		flutterWaveName: "Flutterwave",
@@ -41,9 +41,13 @@ export async function fetchPaymentMethodsConfig(): Promise<PaymentMethodsConfig>
 	const telebirr = (root.telebirr ?? {}) as TelebirrConfig;
 	const flutterWave = (root.flutterWave ?? root.flutterwave ?? {}) as FlutterWaveConfig;
 
+	const chapaExplicitlyDisabled =
+		chapa.enable === false || chapa.isActive === false;
+	const telebirrExplicitlyDisabled = telebirr.enable === false;
+
 	return {
-		chapaEnabled: chapa.enable === true || chapa.isActive === true,
-		telebirrEnabled: telebirr.enable === true,
+		chapaEnabled: !chapaExplicitlyDisabled,
+		telebirrEnabled: !telebirrExplicitlyDisabled,
 		flutterWaveEnabled:
 			(flutterWave.isActive === true || flutterWave.enable === true) &&
 			Boolean(String(flutterWave.publicKey ?? "").trim()),

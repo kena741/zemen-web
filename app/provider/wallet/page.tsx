@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import { ChapaTopUp } from "@/components/payments/chapa-top-up";
+import { GatewayTopUp } from "@/components/payments/gateway-top-up";
 import { ProfileBackLink } from "@/components/provider/profile-back-link";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AppLoading } from "@/components/ui/app-loading";
@@ -262,7 +262,7 @@ export default function WalletPage() {
 			</div>
 
 			<div className="mt-4">
-				<ChapaTopUp
+				<GatewayTopUp
 					email={user?.email}
 					firstName={user?.provider?.firstName ?? user?.name}
 					lastName={user?.provider?.lastName ?? ""}

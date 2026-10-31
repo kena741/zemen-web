@@ -80,6 +80,7 @@ export function ChapaCheckout({
 			userId,
 			accountType,
 			amount: payAmount,
+			gateway: "chapa",
 			providerId,
 			bookingId,
 			serviceId,
