@@ -391,6 +391,9 @@ function BookServiceForm() {
 				paymentType: "",
 				paymentCompleted: false,
 				totalAmount: total,
+				pricingType: service.pricingType,
+				billingInterval: service.billingInterval,
+				billingIntervalCount: service.billingIntervalCount,
 			});
 			if (!bookRes.bookingId) {
 				setBusy(false);
