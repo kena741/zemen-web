@@ -14,7 +14,6 @@ export interface FlutterWaveConfig {
 }
 
 export interface PaymentMethodsConfig {
-	/** @deprecated Chapa is no longer the primary gateway; kept for legacy settings reads. */
 	chapaEnabled: boolean;
 	telebirrEnabled: boolean;
 	flutterWaveEnabled: boolean;
@@ -24,7 +23,7 @@ export interface PaymentMethodsConfig {
 
 export async function fetchPaymentMethodsConfig(): Promise<PaymentMethodsConfig> {
 	const defaults: PaymentMethodsConfig = {
-		chapaEnabled: false,
+		chapaEnabled: true,
 		telebirrEnabled: true,
 		flutterWaveEnabled: false,
 		telebirrName: "Telebirr",
@@ -42,13 +41,13 @@ export async function fetchPaymentMethodsConfig(): Promise<PaymentMethodsConfig>
 	const telebirr = (root.telebirr ?? {}) as TelebirrConfig;
 	const flutterWave = (root.flutterWave ?? root.flutterwave ?? {}) as FlutterWaveConfig;
 
-	// Telebirr is the primary web gateway. Enable unless explicitly disabled.
+	const chapaExplicitlyDisabled =
+		chapa.enable === false || chapa.isActive === false;
 	const telebirrExplicitlyDisabled = telebirr.enable === false;
-	const telebirrEnabled = !telebirrExplicitlyDisabled;
 
 	return {
-		chapaEnabled: chapa.enable === true || chapa.isActive === true,
-		telebirrEnabled,
+		chapaEnabled: !chapaExplicitlyDisabled,
+		telebirrEnabled: !telebirrExplicitlyDisabled,
 		flutterWaveEnabled:
 			(flutterWave.isActive === true || flutterWave.enable === true) &&
 			Boolean(String(flutterWave.publicKey ?? "").trim()),

@@ -1,7 +1,7 @@
 "use client";
 
 import { ProfileBackLink } from "@/components/provider/profile-back-link";
-import { TelebirrTopUp } from "@/components/payments/telebirr-top-up";
+import { GatewayTopUp } from "@/components/payments/gateway-top-up";
 import { PaymentMethodStubs } from "@/components/payments/payment-method-stubs";
 import { ServiceLoading } from "@/components/service/service-loading";
 import { useLocale } from "@/lib/i18n";
@@ -37,7 +37,7 @@ export default function CustomerWalletPage() {
 				</p>
 			</div>
 
-			<TelebirrTopUp
+			<GatewayTopUp
 				email={user?.email}
 				firstName={user?.customer?.fullName?.split(" ")[0]}
 				lastName={user?.customer?.fullName?.split(" ").slice(1).join(" ")}

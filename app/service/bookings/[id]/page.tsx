@@ -253,7 +253,7 @@ export default function CustomerBookingDetailPage() {
 		refresh();
 	}
 
-	async function onPayNextCycleTelebirr() {
+	async function onPayNextCycleGateway(gateway: "chapa" | "telebirr") {
 		if (!booking || !user?.id || busy) return;
 		const amount = Number(booking.subTotal ?? booking.totalAmount ?? 0) || 0;
 		savePaymentPending({
@@ -261,6 +261,7 @@ export default function CustomerBookingDetailPage() {
 			userId: user.id,
 			accountType: "customer",
 			amount: String(amount),
+			gateway,
 			bookingId: booking.id,
 			nextCycle: true,
 			billingInterval: booking.service?.billingInterval ?? undefined,
@@ -268,20 +269,23 @@ export default function CustomerBookingDetailPage() {
 		});
 		setBusy(true);
 		setShowNextCycleConfirm(false);
-		const res = await fetch("/api/pay/telebirr", {
-			method: "POST",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({
-				amount,
-				email: user.email,
-				first_name: booking.firstName,
-				last_name: booking.lastName,
-				phone_number: booking.phoneNumber,
-				purpose: "booking",
-				return_path: `/pay/done?purpose=booking&amount=${amount}`,
-				booking_id: booking.id,
-			}),
-		});
+		const res = await fetch(
+			gateway === "chapa" ? "/api/pay/chapa" : "/api/pay/telebirr",
+			{
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					amount,
+					email: user.email,
+					first_name: booking.firstName,
+					last_name: booking.lastName,
+					phone_number: booking.phoneNumber,
+					purpose: "booking",
+					return_path: `/pay/done?purpose=booking&amount=${amount}`,
+					booking_id: booking.id,
+				}),
+			},
+		);
 		const data = (await res.json()) as {
 			checkout_url?: string;
 			tx_ref?: string;
@@ -289,7 +293,12 @@ export default function CustomerBookingDetailPage() {
 		};
 		setBusy(false);
 		if (!res.ok || !data.checkout_url) {
-			setActionError(data.error || t("bookServiceTelebirrFailed"));
+			setActionError(
+				data.error ||
+					(gateway === "chapa"
+						? t("bookServiceChapaFailed")
+						: t("bookServiceTelebirrFailed")),
+			);
 			return;
 		}
 		if (data.tx_ref) {
@@ -298,6 +307,7 @@ export default function CustomerBookingDetailPage() {
 				userId: user.id,
 				accountType: "customer",
 				amount: String(amount),
+				gateway,
 				bookingId: booking.id,
 				nextCycle: true,
 				billingInterval: booking.service?.billingInterval ?? undefined,
@@ -675,7 +685,7 @@ export default function CustomerBookingDetailPage() {
 						<p className="text-xs text-muted-foreground">
 							{formatAmount(nextCycleAmount)}
 						</p>
-						<div className="flex flex-col gap-2 sm:flex-row">
+						<div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
 							<Button
 								className="flex-1"
 								disabled={busy}
@@ -687,9 +697,17 @@ export default function CustomerBookingDetailPage() {
 								variant="outline"
 								className="flex-1"
 								disabled={busy}
-								onClick={() => void onPayNextCycleTelebirr()}
+								onClick={() => void onPayNextCycleGateway("telebirr")}
 							>
 								{busy ? t("bookingStarting") : t("bookingPayWithTelebirr")}
+							</Button>
+							<Button
+								variant="outline"
+								className="flex-1"
+								disabled={busy}
+								onClick={() => void onPayNextCycleGateway("chapa")}
+							>
+								{busy ? t("bookingStarting") : t("bookingPayWithChapa")}
 							</Button>
 						</div>
 						<Button

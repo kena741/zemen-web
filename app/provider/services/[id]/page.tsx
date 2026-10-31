@@ -19,9 +19,11 @@ import {
 	AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { AppLoading } from "@/components/ui/app-loading";
+import { ChapaCheckout } from "@/components/payments/chapa-checkout";
 import { TelebirrCheckout } from "@/components/payments/telebirr-checkout";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { useLocale } from "@/lib/i18n";
+import type { PaymentGateway } from "@/lib/payment-pending";
 import { cn } from "@/lib/utils";
 import { formatAmount } from "@/services/bookings/types";
 import {
@@ -61,6 +63,8 @@ export default function ServiceDetailPage() {
 	const [error, setError] = useState<string | null>(null);
 	const [info, setInfo] = useState<string | null>(null);
 	const [featuredFee, setFeaturedFee] = useState<number | null>(null);
+	const [featuredGateway, setFeaturedGateway] =
+		useState<PaymentGateway>("telebirr");
 	const [deleteOpen, setDeleteOpen] = useState(false);
 
 	useEffect(() => {
@@ -352,24 +356,67 @@ export default function ServiceDetailPage() {
 										amount: formatAmount(featuredFee),
 									})}
 								</p>
-								<TelebirrCheckout
-									className="w-full"
-									email={user?.email}
-									firstName={user?.provider?.firstName ?? user?.name}
-									lastName={user?.provider?.lastName ?? ""}
-									phone={user?.provider?.phoneNumber}
-									purpose="featured"
-									accountType="provider"
-									userId={user?.id ?? ""}
-									providerId={user?.provider?.id}
-									serviceId={service.id}
-									amount={String(featuredFee)}
-									returnPath="/pay/done?purpose=featured"
-									showAmountInput={false}
-									label={t("providerFeaturedListing", {
-										amount: formatAmount(featuredFee),
-									})}
-								/>
+								<div className="flex gap-2">
+									<Button
+										type="button"
+										variant={
+											featuredGateway === "telebirr" ? "default" : "outline"
+										}
+										size="sm"
+										onClick={() => setFeaturedGateway("telebirr")}
+									>
+										{t("paymentTelebirr")}
+									</Button>
+									<Button
+										type="button"
+										variant={
+											featuredGateway === "chapa" ? "default" : "outline"
+										}
+										size="sm"
+										onClick={() => setFeaturedGateway("chapa")}
+									>
+										{t("paymentChapa")}
+									</Button>
+								</div>
+								{featuredGateway === "chapa" ? (
+									<ChapaCheckout
+										className="w-full"
+										email={user?.email}
+										firstName={user?.provider?.firstName ?? user?.name}
+										lastName={user?.provider?.lastName ?? ""}
+										phone={user?.provider?.phoneNumber}
+										purpose="featured"
+										accountType="provider"
+										userId={user?.id ?? ""}
+										providerId={user?.provider?.id}
+										serviceId={service.id}
+										amount={String(featuredFee)}
+										returnPath="/pay/done?purpose=featured"
+										showAmountInput={false}
+										label={t("providerFeaturedListing", {
+											amount: formatAmount(featuredFee),
+										})}
+									/>
+								) : (
+									<TelebirrCheckout
+										className="w-full"
+										email={user?.email}
+										firstName={user?.provider?.firstName ?? user?.name}
+										lastName={user?.provider?.lastName ?? ""}
+										phone={user?.provider?.phoneNumber}
+										purpose="featured"
+										accountType="provider"
+										userId={user?.id ?? ""}
+										providerId={user?.provider?.id}
+										serviceId={service.id}
+										amount={String(featuredFee)}
+										returnPath="/pay/done?purpose=featured"
+										showAmountInput={false}
+										label={t("providerFeaturedListing", {
+											amount: formatAmount(featuredFee),
+										})}
+									/>
+								)}
 							</div>
 						) : null}
 

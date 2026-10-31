@@ -173,9 +173,9 @@ function BookServiceForm() {
 	const [couponCode, setCouponCode] = useState("");
 	const [appliedCoupon, setAppliedCoupon] = useState<Coupon | null>(null);
 	const [couponError, setCouponError] = useState<string | null>(null);
-	const [paymentMethod, setPaymentMethod] = useState<"wallet" | "telebirr">(
-		"telebirr",
-	);
+	const [paymentMethod, setPaymentMethod] = useState<
+		"wallet" | "telebirr" | "chapa"
+	>("telebirr");
 	const [savedAddresses, setSavedAddresses] = useState<CustomerAddress[]>([]);
 	const [payConfig, setPayConfig] = useState<PaymentMethodsConfig | null>(null);
 	const [step, setStep] = useState<1 | 2>(1);
@@ -266,12 +266,14 @@ function BookServiceForm() {
 
 	const walletAffordable = walletBalance >= dueNow;
 	const telebirrEnabled = !payConfig || payConfig.telebirrEnabled;
+	const chapaEnabled = !payConfig || payConfig.chapaEnabled;
 	const paymentOptions = useMemo(() => {
-		const options: Array<"wallet" | "telebirr"> = [];
+		const options: Array<"wallet" | "telebirr" | "chapa"> = [];
 		if (walletAffordable) options.push("wallet");
 		if (telebirrEnabled) options.push("telebirr");
+		if (chapaEnabled) options.push("chapa");
 		return options;
-	}, [walletAffordable, telebirrEnabled]);
+	}, [walletAffordable, telebirrEnabled, chapaEnabled]);
 
 	useEffect(() => {
 		if (paymentOptions.includes(paymentMethod)) return;
@@ -282,6 +284,7 @@ function BookServiceForm() {
 	const paymentLabels = {
 		wallet: t("paymentWallet"),
 		telebirr: t("paymentTelebirr"),
+		chapa: t("paymentChapa"),
 	} as const;
 
 	async function applyCoupon() {
@@ -473,48 +476,59 @@ function BookServiceForm() {
 			return;
 		}
 
+		const gateway = paymentMethod === "chapa" ? "chapa" : "telebirr";
 		savePaymentPending({
 			purpose: "booking",
 			userId: user.id,
 			accountType: "customer",
 			amount: String(dueNow),
+			gateway,
 			bookingId: res.bookingId,
 		});
 		setBusy(false);
-		const telebirrRes = await fetch("/api/pay/telebirr", {
-			method: "POST",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({
-				amount: dueNow,
-				email: user.email,
-				first_name: firstName,
-				last_name: lastName,
-				phone_number: customer.phone,
-				purpose: "booking",
-				return_path: `/pay/done?purpose=booking&amount=${dueNow}`,
-				booking_id: res.bookingId,
-			}),
-		});
-		const telebirrData = (await telebirrRes.json()) as {
+		const payRes = await fetch(
+			gateway === "chapa" ? "/api/pay/chapa" : "/api/pay/telebirr",
+			{
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					amount: dueNow,
+					email: user.email,
+					first_name: firstName,
+					last_name: lastName,
+					phone_number: customer.phone,
+					purpose: "booking",
+					return_path: `/pay/done?purpose=booking&amount=${dueNow}`,
+					booking_id: res.bookingId,
+				}),
+			},
+		);
+		const payData = (await payRes.json()) as {
 			checkout_url?: string;
 			tx_ref?: string;
 			error?: string;
 		};
-		if (!telebirrRes.ok || !telebirrData.checkout_url) {
-			setError(telebirrData.error || t("bookServiceTelebirrFailed"));
+		if (!payRes.ok || !payData.checkout_url) {
+			setError(
+				payData.error ||
+					(gateway === "chapa"
+						? t("bookServiceChapaFailed")
+						: t("bookServiceTelebirrFailed")),
+			);
 			return;
 		}
-		if (telebirrData.tx_ref) {
+		if (payData.tx_ref) {
 			savePaymentPending({
 				purpose: "booking",
 				userId: user.id,
 				accountType: "customer",
 				amount: String(dueNow),
+				gateway,
 				bookingId: res.bookingId,
-				txRef: telebirrData.tx_ref,
+				txRef: payData.tx_ref,
 			});
 		}
-		window.location.href = telebirrData.checkout_url;
+		window.location.href = payData.checkout_url;
 	}
 
 	if (loading || !user) return <ServiceLoading />;
@@ -966,13 +980,13 @@ function BookServiceForm() {
 										{t("bookServiceInsufficientWallet")}
 									</p>
 								) : (
-									<div className="flex gap-2">
+									<div className="flex flex-wrap gap-2">
 										{paymentOptions.map((method) => (
 											<button
 												key={method}
 												type="button"
 												className={cn(
-													"h-10 flex-1 rounded-xl text-[13px] font-semibold transition-colors duration-150",
+													"h-10 min-w-[30%] flex-1 rounded-xl text-[13px] font-semibold transition-colors duration-150",
 													paymentMethod === method
 														? "bg-primary text-primary-foreground"
 														: "bg-[#f0f0ee] text-[#1a1a1a] hover:bg-[#e8e8e4]",
