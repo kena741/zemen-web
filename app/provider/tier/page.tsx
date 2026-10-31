@@ -4,11 +4,13 @@ import { useEffect, useMemo, useState } from "react";
 import { CheckCircle2Icon, CircleIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 
+import { ChapaCheckout } from "@/components/payments/chapa-checkout";
 import { TelebirrCheckout } from "@/components/payments/telebirr-checkout";
 import { ProfileBackLink } from "@/components/provider/profile-back-link";
 import { ServiceLoading } from "@/components/service/service-loading";
 import { Button } from "@/components/ui/button";
 import { useLocale } from "@/lib/i18n";
+import type { PaymentGateway } from "@/lib/payment-pending";
 import { cn } from "@/lib/utils";
 import { formatAmount } from "@/services/bookings/types";
 import {
@@ -35,7 +37,7 @@ export default function ProviderTierPage() {
 	const [loading, setLoading] = useState(true);
 	const [selectedMax, setSelectedMax] = useState<number | null>(null);
 	const [error, setError] = useState<string | null>(null);
-	const [payMethod, setPayMethod] = useState<"telebirr">("telebirr");
+	const [payMethod, setPayMethod] = useState<PaymentGateway>("telebirr");
 
 	useEffect(() => {
 		void (async () => {
@@ -203,31 +205,60 @@ export default function ProviderTierPage() {
 							<p className="text-sm font-semibold">
 								{t("providerChoosePaymentMethod")}
 							</p>
-							<button
-								type="button"
-								onClick={() => setPayMethod("telebirr")}
-								className={cn(
-									"mt-3 flex w-full items-center gap-3 rounded-[10px] bg-white p-3 text-left ring-1",
-									payMethod === "telebirr"
-										? "ring-[1.6px] ring-primary"
-										: "ring-black/20",
-								)}
-							>
-								<span className="flex size-8 items-center justify-center rounded-md bg-primary/10 text-xs font-bold text-primary">
-									T
-								</span>
-								<span className="min-w-0 flex-1">
-									<p className="text-sm font-semibold">{t("paymentTelebirr")}</p>
-									<p className="text-xs text-muted-foreground">
-										{t("providerTelebirrPayHint")}
-									</p>
-								</span>
-								{payMethod === "telebirr" ? (
-									<CheckCircle2Icon className="size-5 text-primary" />
-								) : (
-									<CircleIcon className="size-5 text-muted-foreground" />
-								)}
-							</button>
+							<div className="mt-3 grid gap-2 sm:grid-cols-2">
+								<button
+									type="button"
+									onClick={() => setPayMethod("telebirr")}
+									className={cn(
+										"flex w-full items-center gap-3 rounded-[10px] bg-white p-3 text-left ring-1",
+										payMethod === "telebirr"
+											? "ring-[1.6px] ring-primary"
+											: "ring-black/20",
+									)}
+								>
+									<span className="flex size-8 items-center justify-center rounded-md bg-primary/10 text-xs font-bold text-primary">
+										T
+									</span>
+									<span className="min-w-0 flex-1">
+										<p className="text-sm font-semibold">
+											{t("paymentTelebirr")}
+										</p>
+										<p className="text-xs text-muted-foreground">
+											{t("providerTelebirrPayHint")}
+										</p>
+									</span>
+									{payMethod === "telebirr" ? (
+										<CheckCircle2Icon className="size-5 text-primary" />
+									) : (
+										<CircleIcon className="size-5 text-muted-foreground" />
+									)}
+								</button>
+								<button
+									type="button"
+									onClick={() => setPayMethod("chapa")}
+									className={cn(
+										"flex w-full items-center gap-3 rounded-[10px] bg-white p-3 text-left ring-1",
+										payMethod === "chapa"
+											? "ring-[1.6px] ring-primary"
+											: "ring-black/20",
+									)}
+								>
+									<span className="flex size-8 items-center justify-center rounded-md bg-primary/10 text-xs font-bold text-primary">
+										C
+									</span>
+									<span className="min-w-0 flex-1">
+										<p className="text-sm font-semibold">{t("paymentChapa")}</p>
+										<p className="text-xs text-muted-foreground">
+											{t("providerChapaPayHint")}
+										</p>
+									</span>
+									{payMethod === "chapa" ? (
+										<CheckCircle2Icon className="size-5 text-primary" />
+									) : (
+										<CircleIcon className="size-5 text-muted-foreground" />
+									)}
+								</button>
+							</div>
 						</div>
 					) : null}
 
@@ -242,24 +273,45 @@ export default function ProviderTierPage() {
 										{formatAmount(payAmount)}
 									</span>
 								</div>
-								<TelebirrCheckout
-									variant="cta"
-									email={user?.email}
-									firstName={user?.provider?.firstName ?? user?.name}
-									lastName={user?.provider?.lastName ?? ""}
-									phone={user?.provider?.phoneNumber}
-									purpose="tier"
-									accountType="provider"
-									userId={user?.id ?? ""}
-									providerId={providerId}
-									amount={String(payAmount)}
-									fromTierMax={currentMax}
-									toTierMax={selected?.max_services}
-									returnPath="/pay/done?purpose=tier"
-									showAmountInput={false}
-									buttonLabel={t("providerProceedToPay")}
-									disabled={!selected || payAmount <= 0}
-								/>
+								{payMethod === "chapa" ? (
+									<ChapaCheckout
+										variant="cta"
+										email={user?.email}
+										firstName={user?.provider?.firstName ?? user?.name}
+										lastName={user?.provider?.lastName ?? ""}
+										phone={user?.provider?.phoneNumber}
+										purpose="tier"
+										accountType="provider"
+										userId={user?.id ?? ""}
+										providerId={providerId}
+										amount={String(payAmount)}
+										fromTierMax={currentMax}
+										toTierMax={selected?.max_services}
+										returnPath="/pay/done?purpose=tier"
+										showAmountInput={false}
+										buttonLabel={t("providerProceedToPay")}
+										disabled={!selected || payAmount <= 0}
+									/>
+								) : (
+									<TelebirrCheckout
+										variant="cta"
+										email={user?.email}
+										firstName={user?.provider?.firstName ?? user?.name}
+										lastName={user?.provider?.lastName ?? ""}
+										phone={user?.provider?.phoneNumber}
+										purpose="tier"
+										accountType="provider"
+										userId={user?.id ?? ""}
+										providerId={providerId}
+										amount={String(payAmount)}
+										fromTierMax={currentMax}
+										toTierMax={selected?.max_services}
+										returnPath="/pay/done?purpose=tier"
+										showAmountInput={false}
+										buttonLabel={t("providerProceedToPay")}
+										disabled={!selected || payAmount <= 0}
+									/>
+								)}
 							</>
 						) : (
 							<Button

@@ -57,6 +57,7 @@ function PayDoneContent() {
 				tx_ref: txRef,
 				purpose: pending?.purpose ?? purpose,
 				amount: pending?.amount ?? amount,
+				gateway: pending?.gateway ?? "telebirr",
 				accountType: pending?.accountType ?? "customer",
 				userId: pending?.userId,
 				providerId: pending?.providerId,
