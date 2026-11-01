@@ -251,6 +251,15 @@ export function generateMerchOrderId(prefix = "web"): string {
 	return `${prefix}${Date.now()}${rand}`.replace(/[^A-Za-z0-9]/g, "").slice(0, 64);
 }
 
+/**
+ * Telebirr often appends `?trans_end_time=...` onto the return URL with a second
+ * `?` instead of `&`, so the order id query value gets polluted. Strip that junk.
+ */
+export function sanitizeMerchOrderId(raw: string): string {
+	const base = raw.trim().split("?")[0]?.split("&")[0]?.split("#")[0] ?? "";
+	return base.replace(/[^A-Za-z0-9]/g, "").slice(0, 64);
+}
+
 function sanitizeTitle(title: string): string {
 	return title
 		.replace(/[^\w\s\-.,&()]/g, "")
@@ -475,6 +484,10 @@ export async function queryTelebirrOrderStatus(params: {
 	config: ResolvedTelebirrConfig;
 	merchOrderId: string;
 }): Promise<TelebirrOrderStatus> {
+	const merchOrderId = sanitizeMerchOrderId(params.merchOrderId);
+	if (!merchOrderId) {
+		throw new Error("merch_order_id is required");
+	}
 	const fabricToken = await applyFabricToken(params.config);
 	const req: SignableRequest = {
 		timestamp: createTimeStamp(),
@@ -484,7 +497,7 @@ export async function queryTelebirrOrderStatus(params: {
 		biz_content: {
 			appid: params.config.merchantAppId,
 			merch_code: params.config.merchantCode,
-			merch_order_id: params.merchOrderId,
+			merch_order_id: merchOrderId,
 		},
 	};
 	req.sign = signRequestObject(params.config.privateKey, req);
@@ -527,7 +540,9 @@ export async function queryTelebirrOrderStatus(params: {
 		amount: pick("total_amount", "totalAmount"),
 		paymentOrderId: paymentOrderId || null,
 		merchOrderId:
-			pick("merch_order_id", "merchOrderId") || params.merchOrderId,
+			sanitizeMerchOrderId(
+				pick("merch_order_id", "merchOrderId") || merchOrderId,
+			) || merchOrderId,
 		transId: pick("trans_id", "transId"),
 	};
 }

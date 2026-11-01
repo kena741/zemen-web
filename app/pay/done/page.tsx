@@ -11,6 +11,7 @@ import {
 	clearPaymentPending,
 	readPaymentPending,
 } from "@/lib/payment-pending";
+import { sanitizeMerchOrderId } from "@/lib/telebirr";
 
 function continueHref(purpose: string): string {
 	if (purpose === "activation" || purpose === "tier") return "/provider";
@@ -19,16 +20,26 @@ function continueHref(purpose: string): string {
 	return "/service/wallet";
 }
 
+function resolveTxRef(search: URLSearchParams): string {
+	const pending = readPaymentPending();
+	const fromPending = sanitizeMerchOrderId(pending?.txRef ?? "");
+	if (fromPending) return fromPending;
+
+	const fromUrl = sanitizeMerchOrderId(
+		search.get("tx_ref") ??
+			search.get("merch_order_id") ??
+			search.get("trx_ref") ??
+			search.get("ref") ??
+			"",
+	);
+	return fromUrl;
+}
+
 function PayDoneContent() {
 	const search = useSearchParams();
 	const { t } = useLocale();
 	const purpose = search.get("purpose") ?? "wallet";
-	const txRef =
-		search.get("tx_ref") ??
-		search.get("merch_order_id") ??
-		search.get("trx_ref") ??
-		search.get("ref") ??
-		"";
+	const txRef = resolveTxRef(search);
 	const amount = search.get("amount") ?? "";
 
 	const [status, setStatus] = useState<"verifying" | "success" | "pending" | "error">(
