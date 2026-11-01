@@ -4,6 +4,7 @@ import {
 	isTelebirrNotifySuccess,
 	loadTelebirrConfig,
 	queryTelebirrOrderStatus,
+	sanitizeMerchOrderId,
 	unwrapTelebirrNotify,
 } from "@/lib/telebirr";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
@@ -29,7 +30,9 @@ export async function POST(request: Request) {
 		}
 
 		const notification = unwrapTelebirrNotify(payload);
-		const merchOrderId = String(notification.merch_order_id ?? "").trim();
+		const merchOrderId = sanitizeMerchOrderId(
+			String(notification.merch_order_id ?? ""),
+		);
 		if (!merchOrderId) {
 			return NextResponse.json(
 				{ success: false, message: "merch_order_id missing" },

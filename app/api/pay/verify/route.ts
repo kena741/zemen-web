@@ -19,6 +19,7 @@ import {
 	getSupabaseAdmin,
 	resolveProviderIdForAuthUser,
 } from "@/lib/supabase/admin";
+import { sanitizeMerchOrderId } from "@/lib/telebirr";
 import { advanceRecurringBookingPeriod } from "@/services/customer/recurringBookingsApi";
 
 export const runtime = "nodejs";
@@ -55,7 +56,12 @@ export async function POST(request: Request) {
 
 	try {
 		const body = (await request.json()) as VerifyBody;
-		const txRef = (body.tx_ref ?? "").trim();
+		const purpose = (body.purpose ?? "wallet").trim();
+		const amount = (body.amount ?? "0").trim();
+		const gateway = body.gateway === "chapa" ? "chapa" : "telebirr";
+		const rawTxRef = (body.tx_ref ?? "").trim();
+		const txRef =
+			gateway === "telebirr" ? sanitizeMerchOrderId(rawTxRef) : rawTxRef;
 		if (!txRef) {
 			return NextResponse.json(
 				{ error: "tx_ref is required" },
@@ -63,9 +69,6 @@ export async function POST(request: Request) {
 			);
 		}
 
-		const purpose = (body.purpose ?? "wallet").trim();
-		const amount = (body.amount ?? "0").trim();
-		const gateway = body.gateway === "chapa" ? "chapa" : "telebirr";
 		const admin = getSupabaseAdmin();
 
 		const maxAttempts = 3;
