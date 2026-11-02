@@ -53,12 +53,14 @@ export async function launchTelebirrPayment(
 	}
 
 	const bridgePresent = isTelebirrMiniApp();
+	const consumerapp =
+		typeof window !== "undefined"
+			? (window as { consumerapp?: { evaluate?: unknown } }).consumerapp
+			: undefined;
 	console.info("[telebirr] forced miniapp launch", {
 		bridgePresent,
-		hasMa:
-			typeof window !== "undefined" &&
-			typeof (window as { ma?: { native?: unknown } }).ma?.native ===
-				"function",
+		hasConsumerApp: consumerapp != null,
+		hasEvaluate: typeof consumerapp?.evaluate === "function",
 		txRef: txRef || null,
 	});
 
