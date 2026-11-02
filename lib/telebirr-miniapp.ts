@@ -12,9 +12,13 @@ type ConsumerAppBridge = {
 };
 
 type MiniAppWindow = Window & {
-	consumerapp?: ConsumerAppBridge;
-	ma?: { native?: (method: string, params?: Record<string, unknown>) => Promise<unknown> };
-	[key: string]: unknown;
+	consumerapp?: ConsumerAppBridge | null;
+	ma?: {
+		native?: (
+			method: string,
+			params?: Record<string, unknown>,
+		) => Promise<unknown>;
+	};
 };
 
 function getWin(): MiniAppWindow | null {
@@ -39,11 +43,7 @@ export function isTelebirrMiniApp(): boolean {
 		/* ignore */
 	}
 
-	return (
-		w.consumerapp != null ||
-		typeof w.consumerapp?.evaluate === "function" ||
-		typeof w.ma?.native === "function"
-	);
+	return w.consumerapp != null || typeof w.ma?.native === "function";
 }
 
 /**
@@ -144,21 +144,22 @@ export function startTelebirrMiniAppPay(
 
 	return new Promise((resolve) => {
 		const callbackName = `__zemenTelebirrPayCb_${Date.now()}`;
+		const mutableWindow = w as MiniAppWindow & Record<string, unknown>;
 		let settled = false;
 		const finish = (result: TelebirrMiniAppPayResult) => {
 			if (settled) return;
 			settled = true;
 			try {
-				delete w[callbackName];
+				delete mutableWindow[callbackName];
 			} catch {
 				/* ignore */
 			}
 			resolve(result);
 		};
 
-		w[callbackName] = ((result?: unknown) => {
+		mutableWindow[callbackName] = (result?: unknown) => {
 			finish(parseStartPayResult(result));
-		}) as MiniAppWindow[string];
+		};
 
 		try {
 			const evaluate = w.consumerapp?.evaluate;
