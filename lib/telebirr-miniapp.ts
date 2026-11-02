@@ -7,15 +7,14 @@ export type TelebirrMiniAppPayResult = {
 	raw?: unknown;
 };
 
-type MaBridge = {
-	native: (
-		method: string,
-		params?: Record<string, unknown>,
-	) => Promise<unknown>;
+type ConsumerAppBridge = {
+	evaluate?: (payload: string) => void;
 };
 
 type MiniAppWindow = Window & {
-	ma?: MaBridge;
+	consumerapp?: ConsumerAppBridge;
+	ma?: { native?: (method: string, params?: Record<string, unknown>) => Promise<unknown> };
+	[key: string]: unknown;
 };
 
 function getWin(): MiniAppWindow | null {
@@ -24,9 +23,9 @@ function getWin(): MiniAppWindow | null {
 }
 
 /**
- * True when running inside Telebirr SuperApp / mini-app WebView.
- * Prefer `window.ma.native` (official docs). `?telebirr_mini=1` forces true
- * for local UI tests (startPay still needs a real bridge to complete payment).
+ * True when running inside Telebirr SuperApp WebView.
+ * H5 Integration Step 4 uses `window.consumerapp`. `?telebirr_mini=1` forces
+ * true for local UI tests (startPay still needs a real bridge).
  */
 export function isTelebirrMiniApp(): boolean {
 	const w = getWin();
@@ -40,7 +39,11 @@ export function isTelebirrMiniApp(): boolean {
 		/* ignore */
 	}
 
-	return typeof w.ma?.native === "function";
+	return (
+		w.consumerapp != null ||
+		typeof w.consumerapp?.evaluate === "function" ||
+		typeof w.ma?.native === "function"
+	);
 }
 
 /**
@@ -52,8 +55,9 @@ export function getTelebirrPayMode(): "h5" | "miniapp" {
 }
 
 function parseStartPayResult(result: unknown): TelebirrMiniAppPayResult {
-	if (result == null) {
-		return { ok: false, message: "Empty startPay result" };
+	if (result == null || result === "") {
+		// Docs sample callback has no args and treats completion as success.
+		return { ok: true, message: "Payment callback received" };
 	}
 
 	let data: Record<string, unknown> = {};
@@ -68,12 +72,13 @@ function parseStartPayResult(result: unknown): TelebirrMiniAppPayResult {
 			if (lower.includes("cancel")) {
 				return { ok: false, canceled: true, message: result, raw: result };
 			}
-			return { ok: false, message: result, raw: result };
+			// Opaque string callback — treat as completed (verify via queryOrder).
+			return { ok: true, message: result, raw: result };
 		}
 	} else if (typeof result === "object") {
 		data = result as Record<string, unknown>;
 	} else {
-		return { ok: false, message: String(result), raw: result };
+		return { ok: true, message: String(result), raw: result };
 	}
 
 	const code = String(
@@ -83,18 +88,26 @@ function parseStartPayResult(result: unknown): TelebirrMiniAppPayResult {
 		data.message ?? data.msg ?? data.errorMsg ?? data.error ?? "",
 	).trim();
 
-	// Official Telebirr docs: resultCode === "1" means pay success.
-	if (code === "1") {
+	if (
+		code === "1" ||
+		code === "0" ||
+		code === "200" ||
+		code.toUpperCase() === "SUCCESS" ||
+		String(data.success) === "true"
+	) {
 		return { ok: true, message: message || undefined, raw: result };
 	}
 
 	if (
 		code === "-3" ||
-		code === "0" ||
 		code.toUpperCase() === "CANCEL" ||
 		message.toLowerCase().includes("cancel")
 	) {
 		return { ok: false, canceled: true, message: message || "Canceled", raw: result };
+	}
+
+	if (!code && !message) {
+		return { ok: true, raw: result };
 	}
 
 	return {
@@ -105,41 +118,79 @@ function parseStartPayResult(result: unknown): TelebirrMiniAppPayResult {
 }
 
 /**
- * Launch Telebirr SuperApp payment via official `window.ma.native("startPay")`.
- * `rawRequest` is the signed query string from preOrder (no paygate base).
+ * H5 Integration with SuperApp Step 4:
+ * `window.consumerapp.evaluate` + `js_fun_start_pay`.
  */
-export async function startTelebirrMiniAppPay(
+export function startTelebirrMiniAppPay(
 	rawRequest: string,
 ): Promise<TelebirrMiniAppPayResult> {
 	const w = getWin();
 	if (!w) {
-		return { ok: false, message: "Not in a browser" };
+		return Promise.resolve({ ok: false, message: "Not in a browser" });
 	}
 
-	if (typeof w.ma?.native !== "function") {
-		return {
+	const trimmed = rawRequest.trim();
+	if (!trimmed) {
+		return Promise.resolve({ ok: false, message: "Missing rawRequest" });
+	}
+
+	if (w.consumerapp == null) {
+		return Promise.resolve({
 			ok: false,
-			message: "Telebirr mini-app payment bridge not available",
-		};
-	}
-
-	try {
-		const startPayRes = await w.ma.native("startPay", {
-			rawRequest,
-			// Spelling matches Telebirr official docs.
-			bussinessType: "BuyGoods",
+			message:
+				"Telebirr SuperApp bridge not available (window.consumerapp). Open this page inside Telebirr.",
 		});
-		return parseStartPayResult(startPayRes);
-	} catch (error: unknown) {
-		const message =
-			error instanceof Error ? error.message : String(error ?? "");
-		if (message.toLowerCase().includes("cancel")) {
-			return { ok: false, canceled: true, message: message || "Canceled", raw: error };
-		}
-		return {
-			ok: false,
-			message: message || "Failed to start mini-app pay",
-			raw: error,
-		};
 	}
+
+	return new Promise((resolve) => {
+		const callbackName = `__zemenTelebirrPayCb_${Date.now()}`;
+		let settled = false;
+		const finish = (result: TelebirrMiniAppPayResult) => {
+			if (settled) return;
+			settled = true;
+			try {
+				delete w[callbackName];
+			} catch {
+				/* ignore */
+			}
+			resolve(result);
+		};
+
+		w[callbackName] = ((result?: unknown) => {
+			finish(parseStartPayResult(result));
+		}) as MiniAppWindow[string];
+
+		try {
+			const evaluate = w.consumerapp?.evaluate;
+			if (typeof evaluate !== "function") {
+				finish({
+					ok: false,
+					message: "window.consumerapp.evaluate is not a function",
+				});
+				return;
+			}
+
+			const payload = JSON.stringify({
+				functionName: "js_fun_start_pay",
+				params: {
+					rawRequest: trimmed,
+					functionCallBackName: callbackName,
+				},
+			});
+
+			console.info("[telebirr] startPay via consumerapp.evaluate", {
+				callbackName,
+			});
+			evaluate.call(w.consumerapp, payload);
+		} catch (error: unknown) {
+			finish({
+				ok: false,
+				message:
+					error instanceof Error
+						? error.message
+						: "Failed to start SuperApp pay",
+				raw: error,
+			});
+		}
+	});
 }

@@ -415,7 +415,8 @@ function buildCheckoutPayload(
 		timestamp: createTimeStamp(),
 	};
 	const sign = signRequestObject(config.privateKey, map);
-	const parts = [
+	// H5 SuperApp Step 3 createRawRequest: appid…sign_type only (no version/trade_type).
+	const rawParts = [
 		`appid=${map.appid}`,
 		`merch_code=${map.merch_code}`,
 		`nonce_str=${map.nonce_str}`,
@@ -423,14 +424,14 @@ function buildCheckoutPayload(
 		`timestamp=${map.timestamp}`,
 		`sign=${encodeURIComponent(sign)}`,
 		"sign_type=SHA256WithRSA",
-		"version=1.0",
-		`trade_type=${tradeType}`,
 	];
-	const rawRequest = parts.join("&");
-	return {
-		rawRequest,
-		checkoutUrl: `${config.webBaseUrl}${rawRequest}`,
-	};
+	const rawRequest = rawParts.join("&");
+	// Browser paygate URL still appends checkout trade type.
+	const checkoutUrl =
+		tradeType === "Checkout"
+			? `${config.webBaseUrl}${rawRequest}&version=1.0&trade_type=Checkout`
+			: `${config.webBaseUrl}${rawRequest}`;
+	return { rawRequest, checkoutUrl };
 }
 
 export async function createTelebirrCheckout(params: {
