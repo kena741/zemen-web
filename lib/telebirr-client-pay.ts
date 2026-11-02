@@ -22,8 +22,8 @@ export type LaunchTelebirrPaymentResult =
 export { getTelebirrPayMode, isTelebirrMiniApp };
 
 /**
- * After `/api/pay/telebirr` succeeds: use SuperApp startPay inside mini app,
- * otherwise redirect to the H5 paygate checkout URL.
+ * TEMP (mini-app test): always use SuperApp startPay — no H5 checkout redirect.
+ * If `window.ma` is missing, fail with a clear error instead of opening paygate.
  */
 export async function launchTelebirrPayment(
 	data: TelebirrPayApiResponse,
@@ -32,49 +32,54 @@ export async function launchTelebirrPayment(
 	const rawRequest = (data.raw_request ?? "").trim();
 	const checkoutUrl = (data.checkout_url ?? "").trim();
 	const txRef = (data.tx_ref ?? "").trim();
-	const useMiniApp =
-		data.mode === "miniapp" || (data.mode == null && isTelebirrMiniApp());
 
-	if (useMiniApp) {
-		if (!rawRequest && !checkoutUrl) {
-			return { ok: false, error: "Missing Telebirr payment payload" };
-		}
-		const raw =
-			rawRequest ||
-			(() => {
-				try {
-					const u = new URL(checkoutUrl);
-					return u.search.startsWith("?") ? u.search.slice(1) : u.search;
-				} catch {
-					return "";
-				}
-			})();
-
-		if (!raw) {
-			return { ok: false, error: "Missing Telebirr rawRequest for mini app" };
-		}
-
-		const result = await startTelebirrMiniAppPay(raw);
-		if (result.canceled) {
-			return { ok: false, canceled: true, error: result.message || "Canceled" };
-		}
-		if (!result.ok) {
-			return {
-				ok: false,
-				error: result.message || "Mini-app payment failed",
-			};
-		}
-
-		const done =
-			options?.donePath ||
-			`/pay/done?purpose=wallet${txRef ? `&tx_ref=${encodeURIComponent(txRef)}` : ""}`;
-		window.location.href = done;
-		return { ok: true, mode: "miniapp" };
+	if (!rawRequest && !checkoutUrl) {
+		return { ok: false, error: "Missing Telebirr payment payload" };
 	}
 
-	if (!checkoutUrl) {
-		return { ok: false, error: "Missing Telebirr checkout URL" };
+	const raw =
+		rawRequest ||
+		(() => {
+			try {
+				const u = new URL(checkoutUrl);
+				return u.search.startsWith("?") ? u.search.slice(1) : u.search;
+			} catch {
+				return "";
+			}
+		})();
+
+	if (!raw) {
+		return { ok: false, error: "Missing Telebirr rawRequest for mini app" };
 	}
-	window.location.href = checkoutUrl;
-	return { ok: true, mode: "h5" };
+
+	const bridgePresent = isTelebirrMiniApp();
+	console.info("[telebirr] forced miniapp launch", {
+		bridgePresent,
+		hasMa:
+			typeof window !== "undefined" &&
+			typeof (window as { ma?: { native?: unknown } }).ma?.native ===
+				"function",
+		txRef: txRef || null,
+	});
+
+	const result = await startTelebirrMiniAppPay(raw);
+	if (result.canceled) {
+		return { ok: false, canceled: true, error: result.message || "Canceled" };
+	}
+	if (!result.ok) {
+		return {
+			ok: false,
+			error:
+				result.message ||
+				(bridgePresent
+					? "Mini-app payment failed"
+					: "Telebirr mini-app bridge not available (window.ma.native). No H5 fallback."),
+		};
+	}
+
+	const done =
+		options?.donePath ||
+		`/pay/done?purpose=wallet${txRef ? `&tx_ref=${encodeURIComponent(txRef)}` : ""}`;
+	window.location.href = done;
+	return { ok: true, mode: "miniapp" };
 }
