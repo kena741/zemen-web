@@ -65,8 +65,13 @@ export interface ResolvedTelebirrConfig {
 
 export interface TelebirrCheckoutResult {
 	checkoutUrl: string;
+	/** Signed query string for SuperApp `startPay` (no paygate base URL). */
+	rawRequest: string;
 	merchOrderId: string;
 	prepayId: string;
+	merchantAppId: string;
+	merchCode: string;
+	amount: string;
 }
 
 export interface TelebirrOrderStatus {
@@ -395,10 +400,13 @@ async function sendSignedRequest(
 	return json;
 }
 
-function buildCheckoutUrl(
+export type TelebirrCheckoutMode = "h5" | "miniapp";
+
+function buildCheckoutPayload(
 	config: ResolvedTelebirrConfig,
 	prepayId: string,
-): string {
+	tradeType: "Checkout" | "InApp",
+): { rawRequest: string; checkoutUrl: string } {
 	const map: Record<string, string> = {
 		appid: config.merchantAppId,
 		merch_code: config.merchantCode,
@@ -415,8 +423,14 @@ function buildCheckoutUrl(
 		`timestamp=${map.timestamp}`,
 		`sign=${encodeURIComponent(sign)}`,
 		"sign_type=SHA256WithRSA",
+		"version=1.0",
+		`trade_type=${tradeType}`,
 	];
-	return `${config.webBaseUrl}${parts.join("&")}&version=1.0&trade_type=Checkout`;
+	const rawRequest = parts.join("&");
+	return {
+		rawRequest,
+		checkoutUrl: `${config.webBaseUrl}${rawRequest}`,
+	};
 }
 
 export async function createTelebirrCheckout(params: {
@@ -425,7 +439,13 @@ export async function createTelebirrCheckout(params: {
 	amount: string | number;
 	merchOrderId?: string;
 	redirectUrl: string;
+	/** H5 web checkout vs SuperApp InApp / startPay. */
+	mode?: TelebirrCheckoutMode;
 }): Promise<TelebirrCheckoutResult> {
+	const mode: TelebirrCheckoutMode = params.mode === "miniapp" ? "miniapp" : "h5";
+	const tradeType = mode === "miniapp" ? "InApp" : "Checkout";
+	const payeeType = mode === "miniapp" ? "3000" : "5000";
+
 	const merchOrderId =
 		params.merchOrderId?.replace(/[^A-Za-z0-9]/g, "") ||
 		generateMerchOrderId();
@@ -443,7 +463,7 @@ export async function createTelebirrCheckout(params: {
 			appid: params.config.merchantAppId,
 			merch_code: params.config.merchantCode,
 			merch_order_id: merchOrderId,
-			trade_type: "Checkout",
+			trade_type: tradeType,
 			title,
 			total_amount: amount,
 			trans_currency: "ETB",
@@ -452,7 +472,7 @@ export async function createTelebirrCheckout(params: {
 			business_type: "BuyGoods",
 			payee_identifier: params.config.merchantCode,
 			payee_identifier_type: "04",
-			payee_type: "5000",
+			payee_type: payeeType,
 		},
 	};
 	req.sign = signRequestObject(params.config.privateKey, req);
@@ -473,10 +493,15 @@ export async function createTelebirrCheckout(params: {
 		);
 	}
 
+	const payload = buildCheckoutPayload(params.config, prepayId, tradeType);
 	return {
-		checkoutUrl: buildCheckoutUrl(params.config, prepayId),
+		checkoutUrl: payload.checkoutUrl,
+		rawRequest: payload.rawRequest,
 		merchOrderId,
 		prepayId,
+		merchantAppId: params.config.merchantAppId,
+		merchCode: params.config.merchantCode,
+		amount,
 	};
 }
 

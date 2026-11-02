@@ -12,6 +12,10 @@ import {
 	type PaymentPending,
 	type PaymentPurpose,
 } from "@/lib/payment-pending";
+import {
+	getTelebirrPayMode,
+	launchTelebirrPayment,
+} from "@/lib/telebirr-client-pay";
 
 export interface TelebirrCheckoutProps {
 	amount?: string;
@@ -94,6 +98,7 @@ export function TelebirrCheckout({
 			`/pay/done?purpose=${encodeURIComponent(purpose)}&amount=${encodeURIComponent(payAmount)}`;
 
 		try {
+			const mode = getTelebirrPayMode();
 			const res = await fetch("/api/pay/telebirr", {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
@@ -108,14 +113,17 @@ export function TelebirrCheckout({
 					provider_id: providerId,
 					booking_id: bookingId,
 					service_id: serviceId,
+					mode,
 				}),
 			});
 			const data = (await res.json()) as {
 				checkout_url?: string;
+				raw_request?: string;
 				tx_ref?: string;
+				mode?: "h5" | "miniapp";
 				error?: string;
 			};
-			if (!res.ok || !data.checkout_url) {
+			if (!res.ok || (!data.checkout_url && !data.raw_request)) {
 				clearPaymentPending();
 				setError(data.error || t("paymentFailed"));
 				return;
@@ -123,7 +131,20 @@ export function TelebirrCheckout({
 			if (data.tx_ref) {
 				savePaymentPending({ ...pending, txRef: data.tx_ref });
 			}
-			window.location.href = data.checkout_url;
+			const launched = await launchTelebirrPayment(data, {
+				donePath: path.includes("tx_ref=")
+					? path
+					: `${path}${path.includes("?") ? "&" : "?"}tx_ref=${encodeURIComponent(data.tx_ref ?? "")}`,
+			});
+			if (!launched.ok) {
+				if (!launched.canceled) {
+					clearPaymentPending();
+					setError(launched.error || t("paymentFailed"));
+				} else {
+					clearPaymentPending();
+				}
+				return;
+			}
 		} catch {
 			clearPaymentPending();
 			setError(t("noInternet"));
