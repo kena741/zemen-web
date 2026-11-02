@@ -48,10 +48,17 @@ function tryGetAdmin(): SupabaseClient | null {
 }
 
 export async function POST(request: Request) {
+	let mode: TelebirrCheckoutMode = "h5";
+	let amountLog: number | null = null;
+	let purposeLog = "wallet";
+	let txRefLog: string | null = null;
+
 	try {
 		const body = (await request.json()) as PayBody;
 		const amount = parseAmount(body.amount);
+		amountLog = amount;
 		if (amount == null || amount < MIN_AMOUNT || amount > MAX_AMOUNT) {
+			console.warn("[telebirr] invalid amount", { amount: body.amount });
 			return NextResponse.json(
 				{
 					error: `Amount must be between ETB ${MIN_AMOUNT} and ${MAX_AMOUNT.toLocaleString()}`,
@@ -63,6 +70,7 @@ export async function POST(request: Request) {
 		const admin = tryGetAdmin();
 		const config = await loadTelebirrConfig(admin ?? undefined);
 		if (!config) {
+			console.error("[telebirr] not configured");
 			return NextResponse.json(
 				{ error: "Telebirr is not configured" },
 				{ status: 500 },
@@ -71,7 +79,9 @@ export async function POST(request: Request) {
 
 		const appBaseUrl = getSiteUrl().replace(/\/$/, "");
 		const txRef = generateMerchOrderId("web");
+		txRefLog = txRef;
 		const purpose = (body.purpose ?? "wallet").trim();
+		purposeLog = purpose;
 		const returnPath =
 			(body.return_path ?? "/pay/done").trim() || "/pay/done";
 		const returnUrl = new URL(
@@ -83,8 +93,17 @@ export async function POST(request: Request) {
 		returnUrl.searchParams.set("purpose", purpose);
 		returnUrl.searchParams.set("amount", amount.toFixed(2));
 
-		const mode: TelebirrCheckoutMode =
-			body.mode === "miniapp" ? "miniapp" : "h5";
+		mode = body.mode === "miniapp" ? "miniapp" : "h5";
+
+		console.info("[telebirr] create order", {
+			mode,
+			purpose,
+			amount: amount.toFixed(2),
+			tx_ref: txRef,
+			merch_code: config.merchantCode,
+			merchant_app_id: config.merchantAppId,
+			base_url: config.baseUrl,
+		});
 
 		const checkout = await createTelebirrCheckout({
 			config,
@@ -97,6 +116,7 @@ export async function POST(request: Request) {
 
 		if (purpose === "activation" && body.provider_id?.trim()) {
 			if (!admin) {
+				console.error("[telebirr] activation missing service role");
 				return NextResponse.json(
 					{
 						error:
@@ -110,6 +130,14 @@ export async function POST(request: Request) {
 				.update({ activation_tx_ref: checkout.merchOrderId })
 				.eq("id", body.provider_id.trim());
 		}
+
+		console.info("[telebirr] create order ok", {
+			mode,
+			tx_ref: checkout.merchOrderId,
+			prepay_id: checkout.prepayId,
+			has_raw_request: Boolean(checkout.rawRequest),
+			has_checkout_url: Boolean(checkout.checkoutUrl),
+		});
 
 		return NextResponse.json({
 			status: "success",
@@ -125,6 +153,13 @@ export async function POST(request: Request) {
 	} catch (error: unknown) {
 		const message =
 			error instanceof Error ? error.message : "Unexpected error";
+		console.error("[telebirr] create order failed", {
+			mode,
+			purpose: purposeLog,
+			amount: amountLog,
+			tx_ref: txRefLog,
+			error: message,
+		});
 		return NextResponse.json({ error: message }, { status: 500 });
 	}
 }
