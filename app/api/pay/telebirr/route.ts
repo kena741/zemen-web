@@ -6,6 +6,7 @@ import {
 	createTelebirrCheckout,
 	generateMerchOrderId,
 	loadTelebirrConfig,
+	type TelebirrCheckoutMode,
 } from "@/lib/telebirr";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
@@ -25,6 +26,8 @@ interface PayBody {
 	provider_id?: string;
 	booking_id?: string;
 	service_id?: string;
+	/** Client detects SuperApp and sends miniapp | h5. */
+	mode?: TelebirrCheckoutMode;
 }
 
 function parseAmount(value: number | string | undefined): number | null {
@@ -80,12 +83,16 @@ export async function POST(request: Request) {
 		returnUrl.searchParams.set("purpose", purpose);
 		returnUrl.searchParams.set("amount", amount.toFixed(2));
 
+		const mode: TelebirrCheckoutMode =
+			body.mode === "miniapp" ? "miniapp" : "h5";
+
 		const checkout = await createTelebirrCheckout({
 			config,
 			title: `Zemen ${purpose} ETB ${amount.toFixed(2)}`,
 			amount,
 			merchOrderId: txRef,
 			redirectUrl: returnUrl.toString(),
+			mode,
 		});
 
 		if (purpose === "activation" && body.provider_id?.trim()) {
@@ -107,9 +114,13 @@ export async function POST(request: Request) {
 		return NextResponse.json({
 			status: "success",
 			checkout_url: checkout.checkoutUrl,
+			raw_request: checkout.rawRequest,
 			tx_ref: checkout.merchOrderId,
 			prepay_id: checkout.prepayId,
+			merchant_app_id: checkout.merchantAppId,
+			merch_code: checkout.merchCode,
 			amount: amount.toFixed(2),
+			mode,
 		});
 	} catch (error: unknown) {
 		const message =
