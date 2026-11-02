@@ -43,8 +43,12 @@ export function isTelebirrMiniApp(): boolean {
 	return typeof w.ma?.native === "function";
 }
 
+/**
+ * TEMP (mini-app test): always request InApp preOrder.
+ * Restore: `return isTelebirrMiniApp() ? "miniapp" : "h5";`
+ */
 export function getTelebirrPayMode(): "h5" | "miniapp" {
-	return isTelebirrMiniApp() ? "miniapp" : "h5";
+	return "miniapp";
 }
 
 function parseStartPayResult(result: unknown): TelebirrMiniAppPayResult {
