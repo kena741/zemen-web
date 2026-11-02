@@ -33,6 +33,10 @@ import { formatAmount } from "@/services/bookings/types";
 import { createCustomerBooking, payBookingWithWallet } from "@/services/customer/bookingsApi";
 import { savePaymentPending } from "@/lib/payment-pending";
 import {
+	getTelebirrPayMode,
+	launchTelebirrPayment,
+} from "@/lib/telebirr-client-pay";
+import {
 	couponDiscount,
 	fetchCouponByCode,
 	fetchPublicCoupons,
@@ -503,15 +507,23 @@ function BookServiceForm() {
 					purpose: "booking",
 					return_path: `/pay/done?purpose=booking&amount=${dueNow}`,
 					booking_id: res.bookingId,
+					...(gateway === "telebirr" ? { mode: getTelebirrPayMode() } : {}),
 				}),
 			},
 		);
 		const payData = (await payRes.json()) as {
 			checkout_url?: string;
+			raw_request?: string;
 			tx_ref?: string;
+			mode?: "h5" | "miniapp";
 			error?: string;
 		};
-		if (!payRes.ok || !payData.checkout_url) {
+		if (
+			!payRes.ok ||
+			(gateway === "chapa"
+				? !payData.checkout_url
+				: !payData.checkout_url && !payData.raw_request)
+		) {
 			setError(
 				payData.error ||
 					(gateway === "chapa"
@@ -531,7 +543,16 @@ function BookServiceForm() {
 				txRef: payData.tx_ref,
 			});
 		}
-		window.location.href = payData.checkout_url;
+		if (gateway === "chapa") {
+			window.location.href = payData.checkout_url!;
+			return;
+		}
+		const launched = await launchTelebirrPayment(payData, {
+			donePath: `/pay/done?purpose=booking&amount=${dueNow}&tx_ref=${encodeURIComponent(payData.tx_ref ?? "")}`,
+		});
+		if (!launched.ok && !launched.canceled) {
+			setError(launched.error || t("bookServiceTelebirrFailed"));
+		}
 	}
 
 	if (loading || !user) return <ServiceLoading />;

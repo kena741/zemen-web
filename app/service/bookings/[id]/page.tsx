@@ -38,6 +38,10 @@ import {
 	RECURRING_PAYMENT_SETTINGS_DEFAULT,
 } from "@/lib/recurring";
 import { savePaymentPending } from "@/lib/payment-pending";
+import {
+	getTelebirrPayMode,
+	launchTelebirrPayment,
+} from "@/lib/telebirr-client-pay";
 import { fetchRecurringPaymentSettings } from "@/services/config/recurringSettingsApi";
 import {
 	cancelCustomerBooking,
@@ -283,16 +287,24 @@ export default function CustomerBookingDetailPage() {
 					purpose: "booking",
 					return_path: `/pay/done?purpose=booking&amount=${amount}`,
 					booking_id: booking.id,
+					...(gateway === "telebirr" ? { mode: getTelebirrPayMode() } : {}),
 				}),
 			},
 		);
 		const data = (await res.json()) as {
 			checkout_url?: string;
+			raw_request?: string;
 			tx_ref?: string;
+			mode?: "h5" | "miniapp";
 			error?: string;
 		};
 		setBusy(false);
-		if (!res.ok || !data.checkout_url) {
+		if (
+			!res.ok ||
+			(gateway === "chapa"
+				? !data.checkout_url
+				: !data.checkout_url && !data.raw_request)
+		) {
 			setActionError(
 				data.error ||
 					(gateway === "chapa"
@@ -315,7 +327,16 @@ export default function CustomerBookingDetailPage() {
 				txRef: data.tx_ref,
 			});
 		}
-		window.location.href = data.checkout_url;
+		if (gateway === "chapa") {
+			window.location.href = data.checkout_url!;
+			return;
+		}
+		const launched = await launchTelebirrPayment(data, {
+			donePath: `/pay/done?purpose=booking&amount=${amount}&tx_ref=${encodeURIComponent(data.tx_ref ?? "")}`,
+		});
+		if (!launched.ok && !launched.canceled) {
+			setActionError(launched.error || t("bookServiceTelebirrFailed"));
+		}
 	}
 
 	async function onReview() {
