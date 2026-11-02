@@ -444,7 +444,9 @@ export async function createTelebirrCheckout(params: {
 }): Promise<TelebirrCheckoutResult> {
 	const mode: TelebirrCheckoutMode = params.mode === "miniapp" ? "miniapp" : "h5";
 	const tradeType = mode === "miniapp" ? "InApp" : "Checkout";
-	const payeeType = mode === "miniapp" ? "3000" : "5000";
+	// Same merchant payee type as H5; docs sample used 3000 for InApp but
+	// this merchant rejects it with 60320019.
+	const payeeType = "5000";
 
 	const merchOrderId =
 		params.merchOrderId?.replace(/[^A-Za-z0-9]/g, "") ||
