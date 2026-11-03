@@ -23,6 +23,9 @@ export async function POST(request: Request) {
 		try {
 			payload = JSON.parse(rawText) as Record<string, unknown>;
 		} catch {
+			console.error("[telebirr] notify invalid JSON", {
+				rawPreview: rawText.slice(0, 500),
+			});
 			return NextResponse.json(
 				{ success: false, message: "Invalid JSON" },
 				{ status: 400 },
@@ -30,10 +33,16 @@ export async function POST(request: Request) {
 		}
 
 		const notification = unwrapTelebirrNotify(payload);
+		console.info("[telebirr] notify callback", {
+			payload,
+			notification,
+		});
+
 		const merchOrderId = sanitizeMerchOrderId(
 			String(notification.merch_order_id ?? ""),
 		);
 		if (!merchOrderId) {
+			console.warn("[telebirr] notify missing merch_order_id", { notification });
 			return NextResponse.json(
 				{ success: false, message: "merch_order_id missing" },
 				{ status: 400 },
@@ -43,6 +52,7 @@ export async function POST(request: Request) {
 		const admin = getSupabaseAdmin();
 		const config = await loadTelebirrConfig(admin);
 		if (!config) {
+			console.error("[telebirr] notify: Telebirr not configured");
 			return NextResponse.json(
 				{ success: false, message: "Telebirr not configured" },
 				{ status: 500 },
@@ -55,31 +65,48 @@ export async function POST(request: Request) {
 		});
 
 		const notifyLooksPaid = isTelebirrNotifySuccess(notification);
+		console.info("[telebirr] notify queryOrder", {
+			merch_order_id: merchOrderId,
+			notifyLooksPaid,
+			query: {
+				paid: status.paid,
+				failed: status.failed,
+				tradeStatus: status.tradeStatus,
+				amount: status.amount,
+				paymentOrderId: status.paymentOrderId,
+				transId: status.transId,
+			},
+		});
+
 		if (!status.paid && !notifyLooksPaid) {
-			return NextResponse.json({
+			const body = {
 				success: true,
 				message: `Acknowledged non-success status ${status.tradeStatus || "unknown"}`,
-			});
+			};
+			console.info("[telebirr] notify response", body);
+			return NextResponse.json(body);
 		}
 
 		if (!status.paid) {
-			return NextResponse.json(
-				{
-					success: false,
-					message: `Order not paid yet (${status.tradeStatus || "unknown"})`,
-				},
-				{ status: 202 },
-			);
+			const body = {
+				success: false,
+				message: `Order not paid yet (${status.tradeStatus || "unknown"})`,
+			};
+			console.info("[telebirr] notify response", body);
+			return NextResponse.json(body, { status: 202 });
 		}
 
-		return NextResponse.json({
+		const body = {
 			success: true,
 			message: "Payment confirmed",
 			merch_order_id: merchOrderId,
-		});
+		};
+		console.info("[telebirr] notify response", body);
+		return NextResponse.json(body);
 	} catch (error: unknown) {
 		const message =
 			error instanceof Error ? error.message : "Notify handling failed";
+		console.error("[telebirr] notify failed", { error: message });
 		return NextResponse.json(
 			{ success: false, message },
 			{ status: 500 },
