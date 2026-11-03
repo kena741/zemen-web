@@ -181,6 +181,9 @@ export function startTelebirrMiniAppPay(
 
 			console.info("[telebirr] startPay via consumerapp.evaluate", {
 				callbackName,
+				rawLen: trimmed.length,
+				rawPrefix: trimmed.slice(0, 64),
+				payloadLen: payload.length,
 			});
 			evaluate.call(w.consumerapp, payload);
 		} catch (error: unknown) {
