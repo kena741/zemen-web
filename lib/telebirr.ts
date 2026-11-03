@@ -415,23 +415,31 @@ function buildCheckoutPayload(
 		timestamp: createTimeStamp(),
 	};
 	const sign = signRequestObject(config.privateKey, map);
-	// H5 SuperApp Step 3 createRawRequest: appid…sign_type only (no version/trade_type).
-	const rawParts = [
+	const baseParts = [
 		`appid=${map.appid}`,
 		`merch_code=${map.merch_code}`,
 		`nonce_str=${map.nonce_str}`,
 		`prepay_id=${map.prepay_id}`,
 		`timestamp=${map.timestamp}`,
+	];
+	// Docs createRawRequest: raw sign (no encodeURIComponent) for js_fun_start_pay.
+	const rawRequest = [
+		...baseParts,
+		`sign=${sign}`,
+		"sign_type=SHA256WithRSA",
+	].join("&");
+	// Browser paygate URL must encode sign so +/= survive the query string.
+	const checkoutQuery = [
+		...baseParts,
 		`sign=${encodeURIComponent(sign)}`,
 		"sign_type=SHA256WithRSA",
-	];
-	const rawRequest = rawParts.join("&");
-	// Browser paygate URL still appends checkout trade type.
-	const checkoutUrl =
-		tradeType === "Checkout"
-			? `${config.webBaseUrl}${rawRequest}&version=1.0&trade_type=Checkout`
-			: `${config.webBaseUrl}${rawRequest}`;
-	return { rawRequest, checkoutUrl };
+		"version=1.0",
+		`trade_type=${tradeType}`,
+	].join("&");
+	return {
+		rawRequest,
+		checkoutUrl: `${config.webBaseUrl}${checkoutQuery}`,
+	};
 }
 
 export async function createTelebirrCheckout(params: {

@@ -136,6 +136,8 @@ export async function POST(request: Request) {
 			tx_ref: checkout.merchOrderId,
 			prepay_id: checkout.prepayId,
 			has_raw_request: Boolean(checkout.rawRequest),
+			raw_request_len: checkout.rawRequest.length,
+			raw_request_prefix: checkout.rawRequest.slice(0, 64),
 			has_checkout_url: Boolean(checkout.checkoutUrl),
 		});
 

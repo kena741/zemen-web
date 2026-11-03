@@ -62,6 +62,10 @@ export async function launchTelebirrPayment(
 		hasConsumerApp: consumerapp != null,
 		hasEvaluate: typeof consumerapp?.evaluate === "function",
 		txRef: txRef || null,
+		rawLen: raw.length,
+		rawPrefix: raw.slice(0, 48),
+		rawHasSign: raw.includes("sign="),
+		fromField: Boolean(rawRequest),
 	});
 
 	const result = await startTelebirrMiniAppPay(raw);
