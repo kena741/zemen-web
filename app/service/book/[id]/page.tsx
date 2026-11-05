@@ -177,9 +177,9 @@ function BookServiceForm() {
 	const [couponCode, setCouponCode] = useState("");
 	const [appliedCoupon, setAppliedCoupon] = useState<Coupon | null>(null);
 	const [couponError, setCouponError] = useState<string | null>(null);
-	const [paymentMethod, setPaymentMethod] = useState<
-		"wallet" | "telebirr" | "chapa"
-	>("telebirr");
+	const [paymentMethod, setPaymentMethod] = useState<"wallet" | "telebirr">(
+		"telebirr",
+	);
 	const [savedAddresses, setSavedAddresses] = useState<CustomerAddress[]>([]);
 	const [payConfig, setPayConfig] = useState<PaymentMethodsConfig | null>(null);
 	const [step, setStep] = useState<1 | 2>(1);
@@ -270,14 +270,12 @@ function BookServiceForm() {
 
 	const walletAffordable = walletBalance >= dueNow;
 	const telebirrEnabled = !payConfig || payConfig.telebirrEnabled;
-	const chapaEnabled = !payConfig || payConfig.chapaEnabled;
 	const paymentOptions = useMemo(() => {
-		const options: Array<"wallet" | "telebirr" | "chapa"> = [];
+		const options: Array<"wallet" | "telebirr"> = [];
 		if (walletAffordable) options.push("wallet");
 		if (telebirrEnabled) options.push("telebirr");
-		if (chapaEnabled) options.push("chapa");
 		return options;
-	}, [walletAffordable, telebirrEnabled, chapaEnabled]);
+	}, [walletAffordable, telebirrEnabled]);
 
 	useEffect(() => {
 		if (paymentOptions.includes(paymentMethod)) return;
@@ -288,7 +286,6 @@ function BookServiceForm() {
 	const paymentLabels = {
 		wallet: t("paymentWallet"),
 		telebirr: t("paymentTelebirr"),
-		chapa: t("paymentChapa"),
 	} as const;
 
 	async function applyCoupon() {
@@ -483,34 +480,30 @@ function BookServiceForm() {
 			return;
 		}
 
-		const gateway = paymentMethod === "chapa" ? "chapa" : "telebirr";
 		savePaymentPending({
 			purpose: "booking",
 			userId: user.id,
 			accountType: "customer",
 			amount: String(dueNow),
-			gateway,
+			gateway: "telebirr",
 			bookingId: res.bookingId,
 		});
 		setBusy(false);
-		const payRes = await fetch(
-			gateway === "chapa" ? "/api/pay/chapa" : "/api/pay/telebirr",
-			{
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({
-					amount: dueNow,
-					email: user.email,
-					first_name: firstName,
-					last_name: lastName,
-					phone_number: customer.phone,
-					purpose: "booking",
-					return_path: `/pay/done?purpose=booking&amount=${dueNow}`,
-					booking_id: res.bookingId,
-					...(gateway === "telebirr" ? { mode: getTelebirrPayMode() } : {}),
-				}),
-			},
-		);
+		const payRes = await fetch("/api/pay/telebirr", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({
+				amount: dueNow,
+				email: user.email,
+				first_name: firstName,
+				last_name: lastName,
+				phone_number: customer.phone,
+				purpose: "booking",
+				return_path: `/pay/done?purpose=booking&amount=${dueNow}`,
+				booking_id: res.bookingId,
+				mode: getTelebirrPayMode(),
+			}),
+		});
 		const payData = (await payRes.json()) as {
 			checkout_url?: string;
 			raw_request?: string;
@@ -518,18 +511,8 @@ function BookServiceForm() {
 			mode?: "h5" | "miniapp";
 			error?: string;
 		};
-		if (
-			!payRes.ok ||
-			(gateway === "chapa"
-				? !payData.checkout_url
-				: !payData.checkout_url && !payData.raw_request)
-		) {
-			setError(
-				payData.error ||
-					(gateway === "chapa"
-						? t("bookServiceChapaFailed")
-						: t("bookServiceTelebirrFailed")),
-			);
+		if (!payRes.ok || (!payData.checkout_url && !payData.raw_request)) {
+			setError(payData.error || t("bookServiceTelebirrFailed"));
 			return;
 		}
 		if (payData.tx_ref) {
@@ -538,14 +521,10 @@ function BookServiceForm() {
 				userId: user.id,
 				accountType: "customer",
 				amount: String(dueNow),
-				gateway,
+				gateway: "telebirr",
 				bookingId: res.bookingId,
 				txRef: payData.tx_ref,
 			});
-		}
-		if (gateway === "chapa") {
-			window.location.href = payData.checkout_url!;
-			return;
 		}
 		const launched = await launchTelebirrPayment(payData, {
 			donePath: `/pay/done?purpose=booking&amount=${dueNow}&tx_ref=${encodeURIComponent(payData.tx_ref ?? "")}`,
