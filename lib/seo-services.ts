@@ -53,7 +53,7 @@ export type CategorySeoCopy = {
 		poster: string;
 		title: string;
 		caption: string;
-		/** ISO 8601 date, for structured data and the video sitemap. */
+		/** ISO 8601 with a timezone offset (Google flags date-only values). */
 		uploadDate: string;
 		durationSeconds: number;
 	};
@@ -137,7 +137,7 @@ const CATEGORY_COPY: Record<string, CategorySeoCopy> = {
 			poster: "/marketing/video/cleaning-poster.jpg",
 			title: "Zemen Service providers cleaning homes and offices in Addis Ababa",
 			caption: "See our cleaners in action",
-			uploadDate: "2026-10-30",
+			uploadDate: "2026-10-30T00:00:00+03:00",
 			durationSeconds: 47,
 		},
 		intro:
