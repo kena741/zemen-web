@@ -51,7 +51,7 @@ export async function POST(request: Request) {
 		).trim();
 		let { data: customer, error: customerError } = await admin
 			.from("customer")
-			.select("id, user_id, wallet_amount, walletAmount")
+			.select("id, user_id, wallet_amount")
 			.eq("id", auth.userId)
 			.maybeSingle();
 		if (customerError) {
@@ -60,7 +60,7 @@ export async function POST(request: Request) {
 		if (!customer) {
 			({ data: customer, error: customerError } = await admin
 				.from("customer")
-				.select("id, user_id, wallet_amount, walletAmount")
+				.select("id, user_id, wallet_amount")
 				.eq("user_id", auth.userId)
 				.maybeSingle());
 			if (customerError) {
@@ -143,9 +143,7 @@ export async function POST(request: Request) {
 		}
 
 		if (existingRefund) {
-			const balance = asNumber(
-				customerRow?.wallet_amount ?? customerRow?.walletAmount,
-			);
+			const balance = asNumber(customerRow?.wallet_amount);
 			return NextResponse.json({
 				ok: true,
 				refunded: 0,
@@ -169,9 +167,7 @@ export async function POST(request: Request) {
 				ok: true,
 				refunded: 0,
 				newBalance:
-					customerRow == null
-						? null
-						: asNumber(customerRow.wallet_amount ?? customerRow.walletAmount),
+					customerRow == null ? null : asNumber(customerRow.wallet_amount),
 			});
 		}
 		if (!customerRow || !customerId) {
@@ -181,9 +177,7 @@ export async function POST(request: Request) {
 			);
 		}
 
-		const balance = asNumber(
-			customerRow.wallet_amount ?? customerRow.walletAmount,
-		);
+		const balance = asNumber(customerRow.wallet_amount);
 		const newBalance = Math.round((balance + refunded) * 100) / 100;
 		const txUserId = String(debits?.[0]?.userId ?? customerId);
 		const { error: txError } = await admin.from("wallet_transaction").insert({
@@ -206,7 +200,6 @@ export async function POST(request: Request) {
 			.from("customer")
 			.update({
 				wallet_amount: newBalance.toFixed(2),
-				walletAmount: newBalance.toFixed(2),
 			})
 			.eq("id", customerId);
 		if (walletError) {

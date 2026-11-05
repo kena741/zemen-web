@@ -2,15 +2,14 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { ArrowRightIcon, ImagePlusIcon } from "lucide-react";
 
 import { ProfileBackLink } from "@/components/provider/profile-back-link";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Field, FieldLabel } from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
 import { SearchableSelect } from "@/components/ui/searchable-select";
-import { Textarea } from "@/components/ui/textarea";
 import { useLocale } from "@/lib/i18n";
+import { cn } from "@/lib/utils";
 import { createJobRequest } from "@/services/customer/bookingsApi";
 import { uploadCustomerServiceImage } from "@/services/customer/customerServicesApi";
 import {
@@ -26,6 +25,8 @@ import { invalidateRequests } from "@/store/customerCacheSlice";
 import { useAuth } from "@/store/useAuth";
 
 const MIN_BUDGET = 500;
+const MAX_DESC = 500;
+const BUDGET_CHIPS = [500, 1000, 2500, 5000] as const;
 
 export default function NewRequestPage() {
 	const { t } = useLocale();
@@ -35,12 +36,13 @@ export default function NewRequestPage() {
 	const customerId = user?.customer?.id ?? user?.id ?? "";
 	const [serviceName, setServiceName] = useState("");
 	const [description, setDescription] = useState("");
-	const [price, setPrice] = useState("");
+	const [price, setPrice] = useState(String(MIN_BUDGET));
 	const [categoryId, setCategoryId] = useState("");
 	const [subCategoryId, setSubCategoryId] = useState("");
 	const [categories, setCategories] = useState<ServiceCategory[]>([]);
 	const [subCategories, setSubCategories] = useState<ServiceSubCategory[]>([]);
 	const [file, setFile] = useState<File | null>(null);
+	const [preview, setPreview] = useState<string | null>(null);
 	const [busy, setBusy] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 
@@ -59,6 +61,16 @@ export default function NewRequestPage() {
 			setSubCategoryId("");
 		});
 	}, [categoryId]);
+
+	useEffect(() => {
+		if (!file) {
+			setPreview(null);
+			return;
+		}
+		const url = URL.createObjectURL(file);
+		setPreview(url);
+		return () => URL.revokeObjectURL(url);
+	}, [file]);
 
 	async function onSubmit(e: React.FormEvent) {
 		e.preventDefault();
@@ -131,49 +143,79 @@ export default function NewRequestPage() {
 		router.replace(`/service/requests/${res.id}`);
 	}
 
+	const descLen = description.length;
+	const priceNum = Number(price) || 0;
+
 	return (
-		<div className="px-4 pt-4 md:px-6 md:pt-8">
+		<div className="mx-auto max-w-lg px-4 pb-28 pt-4 md:px-6 md:pt-8">
 			<ProfileBackLink href="/service/requests" label={t("requestsTitle")} />
-			<h1 className="admin-page-title">{t("requestNew")}</h1>
-			<p className="mt-1 text-sm text-muted-foreground">
+			<h1 className="mt-2 text-[26px] font-bold tracking-tight text-foreground">
+				{t("requestNew")}
+			</h1>
+			<p className="mt-1 text-[14px] leading-snug text-muted-foreground">
 				{t("requestNewSubtitle")}
 			</p>
 
-			<form
-				onSubmit={(e) => void onSubmit(e)}
-				className="mx-auto mt-6 max-w-lg space-y-4"
-			>
+			<form onSubmit={(e) => void onSubmit(e)} className="mt-6 space-y-5">
 				{error ? (
 					<Alert variant="destructive">
 						<AlertDescription>{error}</AlertDescription>
 					</Alert>
 				) : null}
 
-				<Field>
-					<FieldLabel htmlFor="image">{t("providerChooseImage")}</FieldLabel>
-					<Input
-						id="image"
+				<label className="flex min-h-[140px] cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-[#b8c4b0] bg-[#f7faf5] px-4 py-8 text-center transition-colors hover:bg-[#f0f5ec]">
+					{preview ? (
+						// eslint-disable-next-line @next/next/no-img-element
+						<img
+							src={preview}
+							alt=""
+							className="max-h-32 rounded-xl object-cover"
+						/>
+					) : (
+						<>
+							<span className="flex size-12 items-center justify-center rounded-full bg-primary/10 text-primary">
+								<ImagePlusIcon className="size-6" />
+							</span>
+							<p className="text-[14px] text-foreground">
+								<span className="font-semibold text-primary">
+									{t("requestTapUpload")}
+								</span>{" "}
+								{t("requestOrDropPhotos")}
+							</p>
+							<p className="text-[12px] text-muted-foreground">
+								{t("requestImageHint")}
+							</p>
+						</>
+					)}
+					<input
 						type="file"
-						accept="image/*"
+						accept="image/png,image/jpeg,image/heic,image/webp"
+						className="sr-only"
 						onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-						className="bg-white"
 					/>
-				</Field>
+				</label>
 
-				<Field>
-					<FieldLabel htmlFor="name">{t("providerServiceName")}</FieldLabel>
-					<Input
+				<div className="space-y-1.5">
+					<label
+						htmlFor="name"
+						className="text-[11px] font-bold tracking-[0.08em] text-foreground uppercase"
+					>
+						{t("providerServiceName")} *
+					</label>
+					<input
 						id="name"
 						required
 						value={serviceName}
 						onChange={(e) => setServiceName(e.target.value)}
-						placeholder={t("providerServiceNamePlaceholder")}
-						className="bg-white"
+						placeholder={t("requestServiceNamePlaceholder")}
+						className="h-12 w-full rounded-xl border-0 bg-[#eef3ea] px-4 text-[15px] outline-none ring-primary/0 transition focus:bg-white focus:ring-2 focus:ring-primary/25"
 					/>
-				</Field>
+				</div>
 
-				<Field>
-					<FieldLabel>{t("providerSelectCategory")}</FieldLabel>
+				<div className="space-y-1.5">
+					<p className="text-[11px] font-bold tracking-[0.08em] text-foreground uppercase">
+						{t("providerSelectCategory")} *
+					</p>
 					<SearchableSelect
 						options={categories.map((c) => ({
 							id: c.id,
@@ -181,13 +223,16 @@ export default function NewRequestPage() {
 						}))}
 						value={categoryId}
 						onChange={setCategoryId}
-						placeholder={t("providerSelectCategory")}
+						placeholder={t("requestSelectCategory")}
+						triggerClassName="h-12 rounded-xl border-0 bg-[#eef3ea] focus-visible:bg-white"
 					/>
-				</Field>
+				</div>
 
 				{categoryId ? (
-					<Field>
-						<FieldLabel>{t("providerSelectSubcategory")}</FieldLabel>
+					<div className="space-y-1.5">
+						<p className="text-[11px] font-bold tracking-[0.08em] text-foreground uppercase">
+							{t("providerSelectSubcategory")} *
+						</p>
 						<SearchableSelect
 							options={subCategories.map((s) => ({
 								id: s.id,
@@ -197,42 +242,83 @@ export default function NewRequestPage() {
 							onChange={setSubCategoryId}
 							placeholder={t("providerSelectSubcategory")}
 							disabled={subCategories.length === 0}
+							triggerClassName="h-12 rounded-xl border-0 bg-[#eef3ea] focus-visible:bg-white"
 						/>
-					</Field>
+					</div>
 				) : null}
 
-				<Field>
-					<FieldLabel htmlFor="desc">{t("requestDescription")}</FieldLabel>
-					<Textarea
+				<div className="space-y-1.5">
+					<div className="flex items-end justify-between gap-2">
+						<label
+							htmlFor="desc"
+							className="text-[11px] font-bold tracking-[0.08em] text-foreground uppercase"
+						>
+							{t("requestDescription")} *
+						</label>
+						<span className="text-[12px] tabular-nums text-muted-foreground">
+							{descLen} / {MAX_DESC}
+						</span>
+					</div>
+					<textarea
 						id="desc"
 						required
-						rows={5}
+						rows={4}
 						value={description}
-						onChange={(e) => setDescription(e.target.value)}
+						onChange={(e) =>
+							setDescription(e.target.value.slice(0, MAX_DESC))
+						}
 						placeholder={t("requestDescPlaceholder")}
-						className="bg-white"
+						className="min-h-[110px] w-full resize-y rounded-xl border-0 bg-[#eef3ea] px-4 py-3 text-[15px] leading-relaxed outline-none focus:bg-white focus:ring-2 focus:ring-primary/25"
 					/>
-				</Field>
+				</div>
 
-				<Field>
-					<FieldLabel htmlFor="budget">{t("requestBudget")}</FieldLabel>
-					<Input
-						id="budget"
-						type="number"
-						min={MIN_BUDGET}
-						required
-						value={price}
-						onChange={(e) => setPrice(e.target.value)}
-						placeholder={String(MIN_BUDGET)}
-						className="bg-white"
-					/>
-					<p className="mt-1 text-xs text-muted-foreground">
-						{t("requestBudgetMin", { min: String(MIN_BUDGET) })}
-					</p>
-				</Field>
+				<div className="space-y-2">
+					<label
+						htmlFor="budget"
+						className="text-[11px] font-bold tracking-[0.08em] text-foreground uppercase"
+					>
+						{t("requestBudget")} *
+					</label>
+					<div className="relative">
+						<input
+							id="budget"
+							type="number"
+							min={MIN_BUDGET}
+							required
+							value={price}
+							onChange={(e) => setPrice(e.target.value)}
+							className="h-12 w-full rounded-xl border-0 bg-[#eef3ea] px-4 pr-28 text-[15px] outline-none focus:bg-white focus:ring-2 focus:ring-primary/25"
+						/>
+						<span className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 rounded-full bg-primary/15 px-2.5 py-1 text-[11px] font-semibold text-primary">
+							{t("requestCurrencyEtb")}
+						</span>
+					</div>
+					<div className="flex flex-wrap gap-2">
+						{BUDGET_CHIPS.map((chip) => (
+							<button
+								key={chip}
+								type="button"
+								onClick={() => setPrice(String(chip))}
+								className={cn(
+									"rounded-full px-3.5 py-1.5 text-[13px] font-semibold transition-colors",
+									priceNum === chip
+										? "bg-primary/15 text-primary"
+										: "bg-[#eef3ea] text-foreground hover:bg-[#e4ecde]",
+								)}
+							>
+								{chip.toLocaleString()}
+							</button>
+						))}
+					</div>
+				</div>
 
-				<Button type="submit" className="w-full" disabled={busy}>
+				<Button
+					type="submit"
+					disabled={busy}
+					className="h-12 w-full gap-2 rounded-2xl text-[15px] font-semibold"
+				>
 					{busy ? t("requestPosting") : t("requestPostButton")}
+					{!busy ? <ArrowRightIcon className="size-4" /> : null}
 				</Button>
 			</form>
 		</div>

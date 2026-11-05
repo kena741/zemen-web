@@ -190,7 +190,19 @@ export default function CustomerBookingDetailPage() {
 
 	async function onPayWallet() {
 		if (!booking || !user?.id || busy) return;
-		const amount = Number(booking.totalAmount ?? booking.subTotal ?? 0) || 0;
+		const statusNow = (booking.status || "").toLowerCase();
+		const extra =
+			Number(
+				booking.extraChargeAmount ?? booking.extraCharge?.extraCharge ?? 0,
+			) || 0;
+		const amount =
+			statusNow === "pending_extra_payment" && extra > 0
+				? extra
+				: Number(booking.totalAmount ?? booking.subTotal ?? 0) || 0;
+		if (amount <= 0) {
+			setActionError(t("bookServicePriceRequired"));
+			return;
+		}
 		if (
 			!window.confirm(
 				t("bookingPayWalletConfirm", { amount: formatAmount(amount) }),
@@ -204,6 +216,7 @@ export default function CustomerBookingDetailPage() {
 			bookingId: booking.id,
 			customerId: user.customer?.id ?? user.id,
 			amount,
+			extraPayment: statusNow === "pending_extra_payment",
 		});
 		setBusy(false);
 		if (!res.ok) {

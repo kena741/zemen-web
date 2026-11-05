@@ -27,6 +27,16 @@ function normalizeAddress(row: Record<string, unknown>): CustomerAddress {
 	};
 }
 
+function pickAddressList(row: Record<string, unknown>): unknown {
+	// Mobile persists as customer_addresses (and sometimes address)
+	return (
+		row.customer_addresses ??
+		row.address ??
+		row.add_addresses ??
+		row.addAddresses
+	);
+}
+
 export async function fetchCustomerAddresses(
 	customerId: string,
 	authUserId?: string,
@@ -37,13 +47,13 @@ export async function fetchCustomerAddresses(
 
 	const { data, error } = await getSupabase()
 		.from("customer")
-		.select("add_addresses")
+		.select("customer_addresses, address, default_address")
 		.or(filter)
 		.maybeSingle();
 
 	if (error) return { addresses: [], error: error.message };
 	const row = (data ?? {}) as Record<string, unknown>;
-	const raw = row.add_addresses;
+	const raw = pickAddressList(row);
 	if (!Array.isArray(raw)) return { addresses: [], error: null };
 	return {
 		addresses: raw.map((item) =>
@@ -63,10 +73,14 @@ export async function saveCustomerAddresses(params: {
 	addresses: CustomerAddress[];
 }): Promise<{ ok: boolean; error: string | null }> {
 	const defaultId =
-		params.addresses.find((a) => a.isDefault)?.id ?? params.addresses[0]?.id ?? null;
+		params.addresses.find((a) => a.isDefault)?.id ??
+		params.addresses[0]?.id ??
+		null;
 
+	// Match mobile CustomerModel.toJson keys
 	const payload = {
-		add_addresses: params.addresses,
+		customer_addresses: params.addresses,
+		address: params.addresses,
 		default_address: defaultId,
 	};
 
@@ -88,7 +102,10 @@ export async function upsertCustomerAddress(params: {
 	authUserId?: string;
 	address: CustomerAddress;
 }): Promise<{ ok: boolean; error: string | null }> {
-	const existing = await fetchCustomerAddresses(params.customerId, params.authUserId);
+	const existing = await fetchCustomerAddresses(
+		params.customerId,
+		params.authUserId,
+	);
 	if (existing.error) return { ok: false, error: existing.error };
 
 	let list = [...existing.addresses];
@@ -115,7 +132,10 @@ export async function deleteCustomerAddress(params: {
 	authUserId?: string;
 	addressId: string;
 }): Promise<{ ok: boolean; error: string | null }> {
-	const existing = await fetchCustomerAddresses(params.customerId, params.authUserId);
+	const existing = await fetchCustomerAddresses(
+		params.customerId,
+		params.authUserId,
+	);
 	if (existing.error) return { ok: false, error: existing.error };
 
 	const list = existing.addresses.filter((a) => a.id !== params.addressId);

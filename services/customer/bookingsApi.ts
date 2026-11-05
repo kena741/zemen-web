@@ -182,6 +182,8 @@ export async function payBookingWithWallet(params: {
 	customerId: string;
 	amount: number;
 	nextCycle?: boolean;
+	/** After paying an extra charge, move booking to pending_approval. */
+	extraPayment?: boolean;
 	billingInterval?: string | null;
 	billingIntervalCount?: number | null;
 }): Promise<{ ok: boolean; newBalance: number | null; error: string | null }> {
@@ -193,7 +195,7 @@ export async function payBookingWithWallet(params: {
 	const supabase = getSupabase();
 	const { data: customer, error: custErr } = await supabase
 		.from("customer")
-		.select("id, wallet_amount, walletAmount")
+		.select("id, wallet_amount")
 		.eq("id", params.customerId)
 		.maybeSingle();
 
@@ -206,8 +208,7 @@ export async function payBookingWithWallet(params: {
 	}
 
 	const row = customer as Record<string, unknown>;
-	const balance =
-		Number(row.wallet_amount ?? row.walletAmount ?? 0) || 0;
+	const balance = Number(row.wallet_amount ?? 0) || 0;
 	if (amount > 0 && balance < amount) {
 		return {
 			ok: false,
@@ -239,7 +240,6 @@ export async function payBookingWithWallet(params: {
 		.from("customer")
 		.update({
 			wallet_amount: String(newBalance),
-			walletAmount: String(newBalance),
 		})
 		.eq("id", params.customerId);
 
@@ -269,12 +269,16 @@ export async function payBookingWithWallet(params: {
 			.update({ paymentType: "wallet" })
 			.eq("id", params.bookingId);
 	} else {
+		const bookUpdate: Record<string, unknown> = {
+			paymentCompleted: true,
+			paymentType: "wallet",
+		};
+		if (params.extraPayment) {
+			bookUpdate.status = "pending_approval";
+		}
 		const { error: bookErr } = await supabase
 			.from("booked_service")
-			.update({
-				paymentCompleted: true,
-				paymentType: "wallet",
-			})
+			.update(bookUpdate)
 			.eq("id", params.bookingId);
 
 		if (bookErr) {

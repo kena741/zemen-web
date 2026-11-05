@@ -62,11 +62,33 @@ export async function fetchPublicCategories(): Promise<PublicCategory[]> {
 	});
 }
 
+/** Short marketing URLs → match DB category slug/name tokens. */
+const CATEGORY_SLUG_ALIASES: Record<string, string[]> = {
+	cleaning: ["cleaning", "maid", "domestic"],
+	cooking: ["cooking", "chef", "cater", "cook"],
+	plumbing: ["plumb"],
+	electrical: ["electric"],
+	moving: ["moving", "mover", "relocation"],
+	painting: ["paint"],
+	babysitting: ["babysit", "nanny", "child"],
+};
+
 export async function fetchPublicCategoryBySlug(
 	slug: string,
 ): Promise<PublicCategory | null> {
 	const categories = await fetchPublicCategories();
-	return categories.find((c) => c.slug === slug) ?? null;
+	const exact = categories.find((c) => c.slug === slug);
+	if (exact) return exact;
+
+	const needle = slug.toLowerCase().trim();
+	const aliases = CATEGORY_SLUG_ALIASES[needle] ?? [needle];
+	return (
+		categories.find((c) => {
+			const s = c.slug.toLowerCase();
+			const n = c.categoryName.toLowerCase();
+			return aliases.some((a) => s.includes(a) || n.includes(a));
+		}) ?? null
+	);
 }
 
 export async function fetchPublicSubCategories(

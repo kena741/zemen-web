@@ -63,9 +63,25 @@ export async function POST(req: Request) {
 		if (status === "completed") {
 			return NextResponse.json({ ok: true });
 		}
-		if (status !== "pending_approval") {
+		// pending_extra_payment: customer may complete without paying the extra
+		if (
+			status !== "pending_approval" &&
+			status !== "pending_extra_payment"
+		) {
 			return NextResponse.json(
 				{ error: "Booking is not ready to complete" },
+				{ status: 400 },
+			);
+		}
+
+		const gross = Math.max(
+			0,
+			asNumber(row.totalAmount) || asNumber(row.subTotal),
+		);
+		// ponytail: unpaid bookings must not mint provider wallet credit
+		if (gross > 0 && row.paymentCompleted !== true) {
+			return NextResponse.json(
+				{ error: "Booking is not paid" },
 				{ status: 400 },
 			);
 		}
@@ -79,7 +95,7 @@ export async function POST(req: Request) {
 			.from("booked_service")
 			.update({ status: "completed" })
 			.eq("id", bookingId)
-			.eq("status", "pending_approval");
+			.in("status", ["pending_approval", "pending_extra_payment"]);
 
 		if (statusErr) {
 			return NextResponse.json({ error: statusErr.message }, { status: 500 });
@@ -96,11 +112,6 @@ export async function POST(req: Request) {
 		if (existingTx) {
 			return NextResponse.json({ ok: true });
 		}
-
-		const gross = Math.max(
-			0,
-			asNumber(row.totalAmount) || asNumber(row.subTotal),
-		);
 
 		let commissionRule =
 			row.adminCommission && typeof row.adminCommission === "object"
