@@ -120,14 +120,6 @@ function LoginForm() {
 		<AuthShell
 			title={t("signInToAccount")}
 			className="max-w-100"
-			footer={
-				<Link
-					href="/signup"
-					className="font-medium text-primary hover:underline"
-				>
-					{t("createAnAccount")}
-				</Link>
-			}
 			belowCard={
 				<footer className="flex flex-col items-center gap-3 text-[12px]">
 					<div className="flex flex-wrap items-center justify-center gap-2">
@@ -291,14 +283,20 @@ function LoginForm() {
 							? t("signingIn")
 							: t("signInAs", { mode: modeLabel(mode) })}
 					</Button>
-					<p className="text-center text-sm text-muted-foreground">
+					<div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-sm">
+						<Link
+							href="/signup"
+							className="font-medium text-primary hover:underline"
+						>
+							{t("createAnAccount")}
+						</Link>
 						<Link
 							href="/forgot-password"
 							className="text-primary hover:underline"
 						>
 							{t("forgotPassword")}
 						</Link>
-					</p>
+					</div>
 					{/* Reserve height so guest link does not shift layout */}
 					<div className="min-h-5 text-center">
 						{mode === "service" ? (
