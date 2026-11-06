@@ -17,8 +17,6 @@ import {
 } from "lucide-react";
 
 import { LocaleThemeToggle } from "@/components/app/locale-theme-toggle";
-import { TelegramLink } from "@/components/app/telegram-link";
-import { WhatsAppLink } from "@/components/app/whatsapp-link";
 import { NotificationPermissionControl } from "@/components/push/notification-permission-control";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { UserAvatar } from "@/components/ui/user-avatar";
@@ -27,8 +25,6 @@ import { useLocale } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { formatAmount } from "@/services/bookings/types";
 import { useAuth } from "@/store/useAuth";
-
-const SUPPORT_EMAIL = "support@zemenservice.com";
 
 function MenuLink({
 	href,
@@ -188,31 +184,24 @@ export default function CustomerProfilePage() {
 						label={t("profileChangePassword")}
 					/>
 					<div className="mx-4 border-t border-border/60" />
-					<a
-						href={`mailto:${SUPPORT_EMAIL}`}
-						className="flex items-center gap-3 px-4 py-3.5 transition-colors hover:bg-muted/40"
-					>
-						<MailIcon className="size-[22px] shrink-0 text-foreground" />
-						<span className="min-w-0 flex-1 text-sm">{t("contactUs")}</span>
-						<ChevronRightIcon className="size-4 shrink-0 text-muted-foreground" />
-					</a>
+					<MenuLink
+						href="/service/contact"
+						icon={MailIcon}
+						label={t("contactUs")}
+					/>
 				</div>
 			</section>
 
-			<div className="mt-6 space-y-2">
-				<WhatsAppLink className="w-full justify-center" />
-				<TelegramLink className="w-full justify-center" />
-				<div className="flex justify-center gap-4 text-xs text-muted-foreground">
-					<Link href="/legal/privacy" className="hover:text-primary">
-						{t("legalPrivacy")}
-					</Link>
-					<Link href="/legal/terms" className="hover:text-primary">
-						{t("legalTerms")}
-					</Link>
-					<Link href="/legal/about" className="hover:text-primary">
-						{t("legalAbout")}
-					</Link>
-				</div>
+			<div className="mt-6 flex justify-center gap-4 text-xs text-muted-foreground">
+				<Link href="/legal/privacy" className="hover:text-primary">
+					{t("legalPrivacy")}
+				</Link>
+				<Link href="/legal/terms" className="hover:text-primary">
+					{t("legalTerms")}
+				</Link>
+				<Link href="/legal/about" className="hover:text-primary">
+					{t("legalAbout")}
+				</Link>
 			</div>
 
 			<Button

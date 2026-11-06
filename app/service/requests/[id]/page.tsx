@@ -10,6 +10,7 @@ import {
 
 import { ProfileBackLink } from "@/components/provider/profile-back-link";
 import { ServiceLoading } from "@/components/service/service-loading";
+import { Button } from "@/components/ui/button";
 import { ImageLightbox } from "@/components/ui/image-lightbox";
 import { useLocale } from "@/lib/i18n";
 import { getSupabase } from "@/lib/supabase/client";
@@ -259,27 +260,15 @@ export default function RequestDetailPage() {
 											)}
 										</div>
 										<div className="min-w-0 flex-1">
-											<div className="flex items-start justify-between gap-2">
-												<div className="min-w-0">
-													<p className="truncate text-[15px] font-bold">
-														{name}
+											<div className="min-w-0">
+												<p className="truncate text-[15px] font-bold">
+													{name}
+												</p>
+												{bid.createdAt ? (
+													<p className="mt-0.5 flex items-center gap-1.5 text-[12px] text-muted-foreground">
+														<CalendarIcon className="size-3.5 shrink-0" />
+														{formatJobDate(bid.createdAt)}
 													</p>
-													{bid.createdAt ? (
-														<p className="mt-0.5 flex items-center gap-1.5 text-[12px] text-muted-foreground">
-															<CalendarIcon className="size-3.5 shrink-0" />
-															{formatJobDate(bid.createdAt)}
-														</p>
-													) : null}
-												</div>
-												{!job.accepted ? (
-													<button
-														type="button"
-														disabled={busy}
-														onClick={() => void onAcceptBid(bid)}
-														className="shrink-0 rounded-full bg-primary/15 px-3.5 py-1.5 text-[13px] font-semibold text-primary transition-colors hover:bg-primary/25 disabled:opacity-50"
-													>
-														{t("requestAcceptBid")}
-													</button>
 												) : null}
 											</div>
 											<div className="mt-3 flex items-center justify-between gap-2 border-t border-border/50 pt-2.5">
@@ -290,6 +279,16 @@ export default function RequestDetailPage() {
 													{formatAmount(bid.price)}
 												</p>
 											</div>
+											{!job.accepted ? (
+												<Button
+													type="button"
+													disabled={busy}
+													onClick={() => void onAcceptBid(bid)}
+													className="mt-3 h-11 w-full rounded-xl text-[15px] font-semibold shadow-sm"
+												>
+													{t("requestAcceptBid")}
+												</Button>
+											) : null}
 										</div>
 									</div>
 								</li>

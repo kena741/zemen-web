@@ -362,11 +362,6 @@ export default function CustomerBookingDetailPage() {
 			serviceId: booking.serviceId,
 			rating,
 			comment,
-			customerName:
-				user.customer?.fullName ||
-				user.name ||
-				[booking.firstName, booking.lastName].filter(Boolean).join(" ") ||
-				null,
 		});
 		setBusy(false);
 		if (!res.ok) {

@@ -208,10 +208,10 @@ export async function submitServiceReview(params: {
 	serviceId: string;
 	rating: number;
 	comment: string;
-	customerName?: string | null;
 }): Promise<{ ok: boolean; error: string | null }> {
 	const rating = Math.min(5, Math.max(1, Math.round(params.rating)));
 	const id = crypto.randomUUID();
+	// review_customer has no customerName column — names hydrate on read.
 	const payload: Record<string, unknown> = {
 		id,
 		rating: String(rating),
@@ -221,9 +221,6 @@ export async function submitServiceReview(params: {
 		serviceId: params.serviceId,
 		date: new Date().toISOString(),
 	};
-	if (params.customerName?.trim()) {
-		payload.customerName = params.customerName.trim();
-	}
 
 	const existing = await fetchReviewForBooking(params.bookingId);
 	const supabase = getSupabase();
