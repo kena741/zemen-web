@@ -197,10 +197,6 @@ export default function ServiceDetailPage() {
 		Boolean(service.discount) &&
 		service.discount !== "0" &&
 		Number(service.discount) > 0;
-	const typeLabel =
-		(service.type ?? "").trim().toLowerCase() === "fixed"
-			? t("bookServiceTypeFixed")
-			: (service.type?.trim() || null);
 	const descPrefix = hasDiscount
 		? Number(service.discount) <= 100
 			? `(${service.discount}% off) `
@@ -364,25 +360,22 @@ export default function ServiceDetailPage() {
 									<span>{service.address}</span>
 								</p>
 							) : null}
-							<div className="mt-3 flex flex-wrap gap-2">
-								{typeLabel ? (
-									<span className="rounded-md bg-[#EFEFEF] px-2.5 py-1 text-[12px] font-semibold text-[#525252]">
-										{typeLabel}
-									</span>
-								) : null}
-								{isRecurring ? (
-									<RecurringBadge
-										interval={service.billingInterval}
-										count={service.billingIntervalCount}
-									/>
-								) : hasPartialPrePayment ? (
-									<span className="rounded-md bg-[#EFEFEF] px-2.5 py-1 text-[12px] font-semibold text-[#525252]">
-										{t("bookingPayPercentNow", {
-											percent: String(prePayPercent),
-										})}
-									</span>
-								) : null}
-							</div>
+							{(isRecurring || hasPartialPrePayment) && (
+								<div className="mt-3 flex flex-wrap gap-2">
+									{isRecurring ? (
+										<RecurringBadge
+											interval={service.billingInterval}
+											count={service.billingIntervalCount}
+										/>
+									) : (
+										<span className="rounded-md bg-[#EFEFEF] px-2.5 py-1 text-[12px] font-semibold text-[#525252]">
+											{t("bookingPayPercentNow", {
+												percent: String(prePayPercent),
+											})}
+										</span>
+									)}
+								</div>
+							)}
 						</section>
 
 						<section>

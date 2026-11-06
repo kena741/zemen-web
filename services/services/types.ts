@@ -124,7 +124,7 @@ function parseLocation(raw: unknown): {
 
 export function mapServiceRow(row: Record<string, unknown>): ProviderService {
 	const images = Array.isArray(row.serviceImage)
-		? row.serviceImage.map(String).filter(Boolean)
+		? [...new Set(row.serviceImage.map(String).filter(Boolean))]
 		: [];
 	const loc = parseLocation(row.location);
 	const categoryModel =

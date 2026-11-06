@@ -3,8 +3,16 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
-import { ArrowLeftIcon, PencilIcon, StarIcon, Trash2Icon } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import {
+	ArrowLeftIcon,
+	ChevronLeftIcon,
+	ChevronRightIcon,
+	MapPinIcon,
+	PencilIcon,
+	StarIcon,
+	Trash2Icon,
+} from "lucide-react";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
@@ -39,11 +47,33 @@ import {
 import { useAuth } from "@/store/useAuth";
 import { useCachedProviderServiceDetail } from "@/store/useProviderCache";
 
+function StatusChip({
+	children,
+	tone = "neutral",
+}: {
+	children: React.ReactNode;
+	tone?: "neutral" | "good" | "warn" | "muted";
+}) {
+	return (
+		<span
+			className={cn(
+				"inline-flex items-center rounded-full px-2.5 py-1 text-[12px] font-semibold",
+				tone === "good" && "bg-emerald-50 text-emerald-800",
+				tone === "warn" && "bg-amber-50 text-amber-900",
+				tone === "muted" && "bg-muted text-muted-foreground",
+				tone === "neutral" && "bg-primary/10 text-primary",
+			)}
+		>
+			{children}
+		</span>
+	);
+}
+
 function DetailRow({ label, value }: { label: string; value: React.ReactNode }) {
 	return (
-		<div className="flex flex-col gap-0.5 border-b border-border py-3 last:border-b-0 sm:flex-row sm:items-baseline sm:justify-between sm:gap-4">
-			<dt className="text-sm text-muted-foreground">{label}</dt>
-			<dd className="text-sm font-medium text-foreground sm:text-right">
+		<div className="flex flex-col gap-0.5 border-b border-border/70 py-3.5 last:border-b-0 sm:flex-row sm:items-baseline sm:justify-between sm:gap-4">
+			<dt className="text-[13px] text-muted-foreground">{label}</dt>
+			<dd className="text-[14px] font-semibold text-foreground sm:text-right">
 				{value ?? "—"}
 			</dd>
 		</div>
@@ -66,6 +96,31 @@ export default function ServiceDetailPage() {
 	const [featuredGateway, setFeaturedGateway] =
 		useState<PaymentGateway>("telebirr");
 	const [deleteOpen, setDeleteOpen] = useState(false);
+	const [imgIndex, setImgIndex] = useState(0);
+	const carouselRef = useRef<HTMLDivElement>(null);
+	const ignoreScrollRef = useRef(false);
+
+	useEffect(() => {
+		setImgIndex(0);
+		carouselRef.current?.scrollTo({ left: 0 });
+	}, [service?.id]);
+
+	function goToImage(next: number) {
+		const el = carouselRef.current;
+		const count = service?.serviceImage.length ?? 0;
+		if (!el || count < 1) return;
+		const i = ((next % count) + count) % count;
+		ignoreScrollRef.current = true;
+		setImgIndex(i);
+		const slide = el.children[i] as HTMLElement | undefined;
+		el.scrollTo({
+			left: slide?.offsetLeft ?? i * el.clientWidth,
+			behavior: "smooth",
+		});
+		window.setTimeout(() => {
+			ignoreScrollRef.current = false;
+		}, 450);
+	}
 
 	useEffect(() => {
 		if (!service || !user?.provider?.id) return;
@@ -167,52 +222,127 @@ export default function ServiceDetailPage() {
 			) : (
 				<>
 					{service.serviceImage.length > 0 ? (
-						<div className="mb-5 grid grid-cols-2 gap-2 sm:grid-cols-3">
-							{service.serviceImage.map((src, i) => (
-								<div
-									key={src}
-									className={cn(
-										"relative overflow-hidden rounded-xl border border-border bg-muted",
-										i === 0
-											? "col-span-2 aspect-[16/9] sm:col-span-3"
-											: "aspect-square",
-									)}
-								>
-									<Image
-										src={src}
-										alt=""
-										fill
-										className="object-cover"
-										unoptimized
-										sizes="(max-width: 672px) 100vw, 672px"
-									/>
-								</div>
-							))}
+						<div className="relative mb-5">
+							<div
+								ref={carouselRef}
+								className="flex aspect-[16/10] snap-x snap-mandatory overflow-x-auto rounded-2xl bg-muted ring-1 ring-black/5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+								onScroll={(e) => {
+									if (ignoreScrollRef.current) return;
+									const el = e.currentTarget;
+									const w = el.clientWidth || 1;
+									const next = Math.round(el.scrollLeft / w);
+									if (
+										next !== imgIndex &&
+										next >= 0 &&
+										next < service.serviceImage.length
+									) {
+										setImgIndex(next);
+									}
+								}}
+							>
+								{service.serviceImage.map((src, i) => (
+									<div
+										key={`${src}-${i}`}
+										className="relative h-full min-w-full shrink-0 snap-center"
+									>
+										<Image
+											src={src}
+											alt=""
+											fill
+											className="object-cover"
+											unoptimized
+											sizes="(max-width: 672px) 100vw, 672px"
+											priority={i === 0}
+										/>
+									</div>
+								))}
+							</div>
+							{service.serviceImage.length > 1 ? (
+								<>
+									<button
+										type="button"
+										onClick={() => goToImage(imgIndex - 1)}
+										className="absolute top-1/2 left-2 z-10 flex size-10 -translate-y-1/2 items-center justify-center rounded-full bg-black/45 text-white shadow-md backdrop-blur-sm transition-colors hover:bg-black/60"
+										aria-label={t("commonBack")}
+									>
+										<ChevronLeftIcon className="size-5" />
+									</button>
+									<button
+										type="button"
+										onClick={() => goToImage(imgIndex + 1)}
+										className="absolute top-1/2 right-2 z-10 flex size-10 -translate-y-1/2 items-center justify-center rounded-full bg-black/45 text-white shadow-md backdrop-blur-sm transition-colors hover:bg-black/60"
+										aria-label={t("commonNext")}
+									>
+										<ChevronRightIcon className="size-5" />
+									</button>
+									<span className="absolute top-3 right-3 z-10 rounded-full bg-black/55 px-2.5 py-1 text-[11px] font-bold text-white tabular-nums">
+										{imgIndex + 1}/{service.serviceImage.length}
+									</span>
+									<div className="mt-3 flex justify-center gap-1.5">
+										{service.serviceImage.map((_, i) => (
+											<button
+												key={i}
+												type="button"
+												onClick={() => goToImage(i)}
+												aria-label={`${i + 1}`}
+												className={cn(
+													"h-1.5 rounded-full transition-all",
+													i === imgIndex
+														? "w-5 bg-primary"
+														: "w-1.5 bg-muted-foreground/35",
+												)}
+											/>
+										))}
+									</div>
+								</>
+							) : null}
 						</div>
 					) : null}
 
 					<div className="flex flex-wrap items-start justify-between gap-3">
-						<div>
+						<div className="min-w-0 flex-1">
 							<p className="admin-eyebrow">{t("serviceTitle")}</p>
-							<h1 className="admin-page-title mt-1">
+							<h1 className="admin-page-title mt-1 text-balance">
 								{service.serviceName ?? t("providerServiceUntitled")}
 							</h1>
-							<p className="mt-1 text-sm text-muted-foreground">
-								{service.archived
-									? t("providerServiceArchived")
-									: service.status
-										? t("providerServiceActive")
-										: t("providerServiceInactive")}
-								{service.feature ? ` · ${t("providerServiceFeaturedLabel")}` : null}
-								{featuredPending ? ` · ${t("providerFeaturePending")}` : null}
-								{service.approved === false ? ` · ${t("providerPendingApproval")}` : null}
-							</p>
+							<div className="mt-3 flex flex-wrap gap-1.5">
+								{service.archived ? (
+									<StatusChip tone="muted">
+										{t("providerServiceArchived")}
+									</StatusChip>
+								) : service.status ? (
+									<StatusChip tone="good">
+										{t("providerServiceActive")}
+									</StatusChip>
+								) : (
+									<StatusChip tone="muted">
+										{t("providerServiceInactive")}
+									</StatusChip>
+								)}
+								{service.feature ? (
+									<StatusChip tone="neutral">
+										{t("providerServiceFeaturedLabel")}
+									</StatusChip>
+								) : null}
+								{featuredPending ? (
+									<StatusChip tone="warn">
+										{t("providerFeaturePending")}
+									</StatusChip>
+								) : null}
+								{service.approved === false ? (
+									<StatusChip tone="warn">
+										{t("providerPendingApproval")}
+									</StatusChip>
+								) : service.approved === true ? (
+									<StatusChip tone="good">{t("statusApproved")}</StatusChip>
+								) : null}
+							</div>
 						</div>
 						<Link
 							href={`/provider/services/${service.id}/edit`}
 							className={cn(
 								buttonVariants({ variant: "outline", size: "sm" }),
-								"inline-flex items-center gap-1.5",
+								"inline-flex shrink-0 items-center gap-1.5",
 							)}
 						>
 							<PencilIcon className="size-3.5" />
@@ -231,46 +361,65 @@ export default function ServiceDetailPage() {
 						</Alert>
 					) : null}
 
-					{service.description ? (
-						<p className="mt-4 text-sm leading-relaxed text-muted-foreground">
-							{service.description}
+					<section className="mt-5 overflow-hidden rounded-2xl bg-primary px-5 py-5 text-primary-foreground shadow-sm">
+						<p className="text-[13px] font-medium text-primary-foreground/80">
+							{t("commonPrice")}
 						</p>
+						<p className="mt-1 text-[28px] font-bold tracking-tight tabular-nums">
+							{formatAmount(service.price)}
+						</p>
+						<p className="mt-1 text-[13px] text-primary-foreground/80">
+							{service.pricingType === "RECURRING"
+								? `${t("pricingRecurring")} · ${service.billingInterval ?? "MONTH"} × ${service.billingIntervalCount || 1}`
+								: t("pricingOneTime")}
+							{service.discount && service.discount !== "0"
+								? ` · ${service.discount}% ${t("commonDiscount")}`
+								: null}
+						</p>
+					</section>
+
+					{service.description ? (
+						<section className="mt-5 rounded-2xl bg-white px-4 py-4 shadow-[0_1px_3px_rgba(0,0,0,0.06)] ring-1 ring-black/5">
+							<h2 className="text-[13px] font-semibold tracking-wide text-muted-foreground uppercase">
+								{t("serviceDescription")}
+							</h2>
+							<p className="mt-2 text-[14px] leading-relaxed whitespace-pre-wrap text-foreground/90">
+								{service.description}
+							</p>
+						</section>
 					) : null}
 
-					<dl className="mt-6 rounded-xl border border-border bg-white px-4 shadow-xs">
-						<DetailRow label={t("commonPrice")} value={formatAmount(service.price)} />
-						<DetailRow
-							label={t("commonCategory")}
-							value={
-								[service.categoryName, service.subCategoryName]
-									.filter(Boolean)
-									.join(" · ") || null
-							}
-						/>
-						<DetailRow label={t("commonType")} value={service.type} />
-						<DetailRow
-							label={t("providerLocationMode")}
-							value={service.serviceLocationMode}
-						/>
-						<DetailRow label={t("commonAddress")} value={service.address} />
-						<DetailRow
-							label={t("providerApprovalStatus")}
-							value={
-								service.approved === true
-									? t("statusApproved")
-									: service.approved === false
-										? t("providerPendingApproval")
-										: t("commonStatus")
-							}
-						/>
-						<DetailRow
-							label={t("pricingOneTime")}
-							value={
-								service.pricingType === "RECURRING"
-									? `${t("pricingRecurring")} · ${service.billingInterval ?? "MONTH"} × ${service.billingIntervalCount || 1}`
-									: t("pricingOneTime")
-							}
-						/>
+					{(service.categoryName ||
+						service.subCategoryName ||
+						service.address) && (
+						<section className="mt-4 rounded-2xl bg-white px-4 py-1 shadow-[0_1px_3px_rgba(0,0,0,0.06)] ring-1 ring-black/5">
+							<dl>
+								{(service.categoryName || service.subCategoryName) && (
+									<DetailRow
+										label={t("commonCategory")}
+										value={
+											[service.categoryName, service.subCategoryName]
+												.filter(Boolean)
+												.join(" · ") || null
+										}
+									/>
+								)}
+								{service.address ? (
+									<DetailRow
+										label={t("commonAddress")}
+										value={
+											<span className="inline-flex items-start justify-end gap-1.5 sm:max-w-xs">
+												<MapPinIcon className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" />
+												<span>{service.address}</span>
+											</span>
+										}
+									/>
+								) : null}
+							</dl>
+						</section>
+					)}
+
+					<dl className="mt-4 rounded-2xl bg-white px-4 shadow-[0_1px_3px_rgba(0,0,0,0.06)] ring-1 ring-black/5">
 						{service.pricingType !== "RECURRING" ? (
 							<DetailRow
 								label={t("providerPrePaymentPercent")}
@@ -306,15 +455,13 @@ export default function ServiceDetailPage() {
 								</Link>
 							}
 						/>
-						{service.discount && service.discount !== "0" ? (
-							<DetailRow label={t("commonDiscount")} value={`${service.discount}%`} />
-						) : null}
 					</dl>
 
-					<div className="mt-6 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+					<div className="mt-6 flex flex-col gap-2.5 rounded-2xl bg-white p-4 shadow-[0_1px_3px_rgba(0,0,0,0.06)] ring-1 ring-black/5 sm:flex-row sm:flex-wrap sm:items-center">
 						{service.archived ? (
 							<Button
 								disabled={busy}
+								className="h-11 rounded-xl sm:min-w-36"
 								onClick={() => void toggleActive()}
 							>
 								{t("providerServiceRestore")}
@@ -323,6 +470,7 @@ export default function ServiceDetailPage() {
 							<Button
 								variant={service.status ? "outline" : "default"}
 								disabled={busy}
+								className="h-11 rounded-xl sm:min-w-36"
 								onClick={() => void toggleActive()}
 							>
 								{service.status
@@ -335,7 +483,7 @@ export default function ServiceDetailPage() {
 							<Button
 								variant="outline"
 								disabled={busy}
-								className="gap-1.5"
+								className="h-11 gap-1.5 rounded-xl"
 								onClick={() => void handleFeatured()}
 							>
 								<StarIcon className="size-3.5" />
@@ -344,9 +492,9 @@ export default function ServiceDetailPage() {
 						) : null}
 
 						{featuredPending ? (
-							<span className="inline-flex items-center rounded-md bg-amber-100 px-2.5 py-1.5 text-xs font-medium text-amber-900">
+							<StatusChip tone="warn">
 								{t("providerServiceFeaturedPending")}
-							</span>
+							</StatusChip>
 						) : null}
 
 						{featuredFee != null && featuredFee > 0 ? (
@@ -421,10 +569,12 @@ export default function ServiceDetailPage() {
 						) : null}
 
 						{service.feature ? (
-							<span className="inline-flex items-center gap-1 rounded-md bg-secondary px-2.5 py-1.5 text-xs font-medium text-secondary-foreground">
-								<StarIcon className="size-3.5" />
-								{t("providerServiceFeaturedLabel")}
-							</span>
+							<StatusChip tone="neutral">
+								<span className="inline-flex items-center gap-1">
+									<StarIcon className="size-3.5" />
+									{t("providerServiceFeaturedLabel")}
+								</span>
+							</StatusChip>
 						) : null}
 
 						<AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
@@ -433,7 +583,7 @@ export default function ServiceDetailPage() {
 									<Button
 										variant="destructive"
 										disabled={busy}
-										className="gap-1.5 sm:ml-auto"
+										className="h-11 gap-1.5 rounded-xl sm:ml-auto"
 									/>
 								}
 							>
