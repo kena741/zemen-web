@@ -2,6 +2,7 @@
 
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useMemo, useState } from "react";
+import Image from "next/image";
 import {
 	ArrowLeftIcon,
 	CalendarIcon,
@@ -12,6 +13,8 @@ import {
 	MapPinIcon,
 	MinusIcon,
 	PlusIcon,
+	ShieldCheckIcon,
+	XIcon,
 } from "lucide-react";
 
 import { ProfileBackLink } from "@/components/provider/profile-back-link";
@@ -33,9 +36,10 @@ import { formatAmount } from "@/services/bookings/types";
 import { createCustomerBooking, payBookingWithWallet } from "@/services/customer/bookingsApi";
 import { savePaymentPending } from "@/lib/payment-pending";
 import {
-	getTelebirrPayMode,
-	launchTelebirrPayment,
-} from "@/lib/telebirr-client-pay";
+	filterBookingDescriptionInput,
+	isPastTimeOnDate,
+	validateBookingDescription,
+} from "@/lib/booking-description";
 import {
 	couponDiscount,
 	fetchCouponByCode,
@@ -177,9 +181,11 @@ function BookServiceForm() {
 	const [couponCode, setCouponCode] = useState("");
 	const [appliedCoupon, setAppliedCoupon] = useState<Coupon | null>(null);
 	const [couponError, setCouponError] = useState<string | null>(null);
-	const [paymentMethod, setPaymentMethod] = useState<"wallet" | "telebirr">(
-		"telebirr",
+	const [paymentMethod, setPaymentMethod] = useState<"wallet" | "chapa">(
+		"wallet",
 	);
+	const [payDialogOpen, setPayDialogOpen] = useState(false);
+	const [customConfirmOpen, setCustomConfirmOpen] = useState(false);
 	const [savedAddresses, setSavedAddresses] = useState<CustomerAddress[]>([]);
 	const [payConfig, setPayConfig] = useState<PaymentMethodsConfig | null>(null);
 	const [step, setStep] = useState<1 | 2>(1);
@@ -269,13 +275,15 @@ function BookServiceForm() {
 	const hasPartialPrePayment = !isRecurring && !isCustomOffer && prePayPercent < 100;
 
 	const walletAffordable = walletBalance >= dueNow;
-	const telebirrEnabled = !payConfig || payConfig.telebirrEnabled;
+	const chapaEnabled = !payConfig || payConfig.chapaEnabled;
+	const isFixedService =
+		(service?.type ?? "").trim().toLowerCase() === "fixed";
 	const paymentOptions = useMemo(() => {
-		const options: Array<"wallet" | "telebirr"> = [];
+		const options: Array<"wallet" | "chapa"> = [];
 		if (walletAffordable) options.push("wallet");
-		if (telebirrEnabled) options.push("telebirr");
+		if (chapaEnabled) options.push("chapa");
 		return options;
-	}, [walletAffordable, telebirrEnabled]);
+	}, [walletAffordable, chapaEnabled]);
 
 	useEffect(() => {
 		if (paymentOptions.includes(paymentMethod)) return;
@@ -285,8 +293,18 @@ function BookServiceForm() {
 
 	const paymentLabels = {
 		wallet: t("paymentWallet"),
-		telebirr: t("paymentTelebirr"),
+		chapa: t("paymentChapa"),
 	} as const;
+
+	function descriptionErrorMessage(
+		issue: ReturnType<typeof validateBookingDescription>,
+	): string | null {
+		if (issue === "empty") return t("bookServiceDescriptionRequired");
+		if (issue === "tooShort") return t("bookServiceDescriptionTooShort");
+		if (issue === "tooLong") return t("bookServiceDescriptionTooLong");
+		if (issue === "invalidChars") return t("bookServiceDescriptionInvalidChars");
+		return null;
+	}
 
 	async function applyCoupon() {
 		setCouponError(null);
@@ -327,16 +345,14 @@ function BookServiceForm() {
 			setError(t("bookServiceEnterAddress"));
 			return;
 		}
-		if (!description.trim()) {
-			setError(t("bookServiceDescriptionRequired"));
+		const descIssue = validateBookingDescription(description);
+		const descErr = descriptionErrorMessage(descIssue);
+		if (descErr) {
+			setError(descErr);
 			return;
 		}
-		if (description.trim().length < 10) {
-			setError(t("bookServiceDescriptionTooShort"));
-			return;
-		}
-		if (description.trim().length > 1000) {
-			setError(t("bookServiceDescriptionTooShort"));
+		if (isPastTimeOnDate(bookingDate, startTime)) {
+			setError(t("bookServicePastTime"));
 			return;
 		}
 		if (unitPrice <= 0) {
@@ -485,11 +501,11 @@ function BookServiceForm() {
 			userId: user.id,
 			accountType: "customer",
 			amount: String(dueNow),
-			gateway: "telebirr",
+			gateway: "chapa",
 			bookingId: res.bookingId,
 		});
 		setBusy(false);
-		const payRes = await fetch("/api/pay/telebirr", {
+		const payRes = await fetch("/api/pay/chapa", {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
 			body: JSON.stringify({
@@ -501,18 +517,15 @@ function BookServiceForm() {
 				purpose: "booking",
 				return_path: `/pay/done?purpose=booking&amount=${dueNow}`,
 				booking_id: res.bookingId,
-				mode: getTelebirrPayMode(),
 			}),
 		});
 		const payData = (await payRes.json()) as {
 			checkout_url?: string;
-			raw_request?: string;
 			tx_ref?: string;
-			mode?: "h5" | "miniapp";
 			error?: string;
 		};
-		if (!payRes.ok || (!payData.checkout_url && !payData.raw_request)) {
-			setError(payData.error || t("bookServiceTelebirrFailed"));
+		if (!payRes.ok || !payData.checkout_url) {
+			setError(payData.error || t("bookServiceChapaFailed"));
 			return;
 		}
 		if (payData.tx_ref) {
@@ -521,17 +534,12 @@ function BookServiceForm() {
 				userId: user.id,
 				accountType: "customer",
 				amount: String(dueNow),
-				gateway: "telebirr",
+				gateway: "chapa",
 				bookingId: res.bookingId,
 				txRef: payData.tx_ref,
 			});
 		}
-		const launched = await launchTelebirrPayment(payData, {
-			donePath: `/pay/done?purpose=booking&amount=${dueNow}&tx_ref=${encodeURIComponent(payData.tx_ref ?? "")}`,
-		});
-		if (!launched.ok && !launched.canceled) {
-			setError(launched.error || t("bookServiceTelebirrFailed"));
-		}
+		window.location.href = payData.checkout_url;
 	}
 
 	if (loading || !user) return <ServiceLoading />;
@@ -553,13 +561,15 @@ function BookServiceForm() {
 			setError(t("bookServiceEnterAddress"));
 			return;
 		}
-		const desc = description.trim();
-		if (!desc) {
-			setError(t("bookServiceDescriptionRequired"));
+		const descErr = descriptionErrorMessage(
+			validateBookingDescription(description),
+		);
+		if (descErr) {
+			setError(descErr);
 			return;
 		}
-		if (desc.length < 10) {
-			setError(t("bookServiceDescriptionTooShort"));
+		if (isPastTimeOnDate(bookingDate, startTime)) {
+			setError(t("bookServicePastTime"));
 			return;
 		}
 		if (unitPrice <= 0) {
@@ -568,6 +578,23 @@ function BookServiceForm() {
 		}
 		setStep(2);
 		window.scrollTo({ top: 0, behavior: "smooth" });
+	}
+
+	function onConfirmClick() {
+		setError(null);
+		if (isCustomOffer) {
+			setCustomConfirmOpen(true);
+			return;
+		}
+		if (dueNow > 0) {
+			if (paymentOptions.length === 0) {
+				setError(t("bookServiceInsufficientWallet"));
+				return;
+			}
+			setPayDialogOpen(true);
+			return;
+		}
+		void onSubmit();
 	}
 
 	const serviceImage = service.serviceImage?.[0] ?? null;
@@ -610,12 +637,13 @@ function BookServiceForm() {
 				</Alert>
 			) : null}
 
+			{/* Keep step 1 mounted so Places autocomplete survives step 1↔2. */}
 			<div
-				key={step}
-				className="motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-1 motion-safe:duration-200"
+				className={cn(
+					"space-y-5 rounded-2xl bg-white p-4 shadow-[0_1px_2px_rgba(0,0,0,0.04)] motion-safe:animate-in motion-safe:fade-in motion-safe:duration-200",
+					step !== 1 && "hidden",
+				)}
 			>
-				{step === 1 ? (
-					<div className="space-y-5 rounded-2xl bg-white p-4 shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
 						<label className="block space-y-1.5">
 							<span className="text-[13px] font-semibold text-[#1a1a1a]">
 								{t("bookServiceDate")}
@@ -627,7 +655,13 @@ function BookServiceForm() {
 									required
 									min={todayIsoDate()}
 									value={bookingDate}
-									onChange={(e) => setBookingDate(e.target.value)}
+									onChange={(e) => {
+										const next = e.target.value;
+										setBookingDate(next);
+										if (isPastTimeOnDate(next, startTime)) {
+											setStartTime(nowTimeValue());
+										}
+									}}
 									className={fieldClass}
 								/>
 							</div>
@@ -643,7 +677,15 @@ function BookServiceForm() {
 									type="time"
 									required
 									value={startTime}
-									onChange={(e) => setStartTime(e.target.value)}
+									onChange={(e) => {
+										const next = e.target.value;
+										if (isPastTimeOnDate(bookingDate, next)) {
+											setError(t("bookServicePastTime"));
+											return;
+										}
+										setError(null);
+										setStartTime(next);
+									}}
 									className={fieldClass}
 								/>
 							</div>
@@ -704,7 +746,9 @@ function BookServiceForm() {
 								maxLength={1000}
 								placeholder={t("bookServiceDescriptionPlaceholder")}
 								value={description}
-								onChange={(e) => setDescription(e.target.value)}
+								onChange={(e) =>
+									setDescription(filterBookingDescriptionInput(e.target.value))
+								}
 								className="min-h-28 rounded-xl border-[#e8e8e8] bg-white text-[15px] shadow-none focus-visible:ring-2 focus-visible:ring-primary/25"
 							/>
 							<p
@@ -737,55 +781,78 @@ function BookServiceForm() {
 						) : null}
 
 						{allowsCustom ? (
-							<div className="space-y-2 border-t border-[#eee] pt-4">
+							<div className="space-y-3 border-t border-[#eee] pt-4">
 								<button
 									type="button"
 									onClick={() => {
 										const next = !useCustomPrice;
 										setUseCustomPrice(next);
-										if (next) setAppliedCoupon(null);
+										if (next) {
+											setAppliedCoupon(null);
+											if (!customPrice.trim() && catalogPrice > 0) {
+												setCustomPrice(String(catalogPrice));
+											}
+										}
 									}}
 									className={cn(
-										"flex w-full items-center justify-between rounded-xl px-3 py-3 text-left text-[13px] font-medium transition-colors duration-150",
+										"flex w-full items-center justify-between rounded-xl px-3.5 py-3.5 text-left transition-colors duration-150",
 										useCustomPrice
-											? "bg-primary/10 text-primary"
-											: "bg-[#f7f7f5] text-[#1a1a1a] hover:bg-[#f0f0ee]",
+											? "bg-primary/10 ring-1 ring-primary/30"
+											: "bg-[#f7f7f5] hover:bg-[#f0f0ee]",
 									)}
 								>
-									<span>{t("bookServiceCustomPrice")}</span>
+									<span className="min-w-0">
+										<span
+											className={cn(
+												"block text-[14px] font-semibold",
+												useCustomPrice ? "text-primary" : "text-[#1a1a1a]",
+											)}
+										>
+											{t("bookServiceCustomPrice")}
+										</span>
+										<span className="mt-0.5 block text-[12px] text-[#6b6b6b]">
+											{t("bookServiceCustomHint")}
+										</span>
+									</span>
 									<span
 										className={cn(
-											"flex size-5 items-center justify-center rounded-full border-2 transition-colors duration-150",
+											"flex size-6 shrink-0 items-center justify-center rounded-full border-2 transition-colors duration-150",
 											useCustomPrice
 												? "border-primary bg-primary text-white"
 												: "border-[#ccc]",
 										)}
 									>
 										{useCustomPrice ? (
-											<CheckIcon className="size-3" strokeWidth={3} />
+											<CheckIcon className="size-3.5" strokeWidth={3} />
 										) : null}
 									</span>
 								</button>
 								{useCustomPrice ? (
-									<>
-										<Input
-											inputMode="decimal"
-											required
-											value={customPrice}
-											onChange={(e) => setCustomPrice(e.target.value)}
-											placeholder={t("bookServiceYourPrice")}
-											className="h-12 rounded-xl border-[#e8e8e8] bg-white text-[15px]"
-										/>
-										<p className="text-[12px] leading-snug text-[#6b6b6b]">
-											{t("bookServiceCustomHint")}
-										</p>
-									</>
+									<label className="block space-y-1.5">
+										<span className="text-[13px] font-semibold text-[#1a1a1a]">
+											{t("bookServiceYourPrice")}
+										</span>
+										<div className="relative">
+											<span className="pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2 text-[13px] font-medium text-[#8a8a8a]">
+												ETB
+											</span>
+											<Input
+												inputMode="decimal"
+												required
+												value={customPrice}
+												onChange={(e) => setCustomPrice(e.target.value)}
+												placeholder="0"
+												className="h-12 rounded-xl border-[#e8e8e8] bg-white pl-12 text-[15px] tabular-nums shadow-none focus-visible:ring-2 focus-visible:ring-primary/25"
+											/>
+										</div>
+									</label>
 								) : null}
 							</div>
 						) : null}
-					</div>
-				) : (
-					<div className="space-y-4">
+			</div>
+
+			{step === 2 ? (
+					<div className="space-y-4 motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-1 motion-safe:duration-200">
 						<section className="space-y-2">
 							<h2 className="text-[15px] font-bold text-[#1a1a1a]">
 								{t("bookServiceDateTime")}
@@ -810,7 +877,7 @@ function BookServiceForm() {
 							</div>
 						</section>
 
-						{!isCustomOffer ? (
+						{isFixedService ? (
 							<section className="space-y-2">
 								<h2 className="text-[15px] font-bold text-[#1a1a1a]">
 									{t("bookServiceQty")}
@@ -963,8 +1030,8 @@ function BookServiceForm() {
 										<span className="font-bold">
 											{isRecurring
 												? t("bookServiceFirstCycle")
-												: t("commonTotal")}
-									</span>
+												: t("bookServiceTotalAmount")}
+										</span>
 										<span className="font-bold tabular-nums text-primary">
 											{formatAmount(total)}
 										</span>
@@ -973,42 +1040,8 @@ function BookServiceForm() {
 							</div>
 						</section>
 
-						{!isCustomOffer && dueNow > 0 ? (
-							<div className="space-y-2.5 rounded-2xl bg-white p-4 shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
-								<p className="text-[13px] font-semibold">
-									{t("bookServicePayment")}
-								</p>
-								{paymentOptions.length === 0 ? (
-									<p className="text-xs text-destructive">
-										{t("bookServiceInsufficientWallet")}
-									</p>
-								) : (
-									<div className="flex flex-wrap gap-2">
-										{paymentOptions.map((method) => (
-											<button
-												key={method}
-												type="button"
-												className={cn(
-													"h-10 min-w-[30%] flex-1 rounded-xl text-[13px] font-semibold transition-colors duration-150",
-													paymentMethod === method
-														? "bg-primary text-primary-foreground"
-														: "bg-[#f0f0ee] text-[#1a1a1a] hover:bg-[#e8e8e4]",
-												)}
-												onClick={() => setPaymentMethod(method)}
-											>
-												{paymentLabels[method]}
-												{method === "wallet"
-													? ` (${formatAmount(walletBalance)})`
-													: ""}
-											</button>
-										))}
-									</div>
-								)}
-							</div>
-						) : null}
 					</div>
-				)}
-			</div>
+			) : null}
 
 			<div
 				className="fixed inset-x-0 bottom-0 z-30 bg-white/95 px-4 pt-3 shadow-[0_-8px_24px_rgba(0,0,0,0.06)] backdrop-blur-md"
@@ -1028,7 +1061,7 @@ function BookServiceForm() {
 							type="button"
 							className="h-12 w-full rounded-2xl text-[15px] font-semibold"
 							disabled={busy}
-							onClick={() => void onSubmit()}
+							onClick={onConfirmClick}
 						>
 							{busy
 								? t("commonSubmitting")
@@ -1039,6 +1072,223 @@ function BookServiceForm() {
 					)}
 				</div>
 			</div>
+
+			{payDialogOpen ? (
+				<div className="fixed inset-0 z-50 flex items-end justify-center bg-black/45 p-4 sm:items-center">
+					<div
+						role="dialog"
+						aria-modal="true"
+						aria-labelledby="book-pay-title"
+						className="relative w-full max-w-[22rem] rounded-2xl bg-white px-4 pt-5 pb-4 shadow-xl"
+					>
+						<button
+							type="button"
+							aria-label={t("commonCancel")}
+							className="absolute top-3 right-3 flex size-8 items-center justify-center rounded-full text-[#6b6b6b] hover:bg-black/5"
+							onClick={() => setPayDialogOpen(false)}
+						>
+							<XIcon className="size-5" />
+						</button>
+						<div className="mx-auto flex size-14 items-center justify-center rounded-full bg-[#7CB518]">
+							<CheckIcon className="size-8 text-white" strokeWidth={3} />
+						</div>
+						<h2
+							id="book-pay-title"
+							className="mt-3 text-center text-[18px] font-bold text-[#1a1a1a]"
+						>
+							{t("bookServiceConfirm")}
+						</h2>
+						<div className="mt-3 flex gap-2 rounded-lg border border-[#E8A317]/40 bg-[#E8A317]/12 px-2.5 py-2">
+							<ShieldCheckIcon className="mt-0.5 size-4 shrink-0 text-[#C47F0A]" />
+							<p className="text-[12px] leading-snug text-[#C47F0A]">
+								{t("bookServiceEscrowNotice")}
+							</p>
+						</div>
+						<p className="mt-4 text-[15px] font-bold text-[#1a1a1a]">
+							{t("bookServicePaymentMethod")}
+						</p>
+						<div className="mt-3 space-y-3">
+							{paymentOptions.includes("wallet") ? (
+								<button
+									type="button"
+									onClick={() => setPaymentMethod("wallet")}
+									className={cn(
+										"flex w-full items-center gap-3 rounded-[10px] bg-[#f5f5f5] px-3 py-3 text-left",
+										paymentMethod === "wallet"
+											? "ring-1 ring-primary"
+											: "ring-1 ring-transparent",
+									)}
+								>
+									<Image
+										src="/payments/wallet.png"
+										alt=""
+										width={46}
+										height={46}
+										className="size-11 object-contain"
+									/>
+									<span className="min-w-0 flex-1">
+										<span className="block text-[15px] font-medium text-[#1a1a1a]">
+											{t("bookServiceMyWallet")}
+										</span>
+										<span className="mt-0.5 block text-[13px] tabular-nums text-[#1a1a1a]">
+											ETB {walletBalance.toFixed(3)}
+										</span>
+									</span>
+									<span
+										className={cn(
+											"flex size-5 items-center justify-center rounded-full border-2",
+											paymentMethod === "wallet"
+												? "border-primary"
+												: "border-[#c8c8c8]",
+										)}
+									>
+										{paymentMethod === "wallet" ? (
+											<span className="size-2.5 rounded-full bg-primary" />
+										) : null}
+									</span>
+								</button>
+							) : null}
+							{paymentOptions.includes("chapa") ? (
+								<button
+									type="button"
+									onClick={() => setPaymentMethod("chapa")}
+									className={cn(
+										"flex w-full items-center gap-3 rounded-[10px] bg-[#f5f5f5] px-3 py-3 text-left",
+										paymentMethod === "chapa"
+											? "ring-1 ring-primary"
+											: "ring-1 ring-transparent",
+									)}
+								>
+									<Image
+										src="/payments/chapa.png"
+										alt=""
+										width={46}
+										height={46}
+										className="size-11 object-contain"
+									/>
+									<span className="min-w-0 flex-1 text-[15px] font-medium text-[#1a1a1a]">
+										{paymentLabels.chapa}
+									</span>
+									<span
+										className={cn(
+											"flex size-5 items-center justify-center rounded-full border-2",
+											paymentMethod === "chapa"
+												? "border-primary"
+												: "border-[#c8c8c8]",
+										)}
+									>
+										{paymentMethod === "chapa" ? (
+											<span className="size-2.5 rounded-full bg-primary" />
+										) : null}
+									</span>
+								</button>
+							) : null}
+						</div>
+						{paymentMethod ? (
+							<div className="mt-3 rounded-[10px] border border-[#e8e8e8] bg-[#f5f5f5] px-3 py-2">
+								<div className="flex items-center justify-between py-1.5 text-[14px]">
+									<span className="font-medium text-[#1a1a1a]">
+										{hasPartialPrePayment
+											? t("bookingPayPercentNow", {
+													percent: String(prePayPercent),
+												})
+											: t("bookServiceServiceAmount")}
+									</span>
+									<span className="font-bold tabular-nums text-[#2e7d32]">
+										{formatAmount(dueNow)}
+									</span>
+								</div>
+								{remaining > 0 ? (
+									<div className="flex items-center justify-between py-1.5 text-[14px]">
+										<span className="font-medium text-[#1a1a1a]">
+											{t("bookServiceRemainingAfter")}
+										</span>
+										<span className="font-bold tabular-nums text-[#2e7d32]">
+											{formatAmount(remaining)}
+										</span>
+									</div>
+								) : null}
+								<div className="my-1 border-t border-[#e0e0e0]" />
+								<div className="flex items-center justify-between py-1.5 text-[14px]">
+									<span className="font-bold text-[#1a1a1a]">
+										{t("bookServiceTotalAmount")}
+									</span>
+									<span className="font-bold tabular-nums text-[#2e7d32]">
+										{formatAmount(dueNow)}
+									</span>
+								</div>
+							</div>
+						) : null}
+						<Button
+							type="button"
+							className="mt-4 h-12 w-full rounded-xl bg-[#13452A] text-[15px] font-semibold text-white hover:bg-[#0f3a23]"
+							disabled={busy || !paymentMethod}
+							onClick={() => {
+								setPayDialogOpen(false);
+								void onSubmit();
+							}}
+						>
+							{busy ? t("commonSubmitting") : t("bookServicePayNow")}
+						</Button>
+					</div>
+				</div>
+			) : null}
+
+			{customConfirmOpen ? (
+				<div className="fixed inset-0 z-50 flex items-end justify-center bg-black/45 p-4 sm:items-center">
+					<div
+						role="dialog"
+						aria-modal="true"
+						aria-labelledby="book-custom-title"
+						className="relative w-full max-w-[22rem] rounded-2xl bg-white px-4 pt-5 pb-4 shadow-xl"
+					>
+						<button
+							type="button"
+							aria-label={t("commonCancel")}
+							className="absolute top-3 right-3 flex size-8 items-center justify-center rounded-full text-[#6b6b6b] hover:bg-black/5"
+							onClick={() => setCustomConfirmOpen(false)}
+						>
+							<XIcon className="size-5" />
+						</button>
+						<div className="mx-auto flex size-14 items-center justify-center rounded-full bg-[#7CB518]">
+							<CheckIcon className="size-8 text-white" strokeWidth={3} />
+						</div>
+						<h2
+							id="book-custom-title"
+							className="mt-3 text-center text-[18px] font-bold text-[#1a1a1a]"
+						>
+							{t("bookServiceCustomConfirmTitle")}
+						</h2>
+						<p className="mt-2 text-center text-[13px] leading-snug text-[#6b6b6b]">
+							{t("bookServiceCustomConfirmBody")}
+						</p>
+						<div className="mt-4 rounded-[10px] border border-[#e8e8e8] bg-[#f5f5f5] px-3 py-2.5">
+							<div className="flex items-center justify-between text-[14px]">
+								<span className="font-medium text-[#1a1a1a]">
+									{t("bookServiceYourPrice")}
+								</span>
+								<span className="font-bold tabular-nums text-[#2e7d32]">
+									{formatAmount(unitPrice)}
+								</span>
+							</div>
+						</div>
+						<p className="mt-3 text-center text-[12px] leading-snug text-[#8a8a8a]">
+							{t("bookServiceCustomNoMessageHint")}
+						</p>
+						<Button
+							type="button"
+							className="mt-4 h-12 w-full rounded-xl bg-[#13452A] text-[15px] font-semibold text-white hover:bg-[#0f3a23]"
+							disabled={busy}
+							onClick={() => {
+								setCustomConfirmOpen(false);
+								void onSubmit();
+							}}
+						>
+							{busy ? t("commonSubmitting") : t("bookServiceSendCustom")}
+						</Button>
+					</div>
+				</div>
+			) : null}
 		</div>
 	);
 }

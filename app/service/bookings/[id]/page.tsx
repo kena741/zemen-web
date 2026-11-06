@@ -439,11 +439,31 @@ export default function CustomerBookingDetailPage() {
 		Boolean(proof?.description?.trim()) ||
 		Boolean(proof?.image?.length);
 	const qty = Number(booking.quantity) || 1;
-	const unitPrice = Number(booking.service?.price ?? 0) || 0;
+	const offeredPrice =
+		offer?.offeredPrice != null ? Number(offer.offeredPrice) : null;
+	const bookingTotal =
+		Number(booking.totalAmount ?? booking.subTotal ?? 0) || 0;
+	const unitPrice =
+		offeredPrice != null && Number.isFinite(offeredPrice)
+			? offeredPrice
+			: Number(booking.service?.price ?? 0) || 0;
 	const priceLine =
-		unitPrice > 0
-			? `${formatAmount(unitPrice)}${qty > 1 ? ` × ${qty}` : ""}`
-			: formatAmount(booking.subTotal ?? booking.totalAmount);
+		offeredPrice != null && Number.isFinite(offeredPrice)
+			? formatAmount(offeredPrice)
+			: unitPrice > 0
+				? `${formatAmount(unitPrice)}${qty > 1 ? ` × ${qty}` : ""}`
+				: formatAmount(booking.subTotal ?? booking.totalAmount);
+	const showSubTotal =
+		!offer &&
+		booking.subTotal != null &&
+		Math.abs(Number(booking.subTotal) - bookingTotal) > 0.001;
+	const paymentLabel = booking.paymentCompleted
+		? t("bookingPaidWith", {
+				type: booking.paymentType || t("commonPaid"),
+			})
+		: offer
+			? t("commonUnpaid")
+			: booking.paymentType || t("commonUnpaid");
 	const extraAmount =
 		booking.extraChargeAmount ?? booking.extraCharge?.extraCharge ?? null;
 
@@ -536,14 +556,48 @@ export default function CustomerBookingDetailPage() {
 				) : null}
 
 				{isAwaitingOfferApproval ? (
-					<p className="rounded-xl bg-[#CC5A02]/12 px-3.5 py-3 text-[14px] font-medium text-[#9A3412]">
-						{t("bookingCustomPriceWaitBanner")}
-					</p>
+					<div className="overflow-hidden rounded-2xl border border-[#CC5A02]/25 bg-[#FFF7ED]">
+						<div className="flex items-start gap-3 px-4 py-3.5">
+							<span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-full bg-[#CC5A02]/15 text-[#CC5A02]">
+								<ShieldCheckIcon className="size-4" />
+							</span>
+							<div className="min-w-0 flex-1">
+								<p className="text-[14px] font-bold text-[#9A3412]">
+									{t("bookingAwaitingApproval")}
+								</p>
+								<p className="mt-0.5 text-[13px] leading-snug text-[#9A3412]/90">
+									{t("bookingCustomPriceWaitBanner")}
+								</p>
+								{offer?.offeredPrice != null ? (
+									<p className="mt-2 text-[15px] font-bold tabular-nums text-[#CC5A02]">
+										{formatAmount(offer.offeredPrice)}
+									</p>
+								) : null}
+							</div>
+						</div>
+					</div>
 				) : null}
 				{isAwaitingCustomPricePayment ? (
-					<p className="rounded-xl bg-[#CC5A02]/12 px-3.5 py-3 text-[14px] font-medium text-[#9A3412]">
-						{t("bookingCustomPricePayBanner")}
-					</p>
+					<div className="overflow-hidden rounded-2xl border border-[#CC5A02]/25 bg-[#FFF7ED]">
+						<div className="flex items-start gap-3 px-4 py-3.5">
+							<span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-full bg-[#CC5A02]/15 text-[#CC5A02]">
+								<ShieldCheckIcon className="size-4" />
+							</span>
+							<div className="min-w-0 flex-1">
+								<p className="text-[14px] font-bold text-[#9A3412]">
+									{t("bookingAwaitingPayment")}
+								</p>
+								<p className="mt-0.5 text-[13px] leading-snug text-[#9A3412]/90">
+									{t("bookingCustomPricePayBanner")}
+								</p>
+								{offer?.offeredPrice != null ? (
+									<p className="mt-2 text-[15px] font-bold tabular-nums text-[#CC5A02]">
+										{formatAmount(offer.offeredPrice)}
+									</p>
+								) : null}
+							</div>
+						</div>
+					</div>
 				) : null}
 				{showNextCyclePay ? (
 					<p className="rounded-xl bg-[#CC5A02]/12 px-3.5 py-3 text-[14px] font-medium text-[#9A3412]">
@@ -564,27 +618,35 @@ export default function CustomerBookingDetailPage() {
 				</Section>
 
 				<Section title={t("bookingPaymentDetail")}>
-					<MoneyRow label={t("bookServicePriceLine")} value={priceLine} />
-					{booking.subTotal ? (
+					{offer ? (
 						<MoneyRow
-							label={t("bookingSubTotal")}
-							value={formatAmount(booking.subTotal)}
+							label={t("bookingOfferedPrice")}
+							value={formatAmount(
+								offeredPrice != null && Number.isFinite(offeredPrice)
+									? offeredPrice
+									: booking.totalAmount ?? booking.subTotal,
+							)}
+							strong
 						/>
-					) : null}
-					<MoneyRow
-						label={t("bookingTotalAmount")}
-						value={formatAmount(booking.totalAmount ?? booking.subTotal)}
-						strong
-					/>
+					) : (
+						<>
+							<MoneyRow label={t("bookServicePriceLine")} value={priceLine} />
+							{showSubTotal ? (
+								<MoneyRow
+									label={t("bookingSubTotal")}
+									value={formatAmount(booking.subTotal)}
+								/>
+							) : null}
+							<MoneyRow
+								label={t("bookingTotalAmount")}
+								value={formatAmount(booking.totalAmount ?? booking.subTotal)}
+								strong
+							/>
+						</>
+					)}
 					<div className="border-t border-border/60 px-3.5 py-3 text-[13px]">
 						<span className="text-muted-foreground">{t("bookingPayment")}: </span>
-						<span className="font-semibold">
-							{booking.paymentCompleted
-								? t("bookingPaidWith", {
-										type: booking.paymentType || t("commonPaid"),
-									})
-								: booking.paymentType || t("commonUnpaid")}
-						</span>
+						<span className="font-semibold">{paymentLabel}</span>
 					</div>
 				</Section>
 
@@ -692,7 +754,7 @@ export default function CustomerBookingDetailPage() {
 					</Section>
 				) : null}
 
-				{booking.providerId ? (
+				{booking.providerId && booking.paymentCompleted ? (
 					<Section title={t("bookingAboutProvider")}>
 						<button
 							type="button"

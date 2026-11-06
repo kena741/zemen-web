@@ -82,7 +82,9 @@ export async function getAuthUserFromRequest(req: Request): Promise<{
 	}
 
 	const client = getSupabaseForToken(accessToken);
-	const { data, error } = await client.auth.getUser();
+	// Pass JWT — getUser() with no args needs a local session and returns
+	// "Auth session missing!" on the server even when Authorization is set.
+	const { data, error } = await client.auth.getUser(accessToken);
 	if (error || !data.user) {
 		return {
 			userId: null,

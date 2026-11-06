@@ -142,7 +142,9 @@ export async function createCustomerBooking(
 		quantity: input.quantity,
 		subTotal,
 		totalAmount: total,
-		paymentType: input.paymentType || "cash",
+		paymentType:
+			input.paymentType?.trim() ||
+			(input.paymentCompleted ? "cash" : ""),
 		paymentCompleted: Boolean(input.paymentCompleted),
 		description: input.description?.trim() || "",
 		otp,

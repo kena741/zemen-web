@@ -116,6 +116,16 @@ export async function POST(request: Request) {
 					);
 				}
 			}
+
+			// Drop linked custom-price offer so it does not stay pending.
+			await admin
+				.from("service_offer")
+				.update({
+					status: "cancelled",
+					updated_at: new Date().toISOString(),
+				})
+				.eq("booking_id", bookingId)
+				.in("status", ["pending", "accepted"]);
 		} else if (
 			status !== "rejected" &&
 			status !== "cancelled" &&

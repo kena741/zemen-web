@@ -89,7 +89,10 @@ export function PlacesAddressField({
 	const inputRef = useRef<HTMLInputElement>(null);
 	const mapRef = useRef<HTMLDivElement>(null);
 	const mapsKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY?.trim();
-	const [scriptReady, setScriptReady] = useState(false);
+	// Script onLoad only fires once; remounts must see the already-loaded Maps SDK.
+	const [scriptReady, setScriptReady] = useState(
+		() => Boolean(mapsKey && getGoogle()?.maps?.places),
+	);
 	const [mapOpen, setMapOpen] = useState(false);
 	const [busyLoc, setBusyLoc] = useState(false);
 	const [mapError, setMapError] = useState<string | null>(null);

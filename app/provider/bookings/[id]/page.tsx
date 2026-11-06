@@ -372,7 +372,7 @@ export default function BookingDetailPage() {
 								{t("providerViewService")}
 							</Link>
 						) : null}
-						{booking.customerId ? (
+						{booking.customerId && booking.paymentCompleted ? (
 							<Link
 								href={`/provider/inbox/${booking.customerId}`}
 								className="inline-flex items-center gap-1 text-brand-ink underline-offset-4 hover:underline"

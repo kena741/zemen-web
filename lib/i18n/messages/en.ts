@@ -197,6 +197,23 @@ export const en = {
 	bookServiceDescriptionPlaceholder: "Enter service description (10-1000 characters)",
 	bookServiceDescriptionHint: "{count}/1000",
 	bookServiceDescriptionTooShort: "Description must be at least 10 characters.",
+	bookServiceDescriptionTooLong: "Description must not exceed 1000 characters.",
+	bookServiceDescriptionInvalidChars:
+		"Description contains invalid special characters.",
+	bookServicePastTime: "Please choose a time that is not in the past.",
+	bookServiceEscrowNotice:
+		"Payment held in escrow — refunded if the service is not completed correctly.",
+	bookServicePayNow: "Pay Now",
+	bookServicePaymentMethod: "Payment Method",
+	bookServiceMyWallet: "My Wallet",
+	bookServiceServiceAmount: "Service Amount",
+	bookServiceTotalAmount: "Total amount",
+	bookServiceChapaFee: "Chapa fee",
+	bookServiceCustomConfirmTitle: "Send custom price?",
+	bookServiceCustomConfirmBody:
+		"The provider must accept your price before you pay. Continue?",
+	bookServiceCustomNoMessageHint:
+		"Chat opens only after payment is completed.",
 	bookServiceDateTime: "Date & time",
 	bookServicePrice: "Service price",
 	bookServiceServiceTotal: "Service total",
@@ -502,6 +519,7 @@ export const en = {
 	bookingCompleteWithoutExtra: "Complete",
 	bookingPayExtra: "Pay Extra ({amount})",
 	bookingOfferBadge: "Offer",
+	bookingOfferedPrice: "Offered price",
 	bookingSubTotal: "SubTotal",
 	bookingNoDescription: "No description",
 	bookingStatusStrip: "Current status",
