@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import {
 	CalendarClockIcon,
 	CircleDollarSignIcon,
@@ -10,11 +11,16 @@ import {
 } from "lucide-react";
 
 import { UpcomingBookingCard } from "@/components/provider/booking-grid-card";
+import { JobRequestHomeCard } from "@/components/provider/job-request-card";
 import { ProviderHomeHeader } from "@/components/provider/mobile-chrome";
 import { RevenueChart } from "@/components/provider/revenue-chart";
 import { AppLoading } from "@/components/ui/app-loading";
 import { useLocale } from "@/lib/i18n";
 import { formatAmount } from "@/services/bookings/types";
+import {
+	fetchOpenJobRequests,
+	type ProviderJobRequest,
+} from "@/services/jobs/jobsApi";
 import { useAuth } from "@/store/useAuth";
 import { useCachedProviderDashboard } from "@/store/useProviderCache";
 
@@ -59,10 +65,29 @@ function StatBox({
 export default function ProviderDashboardPage() {
 	const { t } = useLocale();
 	const { user } = useAuth();
-	const providerId = user?.provider?.id ?? "";
+	const providerId = user?.provider?.id ?? user?.id ?? "";
 	const year = new Date().getFullYear();
 	const { data, loading, error } =
 		useCachedProviderDashboard(providerId, year);
+	const [jobRequests, setJobRequests] = useState<ProviderJobRequest[]>([]);
+	const [jobsLoading, setJobsLoading] = useState(false);
+
+	useEffect(() => {
+		if (!providerId) {
+			setJobRequests([]);
+			return;
+		}
+		let cancelled = false;
+		setJobsLoading(true);
+		void fetchOpenJobRequests({ providerId }).then((res) => {
+			if (cancelled) return;
+			setJobRequests(res.jobs.slice(0, 12));
+			setJobsLoading(false);
+		});
+		return () => {
+			cancelled = true;
+		};
+	}, [providerId]);
 
 	const wallet = user?.provider?.walletAmount ?? "0";
 	const totalBookings = loading ? "—" : String(data.totalBookings);
@@ -137,6 +162,33 @@ export default function ProviderDashboardPage() {
 								</div>
 							</section>
 						) : null}
+
+						<section className="mt-5">
+							<div className="mb-3 flex items-center justify-between">
+								<h2 className="text-lg font-bold text-[#464646]">
+									{t("providerJobRequestsHome")}
+								</h2>
+								<Link
+									href="/provider/jobs"
+									className="text-sm font-semibold text-primary"
+								>
+									{t("commonViewAll")}
+								</Link>
+							</div>
+							{jobsLoading ? (
+								<AppLoading compact />
+							) : jobRequests.length === 0 ? (
+								<p className="rounded-xl bg-white px-4 py-6 text-center text-sm text-muted-foreground">
+									{t("providerNoJobRequestsHome")}
+								</p>
+							) : (
+								<div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-1 scrollbar-none lg:mx-0 lg:px-0">
+									{jobRequests.map((job) => (
+										<JobRequestHomeCard key={job.id} job={job} />
+									))}
+								</div>
+							)}
+						</section>
 
 						<section className="mt-5 lg:mt-8">
 							<RevenueChart

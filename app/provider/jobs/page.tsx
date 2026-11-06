@@ -3,13 +3,12 @@
 import Link from "next/link";
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { ChevronRightIcon } from "lucide-react";
+import { ArrowLeftIcon, SearchIcon } from "lucide-react";
 
-import { ProfileBackLink } from "@/components/provider/profile-back-link";
+import { JobBidListCard } from "@/components/provider/job-request-card";
 import { AppLoading } from "@/components/ui/app-loading";
-import { Button } from "@/components/ui/button";
 import { useLocale } from "@/lib/i18n";
-import { formatAmount, formatDateTime } from "@/services/bookings/types";
+import { cn } from "@/lib/utils";
 import {
 	fetchMyBidJobs,
 	fetchOpenJobRequests,
@@ -21,7 +20,7 @@ function ProviderJobsContent() {
 	const { t } = useLocale();
 	const { user } = useAuth();
 	const search = useSearchParams();
-	const providerId = user?.provider?.id ?? "";
+	const providerId = user?.provider?.id ?? user?.id ?? "";
 	const [tab, setTab] = useState<"open" | "bids">(
 		search.get("tab") === "bids" ? "bids" : "open",
 	);
@@ -35,6 +34,11 @@ function ProviderJobsContent() {
 	}, [search]);
 
 	const load = useCallback(async () => {
+		if (!providerId) {
+			setJobs([]);
+			setLoading(false);
+			return;
+		}
 		setLoading(true);
 		setError(null);
 		const res =
@@ -52,89 +56,95 @@ function ProviderJobsContent() {
 
 	const filtered = jobs.filter((j) => {
 		if (!q.trim()) return true;
-		const hay = `${j.title ?? ""} ${j.description ?? ""}`.toLowerCase();
+		const hay = [
+			j.title,
+			j.description,
+			j.customerName,
+			j.serviceName,
+			j.categoryName,
+		]
+			.filter(Boolean)
+			.join(" ")
+			.toLowerCase();
 		return hay.includes(q.trim().toLowerCase());
 	});
 
-	return (
-		<div className="mx-auto max-w-3xl">
-			<ProfileBackLink href="/provider/profile" label={t("profileTitle")} />
-			<p className="admin-eyebrow">{t("commonMarketplace")}</p>
-			<h1 className="admin-page-title mt-1">{t("providerJobRequests")}</h1>
-			<p className="mt-2 text-sm text-muted-foreground">
-				{t("providerJobsSubtitle")}
-			</p>
+	const pageTitle =
+		tab === "bids" ? t("providerBidList") : t("providerJobRequests");
 
-			<div className="mt-4 flex gap-2">
-				<Button
-					size="sm"
-					variant={tab === "open" ? "default" : "outline"}
+	return (
+		<div className="mx-auto max-w-lg px-4 pb-10 pt-4 md:px-6 md:pt-8">
+			<div className="mb-4 flex items-center gap-2">
+				<Link
+					href="/provider"
+					className="flex size-10 items-center justify-center rounded-full text-foreground hover:bg-muted"
+					aria-label={t("commonBack")}
+				>
+					<ArrowLeftIcon className="size-5" />
+				</Link>
+				<h1 className="text-[20px] font-bold tracking-tight">{pageTitle}</h1>
+			</div>
+
+			<div className="mb-4 flex gap-2 rounded-full bg-[#f0f0ee] p-1">
+				<button
+					type="button"
 					onClick={() => setTab("open")}
+					className={cn(
+						"flex-1 rounded-full py-2 text-[13px] font-semibold transition-colors",
+						tab === "open"
+							? "bg-primary text-primary-foreground"
+							: "text-muted-foreground hover:text-foreground",
+					)}
 				>
 					{t("providerOpenJobs")}
-				</Button>
-				<Button
-					size="sm"
-					variant={tab === "bids" ? "default" : "outline"}
+				</button>
+				<button
+					type="button"
 					onClick={() => setTab("bids")}
+					className={cn(
+						"flex-1 rounded-full py-2 text-[13px] font-semibold transition-colors",
+						tab === "bids"
+							? "bg-primary text-primary-foreground"
+							: "text-muted-foreground hover:text-foreground",
+					)}
 				>
 					{t("providerMyBids")}
-				</Button>
+				</button>
 			</div>
 
-			<input
-				value={q}
-				onChange={(e) => setQ(e.target.value)}
-				placeholder={t("providerSearchJobs")}
-				className="mt-4 flex h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
-			/>
+			<label className="relative mb-4 block">
+				<SearchIcon className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-muted-foreground" />
+				<input
+					value={q}
+					onChange={(e) => setQ(e.target.value)}
+					placeholder={t("providerSearchJobs")}
+					className="h-11 w-full rounded-full border-0 bg-[#f0f0ee] py-2 pr-4 pl-10 text-[14px] outline-none focus:bg-white focus:ring-2 focus:ring-primary/20"
+				/>
+			</label>
 
 			{error ? (
-				<p className="mt-4 text-sm text-destructive">{error}</p>
+				<p className="mb-3 text-sm text-destructive">{error}</p>
 			) : null}
 
-			<div className="mt-5 rounded-xl bg-white shadow-sm ring-1 ring-black/5">
-				{loading ? (
-					<AppLoading compact />
-				) : filtered.length === 0 ? (
-					<p className="py-10 text-center text-sm text-muted-foreground">
-						{tab === "open" ? t("providerNoOpenJobs") : t("providerNoBids")}
-					</p>
-				) : (
-					filtered.map((job) => {
-						const myBid = job.bidList.find(
-							(b) => b.providerId === providerId,
-						);
-						const bidCountLabel =
-							job.bidList.length === 1
-								? t("providerBidCountOne")
-								: t("providerBidCount", { count: job.bidList.length });
-						return (
-							<Link
-								key={job.id}
-								href={`/provider/jobs/${job.id}`}
-								className="flex items-center gap-3 border-b border-border px-4 py-3 last:border-b-0 hover:bg-muted/40"
-							>
-								<div className="min-w-0 flex-1">
-									<p className="truncate text-sm font-semibold">
-										{job.title || t("providerJobRequest")}
-									</p>
-									<p className="mt-0.5 text-xs text-muted-foreground">
-										{t("providerBudget", { amount: formatAmount(job.price) })}
-										{job.createdAt
-											? ` · ${formatDateTime(job.createdAt)}`
-											: ""}
-										{myBid?.price
-											? ` · ${t("providerYourBidAmount", { amount: formatAmount(myBid.price) })}`
-											: ` · ${bidCountLabel}`}
-									</p>
-								</div>
-								<ChevronRightIcon className="size-4 shrink-0 text-muted-foreground" />
-							</Link>
-						);
-					})
-				)}
-			</div>
+			{loading ? (
+				<AppLoading compact />
+			) : filtered.length === 0 ? (
+				<p className="rounded-2xl bg-white py-12 text-center text-sm text-muted-foreground shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
+					{tab === "open" ? t("providerNoOpenJobs") : t("providerNoBids")}
+				</p>
+			) : (
+				<ul className="space-y-3">
+					{filtered.map((job) => (
+						<li key={job.id}>
+							<JobBidListCard
+								job={job}
+								providerId={providerId}
+								mode={tab}
+							/>
+						</li>
+					))}
+				</ul>
+			)}
 		</div>
 	);
 }

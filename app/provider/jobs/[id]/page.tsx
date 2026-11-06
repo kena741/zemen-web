@@ -1,16 +1,24 @@
 "use client";
 
+import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
+import {
+	ChevronRightIcon,
+	ImageIcon,
+	MapPinIcon,
+	MessageSquareIcon,
+	UserIcon,
+} from "lucide-react";
 
 import { ProfileBackLink } from "@/components/provider/profile-back-link";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AppLoading } from "@/components/ui/app-loading";
 import { Button } from "@/components/ui/button";
+import { ImageLightbox } from "@/components/ui/image-lightbox";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { useLocale } from "@/lib/i18n";
-import { formatAmount, formatDateTime } from "@/services/bookings/types";
+import { formatAmount } from "@/services/bookings/types";
 import {
 	fetchJobRequestById,
 	placeJobBid,
@@ -24,12 +32,14 @@ export default function ProviderJobDetailPage() {
 	const id = params?.id ?? "";
 	const router = useRouter();
 	const { user } = useAuth();
-	const providerId = user?.id ?? "";
+	const providerId = user?.provider?.id ?? user?.id ?? "";
 	const [job, setJob] = useState<ProviderJobRequest | null>(null);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 	const [bidPrice, setBidPrice] = useState("");
 	const [busy, setBusy] = useState(false);
+	const [showBidForm, setShowBidForm] = useState(false);
+	const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
 	const load = useCallback(async () => {
 		setLoading(true);
@@ -45,10 +55,10 @@ export default function ProviderJobDetailPage() {
 
 	const myBid = job?.bidList.find((b) => b.providerId === providerId);
 	const canBid =
-		job &&
+		Boolean(job) &&
 		!myBid &&
-		!(job.accepted && job.providerId) &&
-		!(job.providerId && job.providerId.toLowerCase() !== "null");
+		!(job?.accepted && job.providerId) &&
+		!(job?.providerId && job.providerId.toLowerCase() !== "null");
 
 	async function onBid(e: React.FormEvent) {
 		e.preventDefault();
@@ -66,6 +76,7 @@ export default function ProviderJobDetailPage() {
 			return;
 		}
 		setBidPrice("");
+		setShowBidForm(false);
 		await load();
 	}
 
@@ -73,100 +84,183 @@ export default function ProviderJobDetailPage() {
 
 	if (!job) {
 		return (
-			<div className="mx-auto max-w-2xl">
-				<ProfileBackLink href="/provider/jobs" label={t("jobsTitle")} />
+			<div className="mx-auto max-w-lg px-4 pt-4">
+				<ProfileBackLink href="/provider/jobs" label={t("providerJobDetail")} />
 				<p className="text-sm text-destructive">{error || t("commonNotFound")}</p>
 			</div>
 		);
 	}
 
+	const serviceTitle =
+		job.serviceName?.trim() || job.title?.trim() || t("providerJobRequest");
+	const images = job.imageUrls.length
+		? job.imageUrls
+		: job.imageUrl
+			? [job.imageUrl]
+			: [];
+
 	return (
-		<div className="mx-auto max-w-2xl">
-			<ProfileBackLink href="/provider/jobs" label={t("jobsTitle")} />
-			<p className="admin-eyebrow">{t("providerJobRequestEyebrow")}</p>
-			<h1 className="admin-page-title mt-1">{job.title || t("commonUntitled")}</h1>
-			<p className="mt-1 text-sm text-muted-foreground">
-				{t("providerBudget", { amount: formatAmount(job.price) })}
-				{job.createdAt ? ` · ${formatDateTime(job.createdAt)}` : ""}
-			</p>
+		<div className="mx-auto flex min-h-[min(100dvh,56rem)] max-w-lg flex-col px-4 pt-4 pb-28 md:px-6 md:pt-8">
+			<ProfileBackLink
+				href="/provider/jobs"
+				label={t("providerJobDetail")}
+				className="mb-4 font-semibold"
+			/>
 
 			{error ? (
-				<Alert variant="destructive" className="mt-4">
+				<Alert variant="destructive" className="mb-4">
 					<AlertDescription>{error}</AlertDescription>
 				</Alert>
 			) : null}
 
-			<div className="mt-5 space-y-3 rounded-xl border border-border bg-white p-4 shadow-xs">
-				{job.description ? (
-					<div>
-						<p className="text-xs text-muted-foreground">{t("commonDescription")}</p>
-						<p className="mt-0.5 whitespace-pre-wrap text-sm">
-							{job.description}
-						</p>
+			<section className="space-y-2">
+				<h2 className="text-[15px] font-bold text-foreground">
+					{t("providerAboutCustomer")}
+				</h2>
+				<div className="flex items-center gap-3 rounded-2xl bg-white p-3.5 shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
+					<div className="size-12 shrink-0 overflow-hidden rounded-full bg-muted">
+						{job.customerImage ? (
+							// eslint-disable-next-line @next/next/no-img-element
+							<img
+								src={job.customerImage}
+								alt=""
+								className="size-full object-cover"
+							/>
+						) : (
+							<div className="flex size-full items-center justify-center text-muted-foreground">
+								<UserIcon className="size-5 opacity-50" />
+							</div>
+						)}
 					</div>
-				) : null}
-				<div>
-					<p className="text-xs text-muted-foreground">{t("requestBids")}</p>
-					{job.bidList.length === 0 ? (
-						<p className="mt-1 text-sm text-muted-foreground">{t("providerNoBids")}</p>
-					) : (
-						<ul className="mt-2 space-y-2">
-							{job.bidList.map((b, i) => (
-								<li
-									key={`${b.providerId}-${i}`}
-									className="flex justify-between text-sm"
-								>
-									<span className="text-muted-foreground">
-										{b.providerId === providerId
-											? t("providerYourBid")
-											: t("providerProviderBid", {
-													id: b.providerId?.slice(0, 8) ?? "—",
-												})}
-									</span>
-									<span className="font-medium">{formatAmount(b.price)}</span>
-								</li>
-							))}
-						</ul>
-					)}
+					<div className="min-w-0 flex-1">
+						<p className="truncate text-[15px] font-bold">
+							{job.customerName?.trim() || t("customer")}
+						</p>
+						{job.address ? (
+							<p className="mt-0.5 flex items-start gap-1 text-[12px] text-muted-foreground">
+								<MapPinIcon className="mt-0.5 size-3.5 shrink-0 text-primary" />
+								<span className="line-clamp-2">{job.address}</span>
+							</p>
+						) : null}
+					</div>
+					{job.customerId ? (
+						<Link
+							href={`/provider/inbox/${job.customerId}`}
+							className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary"
+							aria-label={t("profileMessages")}
+						>
+							<MessageSquareIcon className="size-4" />
+						</Link>
+					) : null}
 				</div>
-			</div>
+			</section>
+
+			<section className="mt-5 space-y-2">
+				<h2 className="text-[15px] font-bold text-foreground">
+					{t("providerAboutService")}
+				</h2>
+				<div className="overflow-hidden rounded-2xl bg-white shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
+					<button
+						type="button"
+						className="flex w-full items-center gap-3 p-3.5 text-left"
+						onClick={() => {
+							if (images.length) setLightboxIndex(0);
+						}}
+					>
+						<div className="size-16 shrink-0 overflow-hidden rounded-xl bg-muted">
+							{images[0] ? (
+								// eslint-disable-next-line @next/next/no-img-element
+								<img
+									src={images[0]}
+									alt=""
+									className="size-full object-cover"
+								/>
+							) : (
+								<div className="flex size-full items-center justify-center text-muted-foreground">
+									<ImageIcon className="size-6 opacity-40" />
+								</div>
+							)}
+						</div>
+						<div className="min-w-0 flex-1">
+							<p className="truncate text-[15px] font-bold">{serviceTitle}</p>
+							{job.categoryName ? (
+								<p className="mt-0.5 text-[13px] text-muted-foreground">
+									{job.categoryName}
+								</p>
+							) : null}
+							<p className="mt-1 text-[15px] font-bold tabular-nums text-primary">
+								{formatAmount(job.price)}
+							</p>
+						</div>
+						<ChevronRightIcon className="size-4 shrink-0 text-muted-foreground" />
+					</button>
+					{job.description ? (
+						<div className="border-t border-border/60 bg-[#f7f7f5] px-3.5 py-3">
+							<p className="text-[13px] leading-relaxed whitespace-pre-wrap text-muted-foreground">
+								{job.description}
+							</p>
+						</div>
+					) : null}
+				</div>
+			</section>
 
 			{myBid ? (
-				<p className="mt-4 rounded-xl bg-[#e8f5e3] px-4 py-3 text-sm text-primary">
+				<p className="mt-5 rounded-2xl bg-[#e8f5e3] px-4 py-3 text-sm font-medium text-primary">
 					{t("providerBidWaiting", { amount: formatAmount(myBid.price) })}
 				</p>
-			) : canBid ? (
-				<form
-					onSubmit={onBid}
-					className="mt-5 space-y-3 rounded-xl border border-border bg-white p-4 shadow-xs"
-				>
-					<Label htmlFor="bid">{t("commonAmountEtb")}</Label>
-					<Input
-						id="bid"
-						required
-						inputMode="decimal"
-						value={bidPrice}
-						onChange={(e) => setBidPrice(e.target.value)}
-						placeholder={t("providerBidPlaceholder")}
-					/>
-					<div className="flex gap-2">
-					<Button type="submit" disabled={busy}>
-							{t("providerPlaceBid")}
-						</Button>
-						<Button
-							type="button"
-							variant="ghost"
-							onClick={() => router.push("/provider/jobs")}
+			) : null}
+
+			{lightboxIndex != null && images.length > 0 ? (
+				<ImageLightbox
+					images={images}
+					index={lightboxIndex}
+					onClose={() => setLightboxIndex(null)}
+					onIndexChange={setLightboxIndex}
+				/>
+			) : null}
+
+			{canBid ? (
+				<div className="fixed inset-x-0 bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-20 mx-auto w-full max-w-lg px-4 md:bottom-6">
+					{showBidForm ? (
+						<form
+							onSubmit={(e) => void onBid(e)}
+							className="space-y-2 rounded-2xl bg-white p-3 shadow-lg ring-1 ring-black/5"
 						>
-							{t("commonBack")}
+							<Input
+								required
+								inputMode="decimal"
+								value={bidPrice}
+								onChange={(e) => setBidPrice(e.target.value)}
+								placeholder={t("providerBidPlaceholder")}
+								className="h-11"
+							/>
+							<div className="flex gap-2">
+								<Button type="submit" className="flex-1" disabled={busy}>
+									{busy ? t("commonSaving") : t("providerPlaceBid")}
+								</Button>
+								<Button
+									type="button"
+									variant="outline"
+									onClick={() => setShowBidForm(false)}
+								>
+									{t("commonCancel")}
+								</Button>
+							</div>
+						</form>
+					) : (
+						<Button
+							className="h-12 w-full rounded-2xl text-[15px] font-semibold shadow-md"
+							onClick={() => setShowBidForm(true)}
+						>
+							{t("providerBidAction")}
 						</Button>
-					</div>
-				</form>
-			) : (
-				<p className="mt-4 text-sm text-muted-foreground">
+					)}
+				</div>
+			) : !myBid ? (
+				<p className="mt-6 text-center text-sm text-muted-foreground">
 					{t("providerBiddingClosed")}
 				</p>
-			)}
+			) : null}
 		</div>
 	);
 }

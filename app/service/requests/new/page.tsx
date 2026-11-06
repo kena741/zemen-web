@@ -1,8 +1,8 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
-import { ArrowRightIcon, ImagePlusIcon } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { ArrowRightIcon, ImagePlusIcon, XIcon } from "lucide-react";
 
 import { ProfileBackLink } from "@/components/provider/profile-back-link";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -26,7 +26,10 @@ import { useAuth } from "@/store/useAuth";
 
 const MIN_BUDGET = 500;
 const MAX_DESC = 500;
+const MAX_IMAGES = 6;
 const BUDGET_CHIPS = [500, 1000, 2500, 5000] as const;
+
+type ImageDraft = { id: string; file: File; previewUrl: string };
 
 export default function NewRequestPage() {
 	const { t } = useLocale();
@@ -41,10 +44,45 @@ export default function NewRequestPage() {
 	const [subCategoryId, setSubCategoryId] = useState("");
 	const [categories, setCategories] = useState<ServiceCategory[]>([]);
 	const [subCategories, setSubCategories] = useState<ServiceSubCategory[]>([]);
-	const [file, setFile] = useState<File | null>(null);
-	const [preview, setPreview] = useState<string | null>(null);
+	const [images, setImages] = useState<ImageDraft[]>([]);
 	const [busy, setBusy] = useState(false);
 	const [error, setError] = useState<string | null>(null);
+	const fileInputRef = useRef<HTMLInputElement>(null);
+	const imagesRef = useRef(images);
+	imagesRef.current = images;
+
+	useEffect(() => {
+		return () => {
+			for (const img of imagesRef.current) {
+				URL.revokeObjectURL(img.previewUrl);
+			}
+		};
+	}, []);
+
+	function appendImages(list: FileList | File[] | null) {
+		if (!list) return;
+		const incoming = Array.from(list);
+		if (!incoming.length) return;
+		setImages((prev) => {
+			const room = MAX_IMAGES - prev.length;
+			if (room <= 0) return prev;
+			const added = incoming.slice(0, room).map((file) => ({
+				id: crypto.randomUUID(),
+				file,
+				previewUrl: URL.createObjectURL(file),
+			}));
+			return [...prev, ...added];
+		});
+		if (fileInputRef.current) fileInputRef.current.value = "";
+	}
+
+	function removeImage(id: string) {
+		setImages((prev) => {
+			const target = prev.find((img) => img.id === id);
+			if (target) URL.revokeObjectURL(target.previewUrl);
+			return prev.filter((img) => img.id !== id);
+		});
+	}
 
 	useEffect(() => {
 		void fetchCategories().then((res) => setCategories(res.categories));
@@ -61,16 +99,6 @@ export default function NewRequestPage() {
 			setSubCategoryId("");
 		});
 	}, [categoryId]);
-
-	useEffect(() => {
-		if (!file) {
-			setPreview(null);
-			return;
-		}
-		const url = URL.createObjectURL(file);
-		setPreview(url);
-		return () => URL.revokeObjectURL(url);
-	}, [file]);
 
 	async function onSubmit(e: React.FormEvent) {
 		e.preventDefault();
@@ -92,18 +120,18 @@ export default function NewRequestPage() {
 		setBusy(true);
 		setError(null);
 
-		let images: string[] = [];
-		if (file) {
+		const uploadedUrls: string[] = [];
+		for (const img of images) {
 			const uploaded = await uploadCustomerServiceImage({
 				customerId,
-				file,
+				file: img.file,
 			});
 			if (uploaded.error) {
 				setBusy(false);
 				setError(uploaded.error);
 				return;
 			}
-			if (uploaded.url) images = [uploaded.url];
+			if (uploaded.url) uploadedUrls.push(uploaded.url);
 		}
 
 		const category = categories.find((c) => c.id === categoryId);
@@ -123,7 +151,7 @@ export default function NewRequestPage() {
 						subCategoryName: sub.subCategoryName,
 					}
 				: null,
-			serviceImage: images,
+			serviceImage: uploadedUrls,
 			price: String(amount),
 		};
 
@@ -163,16 +191,57 @@ export default function NewRequestPage() {
 					</Alert>
 				) : null}
 
-				<label className="flex min-h-[140px] cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-[#b8c4b0] bg-[#f7faf5] px-4 py-8 text-center transition-colors hover:bg-[#f0f5ec]">
-					{preview ? (
-						// eslint-disable-next-line @next/next/no-img-element
-						<img
-							src={preview}
-							alt=""
-							className="max-h-32 rounded-xl object-cover"
-						/>
+				<div className="space-y-2">
+					<input
+						ref={fileInputRef}
+						type="file"
+						accept="image/png,image/jpeg,image/heic,image/webp"
+						multiple
+						className="sr-only"
+						onChange={(e) => appendImages(e.target.files)}
+					/>
+					{images.length > 0 ? (
+						<div className="flex flex-wrap gap-2">
+							{images.map((img) => (
+								<div
+									key={img.id}
+									className="relative size-20 overflow-hidden rounded-xl bg-muted"
+								>
+									{/* eslint-disable-next-line @next/next/no-img-element */}
+									<img
+										src={img.previewUrl}
+										alt=""
+										className="size-full object-cover"
+									/>
+									<button
+										type="button"
+										aria-label={t("commonClose")}
+										className="absolute top-1 right-1 flex size-6 items-center justify-center rounded-full bg-black/60 text-white"
+										onClick={() => removeImage(img.id)}
+									>
+										<XIcon className="size-3.5" />
+									</button>
+								</div>
+							))}
+							{images.length < MAX_IMAGES ? (
+								<button
+									type="button"
+									onClick={() => fileInputRef.current?.click()}
+									className="flex size-20 flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-[#b8c4b0] bg-[#f7faf5] text-primary hover:bg-[#f0f5ec]"
+								>
+									<ImagePlusIcon className="size-5" />
+									<span className="text-[10px] font-semibold">
+										{images.length}/{MAX_IMAGES}
+									</span>
+								</button>
+							) : null}
+						</div>
 					) : (
-						<>
+						<button
+							type="button"
+							onClick={() => fileInputRef.current?.click()}
+							className="flex min-h-[140px] w-full flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-[#b8c4b0] bg-[#f7faf5] px-4 py-8 text-center transition-colors hover:bg-[#f0f5ec]"
+						>
 							<span className="flex size-12 items-center justify-center rounded-full bg-primary/10 text-primary">
 								<ImagePlusIcon className="size-6" />
 							</span>
@@ -185,15 +254,9 @@ export default function NewRequestPage() {
 							<p className="text-[12px] text-muted-foreground">
 								{t("requestImageHint")}
 							</p>
-						</>
+						</button>
 					)}
-					<input
-						type="file"
-						accept="image/png,image/jpeg,image/heic,image/webp"
-						className="sr-only"
-						onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-					/>
-				</label>
+				</div>
 
 				<div className="space-y-1.5">
 					<label

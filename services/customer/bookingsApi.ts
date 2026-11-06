@@ -110,6 +110,8 @@ export type CreateBookingInput = {
 	discount?: number | null;
 	totalAmount?: number | null;
 	postJob?: boolean;
+	/** Embedded job service snapshot (mobile serviceDetails). */
+	serviceDetails?: Record<string, unknown>[] | null;
 	pricingType?: string | null;
 	billingInterval?: string | null;
 	billingIntervalCount?: number | null;
@@ -128,11 +130,13 @@ export async function createCustomerBooking(
 			: Math.max(0, subTotal - discount);
 	const now = new Date().toISOString();
 
+	const isPostJob = Boolean(input.postJob);
 	const payload: Record<string, unknown> = {
 		id,
 		customer_id: input.customerId,
 		provider_id: input.providerId,
-		service_id: input.serviceId,
+		// Mobile nulls service_id for post-job bookings (snapshot lives in serviceDetails).
+		service_id: isPostJob ? null : input.serviceId,
 		firstName: input.firstName,
 		lastName: input.lastName,
 		phoneNumber: input.phoneNumber,
@@ -156,8 +160,12 @@ export async function createCustomerBooking(
 		},
 		createdAt: now,
 		providerMySelf: false,
-		postJob: Boolean(input.postJob),
+		postJob: isPostJob,
+		postJobPayment: isPostJob,
 	};
+	if (input.serviceDetails?.length) {
+		payload.serviceDetails = input.serviceDetails;
+	}
 	if (input.coupon) payload.coupon = input.coupon;
 	if (discount > 0) payload.discount = String(discount);
 

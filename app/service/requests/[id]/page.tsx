@@ -2,17 +2,28 @@
 
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import {
+	CalendarIcon,
+	ImageIcon,
+	Trash2Icon,
+} from "lucide-react";
 
 import { ProfileBackLink } from "@/components/provider/profile-back-link";
-import { Button } from "@/components/ui/button";
 import { ServiceLoading } from "@/components/service/service-loading";
+import { ImageLightbox } from "@/components/ui/image-lightbox";
 import { useLocale } from "@/lib/i18n";
 import { getSupabase } from "@/lib/supabase/client";
-import { formatAmount, formatDateTime } from "@/services/bookings/types";
+import { formatAmount } from "@/services/bookings/types";
 import {
 	acceptJobBid,
 	deleteJobRequest,
 } from "@/services/customer/bookingsApi";
+import {
+	formatJobDate,
+	hydrateBidProviders,
+	jobDisplayFromRow,
+	type JobBid,
+} from "@/services/jobs/jobsApi";
 import { useAppDispatch } from "@/store/hooks";
 import { invalidateRequests } from "@/store/customerCacheSlice";
 
@@ -21,10 +32,14 @@ export default function RequestDetailPage() {
 	const params = useParams<{ id: string }>();
 	const router = useRouter();
 	const dispatch = useAppDispatch();
-	const [job, setJob] = useState<Record<string, unknown> | null>(null);
+	const [job, setJob] = useState<ReturnType<typeof jobDisplayFromRow> | null>(
+		null,
+	);
+	const [bids, setBids] = useState<JobBid[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 	const [busy, setBusy] = useState(false);
+	const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
 	async function reload() {
 		setLoading(true);
@@ -34,7 +49,16 @@ export default function RequestDetailPage() {
 			.eq("id", params.id)
 			.maybeSingle();
 		if (err) setError(err.message);
-		setJob((data as Record<string, unknown> | null) ?? null);
+		const row = (data as Record<string, unknown> | null) ?? null;
+		if (!row) {
+			setJob(null);
+			setBids([]);
+			setLoading(false);
+			return;
+		}
+		const display = jobDisplayFromRow(row);
+		setJob(display);
+		setBids(await hydrateBidProviders(display.bidList));
 		setLoading(false);
 	}
 
@@ -47,7 +71,7 @@ export default function RequestDetailPage() {
 		if (!job || busy) return;
 		if (!window.confirm(t("requestDeleteConfirm"))) return;
 		setBusy(true);
-		const res = await deleteJobRequest(String(job.id));
+		const res = await deleteJobRequest(job.id);
 		setBusy(false);
 		if (!res.ok) {
 			setError(res.error);
@@ -57,10 +81,10 @@ export default function RequestDetailPage() {
 		router.replace("/service/requests");
 	}
 
-	async function onAcceptBid(bid: Record<string, unknown>) {
+	async function onAcceptBid(bid: JobBid) {
 		if (!job || busy) return;
-		const providerId = String(bid.providerId ?? bid.provider_id ?? "");
-		const bidPrice = String(bid.price ?? bid.bidPrice ?? "");
+		const providerId = bid.providerId?.trim() ?? "";
+		const bidPrice = bid.price?.trim() ?? "";
 		if (!providerId || !bidPrice) {
 			setError(t("requestInvalidBid"));
 			return;
@@ -75,7 +99,7 @@ export default function RequestDetailPage() {
 		setBusy(true);
 		setError(null);
 		const res = await acceptJobBid({
-			jobId: String(job.id),
+			jobId: job.id,
 			providerId,
 			bidPrice,
 		});
@@ -85,17 +109,10 @@ export default function RequestDetailPage() {
 			return;
 		}
 		dispatch(invalidateRequests());
-		const serviceId =
-			(Array.isArray(job.serviceModelList) &&
-				(job.serviceModelList[0] as { id?: string } | undefined)?.id) ||
-			(job.serviceId != null ? String(job.serviceId) : null);
-		if (serviceId) {
-			router.push(
-				`/service/book/${serviceId}?bidPrice=${encodeURIComponent(bidPrice)}&providerId=${encodeURIComponent(providerId)}&postJob=1`,
-			);
-			return;
-		}
-		await reload();
+		// Book from job id — serviceModelList ids are snapshots, not catalog rows.
+		router.push(
+			`/service/book/${job.id}?postJob=1&bidPrice=${encodeURIComponent(bidPrice)}&providerId=${encodeURIComponent(providerId)}`,
+		);
 	}
 
 	if (loading) {
@@ -113,105 +130,179 @@ export default function RequestDetailPage() {
 		);
 	}
 
-	const bids = Array.isArray(job.bidList)
-		? (job.bidList as Record<string, unknown>[])
-		: [];
-
 	return (
-		<div className="px-4 pt-4 md:px-6 md:pt-8">
-			<ProfileBackLink href="/service/requests" label={t("requestsTitle")} />
-			<h1 className="admin-page-title">
-				{String(job.title ?? t("requestJobRequest"))}
-			</h1>
-			<p className="mt-1 text-sm text-muted-foreground">
-				{job.accepted === true ? t("statusAccepted") : t("requestOpenForBids")}
-				{job.createdAt
-					? ` · ${formatDateTime(String(job.createdAt))}`
-					: null}
-			</p>
-
-			{error ? (
-				<p className="mt-3 text-sm text-destructive">{error}</p>
-			) : null}
-
-			<div className="mt-5 space-y-3 rounded-xl bg-white p-4 shadow-sm ring-1 ring-black/5">
-				{job.description ? (
-					<div>
-						<p className="text-xs text-muted-foreground">{t("requestDescription")}</p>
-						<p className="mt-0.5 whitespace-pre-wrap text-sm">
-							{String(job.description)}
-						</p>
-					</div>
-				) : null}
-				{job.price ? (
-					<div>
-						<p className="text-xs text-muted-foreground">{t("commonBudget")}</p>
-						<p className="mt-0.5 text-sm font-semibold text-primary">
-							{formatAmount(String(job.price))}
-						</p>
-					</div>
+		<div className="mx-auto max-w-lg px-4 pt-4 pb-10 md:px-6 md:pt-8">
+			<div className="mb-4 flex items-center gap-2">
+				<ProfileBackLink
+					href="/service/requests"
+					label={t("requestPostDetails")}
+					className="mb-0 min-w-0 flex-1 font-semibold"
+				/>
+				{!job.accepted ? (
+					<button
+						type="button"
+						disabled={busy}
+						aria-label={t("requestDelete")}
+						onClick={() => void onDelete()}
+						className="flex size-10 shrink-0 items-center justify-center rounded-full text-destructive transition-colors hover:bg-destructive/10 disabled:opacity-50"
+					>
+						<Trash2Icon className="size-5" />
+					</button>
 				) : null}
 			</div>
 
-			<section className="mt-6">
-				<h2 className="text-sm font-semibold">
-					{t("requestBids")} ({bids.length})
-				</h2>
-				<div className="mt-3 rounded-xl bg-white shadow-sm ring-1 ring-black/5">
-					{bids.length === 0 ? (
-						<p className="py-8 text-center text-sm text-muted-foreground">
-							{t("requestNoBids")}
+			{error ? (
+				<p className="mb-3 text-sm text-destructive">{error}</p>
+			) : null}
+
+			<section className="rounded-2xl bg-white p-4 shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
+				<div className="flex items-start justify-between gap-3">
+					<h1 className="min-w-0 text-[18px] font-bold text-foreground">
+						{job.title || t("requestJobRequest")}
+					</h1>
+					{job.price ? (
+						<p className="shrink-0 text-[16px] font-bold tabular-nums text-primary">
+							{formatAmount(job.price)}
 						</p>
-					) : (
-						bids.map((bid, i) => (
-							<div
-								key={i}
-								className="border-b border-border px-4 py-3 last:border-b-0"
-							>
-								<p className="text-sm font-semibold">
-									{String(
-										bid.providerName ??
-											bid.providerId ??
-											`Bid #${i + 1}`,
-									)}
-								</p>
-								{bid.price != null || bid.bidPrice != null ? (
-									<p className="mt-0.5 text-sm text-primary">
-										{formatAmount(
-											String(bid.bidPrice ?? bid.price),
-										)}
-									</p>
-								) : null}
-								{bid.note != null || bid.description != null ? (
-									<p className="mt-1 text-xs text-muted-foreground">
-										{String(bid.note ?? bid.description)}
-									</p>
-								) : null}
-								{job.accepted !== true ? (
-									<Button
-										size="sm"
-										className="mt-2"
-										disabled={busy}
-										onClick={() => void onAcceptBid(bid)}
-									>
-										{t("requestAcceptBid")}
-									</Button>
-								) : null}
-							</div>
-						))
-					)}
+					) : null}
 				</div>
+				{job.description ? (
+					<p className="mt-3 text-[14px] leading-relaxed whitespace-pre-wrap text-foreground/90">
+						{job.description}
+					</p>
+				) : null}
+				{(job.imageUrls.length > 0 || job.categoryName) && (
+					<div className="mt-4 space-y-3 border-t border-border/60 pt-3">
+						{job.imageUrls.length > 0 ? (
+							<div className="flex gap-2 overflow-x-auto pb-0.5">
+								{job.imageUrls.map((url, i) => (
+									<button
+										key={`${url}-${i}`}
+										type="button"
+										onClick={() => setLightboxIndex(i)}
+										className="relative size-16 shrink-0 overflow-hidden rounded-xl bg-muted ring-1 ring-black/5 transition-opacity hover:opacity-90"
+									>
+										{/* eslint-disable-next-line @next/next/no-img-element */}
+										<img
+											src={url}
+											alt=""
+											className="size-full object-cover"
+										/>
+										{i === 0 && job.imageUrls.length > 1 ? (
+											<span className="absolute right-1 bottom-1 rounded-md bg-black/65 px-1.5 py-0.5 text-[10px] font-semibold text-white tabular-nums">
+												{job.imageUrls.length}
+											</span>
+										) : null}
+									</button>
+								))}
+							</div>
+						) : null}
+						{job.categoryName ? (
+							<div className="flex items-center gap-2.5">
+								{job.imageUrls.length === 0 ? (
+									<div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+										<ImageIcon className="size-4 opacity-40" />
+									</div>
+								) : null}
+								<p className="text-[13px] font-medium text-muted-foreground">
+									{job.categoryName}
+								</p>
+							</div>
+						) : null}
+					</div>
+				)}
 			</section>
 
-			{job.accepted !== true ? (
-				<Button
-					variant="outline"
-					className="mt-5 w-full text-destructive"
-					disabled={busy}
-					onClick={onDelete}
-				>
-					{busy ? t("requestDeleting") : t("requestDelete")}
-				</Button>
+			{lightboxIndex != null && job.imageUrls.length > 0 ? (
+				<ImageLightbox
+					images={job.imageUrls}
+					index={lightboxIndex}
+					onClose={() => setLightboxIndex(null)}
+					onIndexChange={setLightboxIndex}
+				/>
+			) : null}
+
+			<section className="mt-6">
+				<h2 className="text-[16px] font-bold text-foreground">
+					{t("requestBids")}
+				</h2>
+				{bids.length === 0 ? (
+					<p className="mt-3 rounded-2xl bg-white py-8 text-center text-sm text-muted-foreground shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
+						{t("requestNoBids")}
+					</p>
+				) : (
+					<ul className="mt-3 space-y-3">
+						{bids.map((bid, i) => {
+							const name =
+								bid.providerName?.trim() ||
+								t("provider") ||
+								`Bid #${i + 1}`;
+							const initial = name.charAt(0).toUpperCase();
+							return (
+								<li
+									key={`${bid.providerId ?? i}-${i}`}
+									className="rounded-2xl bg-white p-4 shadow-[0_1px_3px_rgba(0,0,0,0.06)]"
+								>
+									<div className="flex items-start gap-3">
+										<div className="size-11 shrink-0 overflow-hidden rounded-full bg-muted">
+											{bid.providerImage ? (
+												// eslint-disable-next-line @next/next/no-img-element
+												<img
+													src={bid.providerImage}
+													alt=""
+													className="size-full object-cover"
+												/>
+											) : (
+												<div className="flex size-full items-center justify-center text-sm font-bold text-muted-foreground">
+													{initial}
+												</div>
+											)}
+										</div>
+										<div className="min-w-0 flex-1">
+											<div className="flex items-start justify-between gap-2">
+												<div className="min-w-0">
+													<p className="truncate text-[15px] font-bold">
+														{name}
+													</p>
+													{bid.createdAt ? (
+														<p className="mt-0.5 flex items-center gap-1.5 text-[12px] text-muted-foreground">
+															<CalendarIcon className="size-3.5 shrink-0" />
+															{formatJobDate(bid.createdAt)}
+														</p>
+													) : null}
+												</div>
+												{!job.accepted ? (
+													<button
+														type="button"
+														disabled={busy}
+														onClick={() => void onAcceptBid(bid)}
+														className="shrink-0 rounded-full bg-primary/15 px-3.5 py-1.5 text-[13px] font-semibold text-primary transition-colors hover:bg-primary/25 disabled:opacity-50"
+													>
+														{t("requestAcceptBid")}
+													</button>
+												) : null}
+											</div>
+											<div className="mt-3 flex items-center justify-between gap-2 border-t border-border/50 pt-2.5">
+												<p className="text-[13px] text-muted-foreground">
+													{t("requestBidAmount")}
+												</p>
+												<p className="text-[15px] font-bold tabular-nums text-primary">
+													{formatAmount(bid.price)}
+												</p>
+											</div>
+										</div>
+									</div>
+								</li>
+							);
+						})}
+					</ul>
+				)}
+			</section>
+
+			{job.accepted ? (
+				<p className="mt-5 text-center text-sm font-medium text-primary">
+					{t("statusAccepted")}
+				</p>
 			) : null}
 		</div>
 	);

@@ -47,6 +47,11 @@ import {
 	type Coupon,
 } from "@/services/customer/couponsApi";
 import {
+	fetchJobServiceForBooking,
+	markJobRequestPaid,
+} from "@/services/jobs/jobsApi";
+import type { ProviderService } from "@/services/services/types";
+import {
 	attachOfferToBooking,
 	createCustomerServiceOffer,
 } from "@/services/customer/offersApi";
@@ -157,13 +162,21 @@ function BookServiceForm() {
 	const dispatch = useAppDispatch();
 	const { user } = useAuth();
 	const customer = user?.customer;
-	const { service, loading, error: loadError } = useCachedServiceDetail(params.id);
-	const [busy, setBusy] = useState(false);
-	const [error, setError] = useState<string | null>(null);
-
 	const bidPrice = search.get("bidPrice");
 	const bidProvider = search.get("providerId");
 	const postJob = search.get("postJob") === "1";
+	const catalog = useCachedServiceDetail(postJob ? "" : params.id);
+	const [jobService, setJobService] = useState<ProviderService | null>(null);
+	const [jobServiceDetails, setJobServiceDetails] = useState<
+		Record<string, unknown>[]
+	>([]);
+	const [jobLoading, setJobLoading] = useState(postJob);
+	const [jobError, setJobError] = useState<string | null>(null);
+	const service = postJob ? jobService : catalog.service;
+	const loading = postJob ? jobLoading : catalog.loading;
+	const loadError = postJob ? jobError : catalog.error;
+	const [busy, setBusy] = useState(false);
+	const [error, setError] = useState<string | null>(null);
 
 	const [bookingDate, setBookingDate] = useState(todayIsoDate());
 	const [startTime, setStartTime] = useState(nowTimeValue());
@@ -193,18 +206,41 @@ function BookServiceForm() {
 
 	useEffect(() => {
 		if (!user) {
-			router.replace(
-				`/login?next=${encodeURIComponent(`/service/book/${params.id}`)}`,
-			);
+			const q = search.toString();
+			const next = `/service/book/${params.id}${q ? `?${q}` : ""}`;
+			router.replace(`/login?next=${encodeURIComponent(next)}`);
 		}
-	}, [user, router, params.id]);
+	}, [user, router, params.id, search]);
 
 	useEffect(() => {
+		if (!postJob) return;
+		let cancelled = false;
+		setJobLoading(true);
+		void fetchJobServiceForBooking(params.id, {
+			providerId: bidProvider,
+			bidPrice,
+		}).then((res) => {
+			if (cancelled) return;
+			setJobService(res.service);
+			setJobServiceDetails(res.serviceDetails);
+			setJobError(res.error);
+			setJobLoading(false);
+			if (res.service?.description) {
+				setDescription((prev) => prev.trim() || res.service!.description!);
+			}
+		});
+		return () => {
+			cancelled = true;
+		};
+	}, [postJob, params.id, bidProvider, bidPrice]);
+
+	useEffect(() => {
+		if (postJob) return;
 		if (bidPrice) {
 			setCustomPrice(bidPrice);
 			setUseCustomPrice(true);
 		}
-	}, [bidPrice]);
+	}, [bidPrice, postJob]);
 
 	useEffect(() => {
 		const raw = search.get("qty");
@@ -234,7 +270,8 @@ function BookServiceForm() {
 	}, [customer?.id, user?.id]);
 
 	const allowsCustom =
-		Boolean(service?.allowsCustomOffer) || Boolean(bidPrice);
+		!postJob &&
+		(Boolean(service?.allowsCustomOffer) || Boolean(bidPrice));
 	const unitPrice = useMemo(() => {
 		if (allowsCustom && useCustomPrice && customPrice.trim()) {
 			const n = Number(customPrice);
@@ -244,6 +281,7 @@ function BookServiceForm() {
 	}, [allowsCustom, useCustomPrice, customPrice, catalogPrice]);
 
 	const isCustomOffer =
+		!postJob &&
 		allowsCustom &&
 		useCustomPrice &&
 		customPrice.trim() !== "" &&
@@ -463,6 +501,7 @@ function BookServiceForm() {
 			discount: serviceDiscount + discount,
 			totalAmount: total,
 			postJob,
+			serviceDetails: postJob ? jobServiceDetails : null,
 			pricingType: service.pricingType,
 			billingInterval: service.billingInterval,
 			billingIntervalCount: service.billingIntervalCount,
@@ -473,7 +512,12 @@ function BookServiceForm() {
 			return;
 		}
 
+		async function finishPostJobPaid() {
+			if (postJob) await markJobRequestPaid(params.id);
+		}
+
 		if (dueNow <= 0) {
+			await finishPostJobPaid();
 			dispatch(invalidateBookings());
 			setBusy(false);
 			router.replace(`/service/bookings/${res.bookingId}`);
@@ -491,6 +535,7 @@ function BookServiceForm() {
 				setError(paid.error || t("bookServiceWalletFailed"));
 				return;
 			}
+			await finishPostJobPaid();
 			dispatch(invalidateBookings());
 			router.replace(`/service/bookings/${res.bookingId}`);
 			return;
