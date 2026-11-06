@@ -27,11 +27,9 @@ import { ServiceLoading } from "@/components/service/service-loading";
 import { useLocale } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import {
-	dueNowAmount,
-	effectivePrePaymentPercent,
-	isRecurringPricingType,
-	remainingAmount,
-} from "@/lib/recurring";
+	computeBookingPrice,
+	serviceDiscountIsPercent,
+} from "@/lib/booking-pricing";
 import { formatAmount } from "@/services/bookings/types";
 import { createCustomerBooking, payBookingWithWallet } from "@/services/customer/bookingsApi";
 import { savePaymentPending } from "@/lib/payment-pending";
@@ -104,54 +102,60 @@ function formatDisplayTime(hhmm: string) {
 	});
 }
 
-function BookStepper({ step }: { step: 1 | 2 }) {
+function BookStepper({
+	step,
+	labels,
+}: {
+	step: 1 | 2;
+	labels: [string, string];
+}) {
 	return (
-		<div className="flex items-center py-4" aria-label={`Step ${step} of 2`}>
-			<div className="h-1 w-6 rounded-full bg-primary" />
+		<div
+			className="mt-3 mb-3 grid grid-cols-2 gap-1.5 rounded-2xl bg-white p-1.5 shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-black/5"
+			aria-label={`Step ${step} of 2`}
+		>
 			<div
 				className={cn(
-					"flex size-8 shrink-0 items-center justify-center rounded-full text-[13px] font-bold text-white transition-colors duration-200",
-					"bg-primary",
+					"flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 transition-colors duration-200",
+					step === 1
+						? "bg-primary text-primary-foreground"
+						: "bg-primary/10 text-primary",
 				)}
 			>
-				{step > 1 ? <CheckIcon className="size-4" strokeWidth={2.5} /> : "1"}
+				<span
+					className={cn(
+						"flex size-6 shrink-0 items-center justify-center rounded-full text-[12px] font-bold",
+						step === 1
+							? "bg-white/20 text-primary-foreground"
+							: "bg-primary text-primary-foreground",
+					)}
+				>
+					{step > 1 ? <CheckIcon className="size-3.5" strokeWidth={2.5} /> : "1"}
+				</span>
+				<span className="text-[13px] font-semibold">{labels[0]}</span>
 			</div>
 			<div
 				className={cn(
-					"h-1 flex-1 transition-colors duration-200",
-					step >= 2 ? "bg-primary" : "bg-[#e5e5e5]",
-				)}
-			/>
-			<div
-				className={cn(
-					"flex size-8 shrink-0 items-center justify-center rounded-full text-[13px] font-bold transition-colors duration-200",
-					step >= 2
-						? "bg-primary text-white"
-						: "bg-[#e5e5e5] text-white",
+					"flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 transition-colors duration-200",
+					step === 2
+						? "bg-primary text-primary-foreground"
+						: "text-muted-foreground",
 				)}
 			>
-				2
+				<span
+					className={cn(
+						"flex size-6 shrink-0 items-center justify-center rounded-full text-[12px] font-bold",
+						step === 2
+							? "bg-white/20 text-primary-foreground"
+							: "bg-muted text-muted-foreground",
+					)}
+				>
+					2
+				</span>
+				<span className="text-[13px] font-semibold">{labels[1]}</span>
 			</div>
-			<div className="h-1 flex-1 rounded-r-full bg-[#e5e5e5]" />
 		</div>
 	);
-}
-
-/** Matches mobile ServiceModel.discountAmount (≤100 = %, else fixed per unit). */
-function serviceDiscountAmount(
-	discountRaw: string | null | undefined,
-	unitPrice: number,
-	quantity: number,
-): number {
-	const discountValue = Number(String(discountRaw ?? "").trim()) || 0;
-	if (discountValue <= 0) return 0;
-	const lineSubtotal = quantity * unitPrice;
-	if (lineSubtotal <= 0) return 0;
-	if (discountValue <= 100) {
-		return Math.round(((lineSubtotal * discountValue) / 100) * 100) / 100;
-	}
-	const fixedTotal = quantity * discountValue;
-	return Math.min(fixedTotal, lineSubtotal);
 }
 
 function BookServiceForm() {
@@ -287,30 +291,39 @@ function BookServiceForm() {
 		customPrice.trim() !== "" &&
 		Math.abs(unitPrice - catalogPrice) > 0.001;
 
-	const isRecurring = isRecurringPricingType(service?.pricingType);
-	const subtotal = unitPrice * quantity;
-	const serviceDiscount = isCustomOffer
-		? 0
-		: serviceDiscountAmount(service?.discount, unitPrice, quantity);
-	const afterServiceDiscount = Math.max(0, subtotal - serviceDiscount);
-	const discount = appliedCoupon
-		? couponDiscount(appliedCoupon, afterServiceDiscount)
-		: 0;
-	const total = Math.max(0, afterServiceDiscount - discount);
-	const dueNow = isCustomOffer
-		? 0
-		: dueNowAmount({
-				total,
-				pricingType: service?.pricingType,
-				prePayment: service?.prePayment,
-				prePaymentPercent: service?.prePaymentPercent,
-			});
-	const remaining = remainingAmount(total, dueNow);
-	const prePayPercent = effectivePrePaymentPercent({
+	const usingCustomPrice = Boolean(allowsCustom && useCustomPrice);
+	const afterCatalogDiscount = computeBookingPrice({
+		unitPrice,
+		quantity,
+		discountRaw: service?.discount,
+		skipDiscount: usingCustomPrice,
+	}).afterServiceDiscount;
+	const couponAmount =
+		!usingCustomPrice && appliedCoupon
+			? couponDiscount(appliedCoupon, afterCatalogDiscount)
+			: 0;
+	const {
+		subtotal,
+		serviceDiscount,
+		afterServiceDiscount,
+		total,
+		dueNow,
+		remaining,
+		prePayPercent,
+		hasPartialPrePayment,
+		isRecurring,
+	} = computeBookingPrice({
+		unitPrice,
+		quantity,
+		discountRaw: service?.discount,
+		skipDiscount: usingCustomPrice,
+		couponAmount,
 		pricingType: service?.pricingType,
+		prePayment: service?.prePayment,
 		prePaymentPercent: service?.prePaymentPercent,
+		deferPayment: isCustomOffer,
 	});
-	const hasPartialPrePayment = !isRecurring && !isCustomOffer && prePayPercent < 100;
+	const discount = couponAmount;
 
 	const walletAffordable = walletBalance >= dueNow;
 	const chapaEnabled = !payConfig || payConfig.chapaEnabled;
@@ -346,7 +359,7 @@ function BookServiceForm() {
 
 	async function applyCoupon() {
 		setCouponError(null);
-		if (isCustomOffer) {
+		if (usingCustomPrice) {
 			setCouponError(t("couponCustomBlocked"));
 			return;
 		}
@@ -645,7 +658,7 @@ function BookServiceForm() {
 	const serviceImage = service.serviceImage?.[0] ?? null;
 	const descLen = description.length;
 	const fieldClass =
-		"h-12 rounded-xl border-[#e8e8e8] bg-white pl-10 text-[15px] shadow-none focus-visible:ring-2 focus-visible:ring-primary/25";
+		"h-12 rounded-xl border-[#e8e8e8] bg-white pl-9 text-[14px] shadow-none focus-visible:ring-2 focus-visible:ring-primary/25 sm:pl-10 sm:text-[15px]";
 
 	return (
 		<div className="mx-auto min-h-[min(100dvh,56rem)] max-w-lg bg-[#f5f5f5] px-4 pt-3 pb-28">
@@ -668,13 +681,51 @@ function BookServiceForm() {
 					className="mb-1"
 				/>
 			)}
-			<h1 className="text-[22px] font-bold tracking-tight text-balance">
-				{t("bookServiceTitle")}
-			</h1>
-			<p className="mt-0.5 truncate text-[13px] text-[#6b6b6b]">
-				{service.serviceName}
-			</p>
-			<BookStepper step={step} />
+
+			<section className="mt-1 flex items-center gap-3 rounded-2xl bg-white p-3 shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-black/5">
+				<div className="relative size-14 shrink-0 overflow-hidden rounded-xl bg-muted">
+					{serviceImage ? (
+						// eslint-disable-next-line @next/next/no-img-element
+						<img
+							src={serviceImage}
+							alt=""
+							className="size-full object-cover"
+						/>
+					) : (
+						<div className="flex size-full items-center justify-center text-muted-foreground">
+							<InfoIcon className="size-5 opacity-40" />
+						</div>
+					)}
+				</div>
+				<div className="min-w-0 flex-1">
+					<p className="truncate text-[15px] font-bold text-foreground">
+						{service.serviceName}
+					</p>
+					{!usingCustomPrice ? (
+						<p className="mt-0.5 text-[13px] font-semibold tabular-nums text-primary">
+							{serviceDiscount > 0 ? (
+								<>
+									<span className="mr-1.5 text-muted-foreground line-through">
+										{formatAmount(catalogPrice)}
+									</span>
+									{formatAmount(afterServiceDiscount)}
+								</>
+							) : (
+								formatAmount(catalogPrice)
+							)}
+						</p>
+					) : (
+						<p className="mt-0.5 text-[13px] text-muted-foreground">
+							{t("bookServiceCustomPrice")}
+						</p>
+					)}
+				</div>
+			</section>
+
+			<BookStepper
+				step={step}
+				labels={[t("bookServiceStepDetails"), t("bookServiceStepReview")]}
+			/>
 
 			{error ? (
 				<Alert variant="destructive" className="mb-3">
@@ -685,16 +736,21 @@ function BookServiceForm() {
 			{/* Keep step 1 mounted so Places autocomplete survives step 1↔2. */}
 			<div
 				className={cn(
-					"space-y-5 rounded-2xl bg-white p-4 shadow-[0_1px_2px_rgba(0,0,0,0.04)] motion-safe:animate-in motion-safe:fade-in motion-safe:duration-200",
+					"space-y-3 motion-safe:animate-in motion-safe:fade-in motion-safe:duration-200",
 					step !== 1 && "hidden",
 				)}
 			>
+				<section className="space-y-3 rounded-2xl bg-white p-4 shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-black/5">
+					<h2 className="text-[13px] font-semibold tracking-wide text-muted-foreground uppercase">
+						{t("bookServiceWhen")}
+					</h2>
+					<div className="grid grid-cols-2 gap-3">
 						<label className="block space-y-1.5">
-							<span className="text-[13px] font-semibold text-[#1a1a1a]">
+							<span className="text-[13px] font-semibold text-foreground">
 								{t("bookServiceDate")}
 							</span>
 							<div className="relative">
-								<CalendarIcon className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-[#8a8a8a]" />
+								<CalendarIcon className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
 								<Input
 									type="date"
 									required
@@ -711,13 +767,12 @@ function BookServiceForm() {
 								/>
 							</div>
 						</label>
-
 						<label className="block space-y-1.5">
-							<span className="text-[13px] font-semibold text-[#1a1a1a]">
+							<span className="text-[13px] font-semibold text-foreground">
 								{t("bookServiceTime")}
 							</span>
 							<div className="relative">
-								<ClockIcon className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-[#8a8a8a]" />
+								<ClockIcon className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
 								<Input
 									type="time"
 									required
@@ -735,165 +790,185 @@ function BookServiceForm() {
 								/>
 							</div>
 						</label>
+					</div>
+				</section>
 
-						<div className="space-y-1.5">
-							<span className="text-[13px] font-semibold text-[#1a1a1a]">
-								{t("bookServiceYourAddress")}
-							</span>
-							{savedAddresses.length > 0 ? (
-								<select
-									className="mb-1.5 flex h-11 w-full rounded-xl border border-[#e8e8e8] bg-[#fafafa] px-3 text-sm"
-									value=""
-									onChange={(e) => {
-										const picked = savedAddresses.find(
-											(a) => a.id === e.target.value,
-										);
-										if (!picked?.address) return;
-										setAddress(picked.address);
-										if (picked.location) {
-											setAddressLocation({
-												lat: Number(picked.location.latitude),
-												lng: Number(picked.location.longitude),
-											});
-										}
-									}}
-								>
-									<option value="">{t("bookServicePickSavedAddress")}</option>
-									{savedAddresses.map((a) => (
-										<option key={a.id} value={a.id}>
-											{a.addressAs || a.name || a.address}
-										</option>
-									))}
-								</select>
-							) : null}
-							<div className="relative">
-								<MapPinIcon className="pointer-events-none absolute top-3.5 left-3.5 z-10 size-4 text-[#8a8a8a]" />
-								<PlacesAddressField
-									id="address"
-									value={address}
-									required
-									compact
-									onChange={setAddress}
-									onLocationChange={setAddressLocation}
-									inputClassName="h-12 rounded-xl border-[#e8e8e8] bg-white pl-10 pr-10 text-[15px] shadow-none"
-								/>
-								<ChevronRightIcon className="pointer-events-none absolute top-3.5 right-3.5 size-4 text-[#b0b0b0]" />
-							</div>
-						</div>
-
-						<label className="block space-y-1.5">
-							<span className="text-[13px] font-semibold text-[#1a1a1a]">
-								{t("bookServiceDescription")}
-							</span>
-							<Textarea
-								rows={4}
-								required
-								maxLength={1000}
-								placeholder={t("bookServiceDescriptionPlaceholder")}
-								value={description}
-								onChange={(e) =>
-									setDescription(filterBookingDescriptionInput(e.target.value))
-								}
-								className="min-h-28 rounded-xl border-[#e8e8e8] bg-white text-[15px] shadow-none focus-visible:ring-2 focus-visible:ring-primary/25"
-							/>
-							<p
-								className={cn(
-									"text-right text-[12px] tabular-nums",
-									descLen < 10 ? "text-[#8a8a8a]" : "text-[#6b6b6b]",
-								)}
-							>
-								{t("bookServiceDescriptionHint", { count: String(descLen) })}
-							</p>
-						</label>
-
-						{!useCustomPrice ? (
-							<label className="block space-y-1.5">
-								<span className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-[#1a1a1a]">
-									{t("bookServicePrice")}
-									<InfoIcon className="size-3.5 text-primary" />
-								</span>
-								<div className="relative">
-									<span className="pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2 text-[13px] font-medium text-[#8a8a8a]">
-										ETB
-									</span>
-									<Input
-										readOnly
-										value={String(catalogPrice || "")}
-										className="h-12 rounded-xl border-[#e8e8e8] bg-[#fafafa] pl-12 text-[15px] tabular-nums shadow-none"
-									/>
-								</div>
-							</label>
-						) : null}
-
-						{allowsCustom ? (
-							<div className="space-y-3 border-t border-[#eee] pt-4">
-								<button
-									type="button"
-									onClick={() => {
-										const next = !useCustomPrice;
-										setUseCustomPrice(next);
-										if (next) {
-											setAppliedCoupon(null);
-											if (!customPrice.trim() && catalogPrice > 0) {
-												setCustomPrice(String(catalogPrice));
+				<section className="space-y-3 rounded-2xl bg-white p-4 shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-black/5">
+					<h2 className="text-[13px] font-semibold tracking-wide text-muted-foreground uppercase">
+						{t("bookServiceWhere")}
+					</h2>
+					{savedAddresses.length > 0 ? (
+						<div className="flex gap-2 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+							{savedAddresses.map((a) => {
+								const label = a.addressAs || a.name || a.address;
+								const selected = address.trim() === a.address.trim();
+								return (
+									<button
+										key={a.id}
+										type="button"
+										onClick={() => {
+											setAddress(a.address);
+											if (a.location) {
+												setAddressLocation({
+													lat: Number(a.location.latitude),
+													lng: Number(a.location.longitude),
+												});
 											}
-										}
-									}}
-									className={cn(
-										"flex w-full items-center justify-between rounded-xl px-3.5 py-3.5 text-left transition-colors duration-150",
-										useCustomPrice
-											? "bg-primary/10 ring-1 ring-primary/30"
-											: "bg-[#f7f7f5] hover:bg-[#f0f0ee]",
-									)}
-								>
-									<span className="min-w-0">
-										<span
-											className={cn(
-												"block text-[14px] font-semibold",
-												useCustomPrice ? "text-primary" : "text-[#1a1a1a]",
-											)}
-										>
-											{t("bookServiceCustomPrice")}
-										</span>
-										<span className="mt-0.5 block text-[12px] text-[#6b6b6b]">
-											{t("bookServiceCustomHint")}
-										</span>
-									</span>
-									<span
+										}}
 										className={cn(
-											"flex size-6 shrink-0 items-center justify-center rounded-full border-2 transition-colors duration-150",
-											useCustomPrice
-												? "border-primary bg-primary text-white"
-												: "border-[#ccc]",
+											"max-w-[11rem] shrink-0 truncate rounded-full px-3.5 py-2 text-[12px] font-semibold transition-colors",
+											selected
+												? "bg-primary text-primary-foreground"
+												: "bg-muted text-foreground hover:bg-muted/80",
 										)}
 									>
-										{useCustomPrice ? (
-											<CheckIcon className="size-3.5" strokeWidth={3} />
-										) : null}
+										{label}
+									</button>
+								);
+							})}
+						</div>
+					) : null}
+					<div className="relative">
+						<MapPinIcon className="pointer-events-none absolute top-3.5 left-3.5 z-10 size-4 text-muted-foreground" />
+						<PlacesAddressField
+							id="address"
+							value={address}
+							required
+							compact
+							onChange={setAddress}
+							onLocationChange={setAddressLocation}
+							inputClassName="h-12 rounded-xl border-[#e8e8e8] bg-white pl-10 pr-10 text-[15px] shadow-none"
+						/>
+						<ChevronRightIcon className="pointer-events-none absolute top-3.5 right-3.5 size-4 text-muted-foreground/60" />
+					</div>
+				</section>
+
+				<section className="space-y-3 rounded-2xl bg-white p-4 shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-black/5">
+					<h2 className="text-[13px] font-semibold tracking-wide text-muted-foreground uppercase">
+						{t("bookServiceWhat")}
+					</h2>
+					<label className="block space-y-1.5">
+						<span className="text-[13px] font-semibold text-foreground">
+							{t("bookServiceDescription")}
+						</span>
+						<Textarea
+							rows={4}
+							required
+							maxLength={1000}
+							placeholder={t("bookServiceDescriptionPlaceholder")}
+							value={description}
+							onChange={(e) =>
+								setDescription(filterBookingDescriptionInput(e.target.value))
+							}
+							className="min-h-28 rounded-xl border-[#e8e8e8] bg-white text-[15px] shadow-none focus-visible:ring-2 focus-visible:ring-primary/25"
+						/>
+						<p
+							className={cn(
+								"text-right text-[12px] tabular-nums",
+								descLen < 10 ? "text-muted-foreground" : "text-foreground/70",
+							)}
+						>
+							{t("bookServiceDescriptionHint", { count: String(descLen) })}
+						</p>
+					</label>
+				</section>
+
+				<section className="space-y-3 rounded-2xl bg-white p-4 shadow-[0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-black/5">
+					<h2 className="text-[13px] font-semibold tracking-wide text-muted-foreground uppercase">
+						{t("bookServicePricing")}
+					</h2>
+					{!useCustomPrice ? (
+						<div className="rounded-xl bg-primary/10 px-4 py-3.5 ring-1 ring-primary/15">
+							<p className="text-[12px] font-medium text-muted-foreground">
+								{t("bookServicePrice")}
+							</p>
+							<p className="mt-1 text-[22px] font-bold tracking-tight tabular-nums text-foreground">
+								{formatAmount(catalogPrice)}
+							</p>
+							{serviceDiscount > 0 ? (
+								<p className="mt-1 text-[13px] font-semibold text-primary">
+									{t("commonDiscount")}
+									{service?.discount &&
+									serviceDiscountIsPercent(service.discount)
+										? ` (${service.discount}% off)`
+										: ""}
+									{" · "}
+									{formatAmount(afterServiceDiscount)}
+								</p>
+							) : null}
+						</div>
+					) : null}
+
+					{allowsCustom ? (
+						<div className="space-y-3">
+							<button
+								type="button"
+								onClick={() => {
+									const next = !useCustomPrice;
+									setUseCustomPrice(next);
+									if (next) {
+										setAppliedCoupon(null);
+										if (!customPrice.trim() && catalogPrice > 0) {
+											setCustomPrice(String(catalogPrice));
+										}
+									}
+								}}
+								className={cn(
+									"flex w-full items-center justify-between rounded-xl px-3.5 py-3.5 text-left transition-colors duration-150",
+									useCustomPrice
+										? "bg-primary/10 ring-1 ring-primary/30"
+										: "bg-muted/70 hover:bg-muted",
+								)}
+							>
+								<span className="min-w-0">
+									<span
+										className={cn(
+											"block text-[14px] font-semibold",
+											useCustomPrice ? "text-primary" : "text-foreground",
+										)}
+									>
+										{t("bookServiceCustomPrice")}
 									</span>
-								</button>
-								{useCustomPrice ? (
-									<label className="block space-y-1.5">
-										<span className="text-[13px] font-semibold text-[#1a1a1a]">
-											{t("bookServiceYourPrice")}
+									<span className="mt-0.5 block text-[12px] text-muted-foreground">
+										{t("bookServiceCustomHint")}
+									</span>
+								</span>
+								<span
+									className={cn(
+										"flex size-6 shrink-0 items-center justify-center rounded-full border-2 transition-colors duration-150",
+										useCustomPrice
+											? "border-primary bg-primary text-primary-foreground"
+											: "border-muted-foreground/40",
+									)}
+								>
+									{useCustomPrice ? (
+										<CheckIcon className="size-3.5" strokeWidth={3} />
+									) : null}
+								</span>
+							</button>
+							{useCustomPrice ? (
+								<label className="block space-y-1.5">
+									<span className="text-[13px] font-semibold text-foreground">
+										{t("bookServiceYourPrice")}
+									</span>
+									<div className="relative">
+										<span className="pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2 text-[13px] font-medium text-muted-foreground">
+											ETB
 										</span>
-										<div className="relative">
-											<span className="pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2 text-[13px] font-medium text-[#8a8a8a]">
-												ETB
-											</span>
-											<Input
-												inputMode="decimal"
-												required
-												value={customPrice}
-												onChange={(e) => setCustomPrice(e.target.value)}
-												placeholder="0"
-												className="h-12 rounded-xl border-[#e8e8e8] bg-white pl-12 text-[15px] tabular-nums shadow-none focus-visible:ring-2 focus-visible:ring-primary/25"
-											/>
-										</div>
-									</label>
-								) : null}
-							</div>
-						) : null}
+										<Input
+											inputMode="decimal"
+											required
+											value={customPrice}
+											onChange={(e) => setCustomPrice(e.target.value)}
+											placeholder="0"
+											className="h-12 rounded-xl border-[#e8e8e8] bg-white pl-12 text-[15px] tabular-nums shadow-none focus-visible:ring-2 focus-visible:ring-primary/25"
+										/>
+									</div>
+								</label>
+							) : null}
+						</div>
+					) : null}
+				</section>
 			</div>
 
 			{step === 2 ? (
@@ -974,7 +1049,7 @@ function BookServiceForm() {
 							</section>
 						) : null}
 
-						{!isCustomOffer && coupons.length > 0 ? (
+						{!usingCustomPrice && coupons.length > 0 ? (
 							<div className="space-y-2 rounded-2xl bg-white p-4 shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
 								<p className="text-[13px] font-semibold">{t("bookServiceCoupon")}</p>
 								<div className="flex gap-2">
@@ -1023,9 +1098,12 @@ function BookServiceForm() {
 									<div className="flex items-center justify-between gap-3 px-4 py-2.5 text-[14px]">
 										<span className="text-[#6b6b6b]">
 											{t("commonDiscount")}
-											{service.discount && Number(service.discount) <= 100
+											{service.discount &&
+											serviceDiscountIsPercent(service.discount)
 												? ` (${service.discount}% off)`
-												: ""}
+												: service.discount
+													? ` (ETB ${service.discount} off)`
+													: ""}
 										</span>
 										<span className="tabular-nums text-[#6b6b6b]">
 											{formatAmount(serviceDiscount)}
@@ -1253,10 +1331,24 @@ function BookServiceForm() {
 										</span>
 									</div>
 								) : null}
+								{serviceDiscount > 0 || discount > 0 || remaining > 0 ? (
+									<div className="flex items-center justify-between py-1.5 text-[14px]">
+										<span className="font-medium text-[#1a1a1a]">
+											{t("bookServiceServiceTotal")}
+										</span>
+										<span className="font-bold tabular-nums text-[#2e7d32]">
+											{formatAmount(total)}
+										</span>
+									</div>
+								) : null}
 								<div className="my-1 border-t border-[#e0e0e0]" />
 								<div className="flex items-center justify-between py-1.5 text-[14px]">
 									<span className="font-bold text-[#1a1a1a]">
-										{t("bookServiceTotalAmount")}
+										{hasPartialPrePayment
+											? t("bookingPayPercentNow", {
+													percent: String(prePayPercent),
+												})
+											: t("bookServiceTotalAmount")}
 									</span>
 									<span className="font-bold tabular-nums text-[#2e7d32]">
 										{formatAmount(dueNow)}

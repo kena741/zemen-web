@@ -63,7 +63,11 @@ export default function CustomerProfilePage() {
 
 	function onDeleteAccount() {
 		if (!window.confirm(t("deleteAccountConfirm"))) return;
-		window.alert(t("deleteAccountContactSupport", { email: SUPPORT_EMAIL }));
+		window.alert(
+			t("deleteAccountContactSupport", {
+				email: "support@zemenservice.com",
+			}),
+		);
 		clearGuestBrowse();
 		logout();
 	}
