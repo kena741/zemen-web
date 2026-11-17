@@ -23,6 +23,13 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ServiceLoading } from "@/components/service/service-loading";
 import {
+	bookingAmountsFromRow,
+	customerObligationAmount,
+	paidPercentage,
+	remainingServiceBalance,
+	resolveBookingPaymentSettlement,
+} from "@/lib/booking-payment-progress";
+import {
 	bookingListStatusClass,
 	formatBookingStatus,
 } from "@/lib/booking-status";
@@ -188,15 +195,18 @@ export default function CustomerBookingDetailPage() {
 		router.replace("/service/bookings");
 	}
 
-	async function onPayWallet() {
+	async function onPayWallet(opts?: { remainingBalance?: boolean }) {
 		if (!booking || !user?.id || busy) return;
 		const statusNow = (booking.status || "").toLowerCase();
+		const amounts = bookingAmountsFromRow(booking);
+		const remaining = remainingServiceBalance(amounts);
 		const extra =
 			Number(
 				booking.extraChargeAmount ?? booking.extraCharge?.extraCharge ?? 0,
 			) || 0;
-		const amount =
-			statusNow === "pending_extra_payment" && extra > 0
+		const amount = opts?.remainingBalance
+			? remaining
+			: statusNow === "pending_extra_payment" && extra > 0
 				? extra
 				: Number(booking.totalAmount ?? booking.subTotal ?? 0) || 0;
 		if (amount <= 0) {
@@ -216,7 +226,11 @@ export default function CustomerBookingDetailPage() {
 			bookingId: booking.id,
 			customerId: user.customer?.id ?? user.id,
 			amount,
-			extraPayment: statusNow === "pending_extra_payment",
+			extraPayment: !opts?.remainingBalance && statusNow === "pending_extra_payment",
+			remainingBalance: opts?.remainingBalance === true,
+			fullObligation: opts?.remainingBalance
+				? customerObligationAmount(amounts)
+				: undefined,
 		});
 		setBusy(false);
 		if (!res.ok) {
@@ -389,10 +403,16 @@ export default function CustomerBookingDetailPage() {
 
 	const status = (booking.status || "").toLowerCase();
 	const offerStatus = (offer?.status ?? "").toLowerCase();
+	const paymentAmounts = bookingAmountsFromRow(booking);
+	const remainingDue = remainingServiceBalance(paymentAmounts);
+	const paidPct = paidPercentage(paymentAmounts);
+	const settlement = resolveBookingPaymentSettlement(paymentAmounts);
 	const isAwaitingCustomPricePayment =
 		!booking.paymentCompleted && offerStatus === "accepted";
 	const isAwaitingOfferApproval =
 		!booking.paymentCompleted && offerStatus === "pending";
+	const isRemainingBalanceDue =
+		remainingDue > 0 && !booking.nextCycleDue;
 	const canCancel =
 		(status === "pending" || status === "accepted") &&
 		!isAwaitingCustomPricePayment;
@@ -426,7 +446,9 @@ export default function CustomerBookingDetailPage() {
 		? t("bookingPayNow")
 		: isAwaitingCustomPricePayment
 			? t("bookingAwaitingPayment")
-			: formatBookingStatus(booking.status);
+			: isRemainingBalanceDue
+				? t("bookingPayRemaining", { amount: formatAmount(remainingDue) })
+				: formatBookingStatus(booking.status);
 	const showOtp = shouldShowCustomerBookingOtp(booking.otp, booking.status);
 	const proof = booking.serviceProof;
 	const hasProof =
@@ -452,19 +474,23 @@ export default function CustomerBookingDetailPage() {
 		!offer &&
 		booking.subTotal != null &&
 		Math.abs(Number(booking.subTotal) - bookingTotal) > 0.001;
-	const paymentLabel = booking.paymentCompleted
-		? t("bookingPaidWith", {
-				type: booking.paymentType || t("commonPaid"),
-			})
-		: offer
-			? t("commonUnpaid")
-			: booking.paymentType || t("commonUnpaid");
+	const paymentLabel =
+		settlement === "partial"
+			? t("bookingPartiallyPaid", { percent: String(paidPct) })
+			: settlement === "paid"
+				? t("bookingPaidWith", {
+						type: booking.paymentType || t("commonPaid"),
+					})
+				: offer
+					? t("commonUnpaid")
+					: booking.paymentType || t("commonUnpaid");
 	const extraAmount =
 		booking.extraChargeAmount ?? booking.extraCharge?.extraCharge ?? null;
 
 	const primaryActions =
 		showNextCyclePay ||
 		isAwaitingCustomPricePayment ||
+		isRemainingBalanceDue ||
 		canComplete ||
 		showWalletPay ||
 		canReview ||
@@ -642,6 +668,9 @@ export default function CustomerBookingDetailPage() {
 					<div className="border-t border-border/60 px-3.5 py-3 text-[13px]">
 						<span className="text-muted-foreground">{t("bookingPayment")}: </span>
 						<span className="font-semibold">{paymentLabel}</span>
+					</div>
+					<div className="border-t border-border/60 px-3.5 py-3 text-[13px] text-muted-foreground">
+						{t("bookingPercentPaid", { percent: String(paidPct) })}
 					</div>
 				</Section>
 
@@ -892,6 +921,18 @@ export default function CustomerBookingDetailPage() {
 				{isAwaitingCustomPricePayment ? (
 					<Button className="w-full" disabled={busy} onClick={() => void onPayWallet()}>
 						{busy ? t("bookingPaying") : t("bookingPayNow")}
+					</Button>
+				) : null}
+
+				{isRemainingBalanceDue && !showNextCyclePay && !isAwaitingCustomPricePayment ? (
+					<Button
+						className="w-full"
+						disabled={busy}
+						onClick={() => void onPayWallet({ remainingBalance: true })}
+					>
+						{busy
+							? t("bookingPaying")
+							: t("bookingPayRemaining", { amount: formatAmount(remainingDue) })}
 					</Button>
 				) : null}
 

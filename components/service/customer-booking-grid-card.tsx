@@ -9,6 +9,10 @@ import {
 	shouldShowCustomerBookingOtp,
 } from "@/components/service/booking-otp-chip";
 import {
+	bookingAmountsFromRow,
+	paidPercentage,
+} from "@/lib/booking-payment-progress";
+import {
 	bookingListStatusClass,
 	formatBookingStatus,
 } from "@/lib/booking-status";
@@ -51,10 +55,12 @@ export function CustomerBookingGridCard({
 	statusLabel?: string;
 	className?: string;
 }) {
+	const { t } = useLocale();
 	const [imgFailed, setImgFailed] = useState(false);
 	const image = booking.service?.serviceImage?.[0];
 	const label = statusLabel ?? formatBookingStatus(booking.status);
 	const showOtp = shouldShowCustomerBookingOtp(booking.otp, booking.status);
+	const pct = paidPercentage(bookingAmountsFromRow(booking));
 
 	return (
 		<Link
@@ -82,6 +88,9 @@ export function CustomerBookingGridCard({
 			<div className="flex flex-1 flex-col gap-1 px-2 pt-1.5 pb-2">
 				<p className="line-clamp-1 text-[13px] font-bold text-foreground">
 					{bookingTitle(booking)}
+				</p>
+				<p className="truncate text-[11px] font-medium text-muted-foreground">
+					{t("bookingPercentPaid", { percent: String(pct) })}
 				</p>
 				<div className="mt-auto flex items-end justify-between gap-1">
 					<p className="min-w-0 truncate text-[12px] font-semibold tabular-nums text-[#525252]">

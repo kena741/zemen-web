@@ -194,6 +194,9 @@ export async function payBookingWithWallet(params: {
 	nextCycle?: boolean;
 	/** After paying an extra charge, move booking to pending_approval. */
 	extraPayment?: boolean;
+	/** Partial escrow top-up: bump totalAmount to full obligation (mobile markRemaining). */
+	remainingBalance?: boolean;
+	fullObligation?: number;
 	billingInterval?: string | null;
 	billingIntervalCount?: number | null;
 }): Promise<{ ok: boolean; newBalance: number | null; error: string | null }> {
@@ -285,6 +288,15 @@ export async function payBookingWithWallet(params: {
 		};
 		if (params.extraPayment) {
 			bookUpdate.status = "pending_approval";
+		}
+		if (params.remainingBalance) {
+			const full =
+				params.fullObligation != null && params.fullObligation > 0
+					? params.fullObligation
+					: amount;
+			const fullStr = String(Math.round(full * 100) / 100);
+			bookUpdate.totalAmount = fullStr;
+			bookUpdate.subTotal = fullStr;
 		}
 		const { error: bookErr } = await supabase
 			.from("booked_service")
