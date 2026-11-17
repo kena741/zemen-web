@@ -269,7 +269,7 @@ export async function finalizeBookingTelebirrPayment(params: {
 
 	const { data: booking } = await params.admin
 		.from("booked_service")
-		.select("id, paymentCompleted, totalAmount")
+		.select("id, customer_id, customerId, paymentCompleted, totalAmount")
 		.eq("id", params.bookingId)
 		.maybeSingle();
 
@@ -278,6 +278,37 @@ export async function finalizeBookingTelebirrPayment(params: {
 	const row = booking as Record<string, unknown>;
 	if (row.paymentCompleted === true) {
 		return { ok: true, error: null };
+	}
+
+	const customerId = String(row.customer_id ?? row.customerId ?? "").trim();
+	const paidAmount = Number(params.fallbackAmount);
+	if (customerId && Number.isFinite(paidAmount) && paidAmount > 0) {
+		const { data: existingPayment } = await params.admin
+			.from("wallet_transaction")
+			.select("id")
+			.eq("transactionId", params.bookingId)
+			.eq("type", "customer")
+			.eq("paymentType", "telebirr")
+			.eq("isCredit", false)
+			.maybeSingle();
+		if (!existingPayment) {
+			const { error: paymentError } = await params.admin
+				.from("wallet_transaction")
+				.insert({
+					id: crypto.randomUUID(),
+					userId: customerId,
+					amount: paidAmount.toFixed(2),
+					createdDate: new Date().toISOString(),
+					paymentType: "telebirr",
+					transactionId: params.bookingId,
+					isCredit: false,
+					type: "customer",
+					note: "Service fee paid via Telebirr",
+				});
+			if (paymentError) {
+				return { ok: false, error: paymentError.message };
+			}
+		}
 	}
 
 	const { error } = await params.admin

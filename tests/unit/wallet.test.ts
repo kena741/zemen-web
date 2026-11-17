@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { customerBookingRefundAmount } from "@/services/customer/bookingRefund";
+import {
+	customerBookingRefundAmount,
+	resolveCustomerCancelRefundAmount,
+} from "@/services/customer/bookingRefund";
 
 /** Mirrors requestWithdrawal: queue-only, check full wallet (no soft-hold). */
 function canRequest(balance: number, amount: number): boolean {
@@ -59,5 +62,58 @@ describe("customer booking refund", () => {
 
 	it("does not refund when there are no valid debits", () => {
 		expect(customerBookingRefundAmount([{ amount: 0 }, { amount: null }])).toBe(0);
+	});
+});
+
+describe("resolveCustomerCancelRefundAmount", () => {
+	it("refunds nothing when payment is not completed", () => {
+		expect(
+			resolveCustomerCancelRefundAmount({
+				paymentCompleted: false,
+				totalAmount: 500,
+				debitTotal: 500,
+			}),
+		).toBe(0);
+	});
+
+	it("prefers wallet/chapa debit total when present", () => {
+		expect(
+			resolveCustomerCancelRefundAmount({
+				paymentCompleted: true,
+				paymentType: "wallet",
+				totalAmount: 900,
+				debitTotal: 450,
+			}),
+		).toBe(450);
+	});
+
+	it("uses Chapa escrow then subTotal when no debit ledger", () => {
+		expect(
+			resolveCustomerCancelRefundAmount({
+				paymentCompleted: true,
+				paymentType: "chapa",
+				escrowAmount: 320,
+				subTotal: 400,
+				totalAmount: 400,
+			}),
+		).toBe(320);
+		expect(
+			resolveCustomerCancelRefundAmount({
+				paymentCompleted: true,
+				paymentType: "Chapa",
+				subTotal: 400,
+				totalAmount: 500,
+			}),
+		).toBe(400);
+	});
+
+	it("falls back to totalAmount for telebirr/wallet without debit rows", () => {
+		expect(
+			resolveCustomerCancelRefundAmount({
+				paymentCompleted: true,
+				paymentType: "telebirr",
+				totalAmount: "275.50",
+			}),
+		).toBe(275.5);
 	});
 });

@@ -4,7 +4,10 @@ import {
 	getAuthUserFromRequest,
 	getSupabaseAdmin,
 } from "@/lib/supabase/admin";
-import { customerBookingRefundAmount } from "@/services/customer/bookingRefund";
+import {
+	customerBookingRefundAmount,
+	resolveCustomerCancelRefundAmount,
+} from "@/services/customer/bookingRefund";
 
 export const runtime = "nodejs";
 
@@ -109,7 +112,11 @@ export async function POST(request: Request) {
 				const latestStatus = String(latest?.status ?? "")
 					.trim()
 					.toLowerCase();
-				if (latestStatus !== "rejected" && latestStatus !== "cancelled" && latestStatus !== "canceled") {
+				if (
+					latestStatus !== "rejected" &&
+					latestStatus !== "cancelled" &&
+					latestStatus !== "canceled"
+				) {
 					return NextResponse.json(
 						{ error: "Booking can no longer be cancelled." },
 						{ status: 409 },
@@ -171,7 +178,30 @@ export async function POST(request: Request) {
 			return NextResponse.json({ error: debitError.message }, { status: 500 });
 		}
 
-		const refunded = customerBookingRefundAmount(debits ?? []);
+		const debitTotal = customerBookingRefundAmount(debits ?? []);
+		let escrowAmount: number | null = null;
+		const paymentType = String(bookingRow.paymentType ?? "");
+		if (paymentType.toLowerCase().includes("chapa")) {
+			const { data: paymentRow } = await admin
+				.from("payments")
+				.select("amount")
+				.eq("booking_id", bookingId)
+				.maybeSingle();
+			escrowAmount = asNumber(
+				(paymentRow as { amount?: unknown } | null)?.amount,
+			);
+			if (escrowAmount <= 0) escrowAmount = null;
+		}
+
+		// Match mobile: only refund paid bookings; amount from debits → escrow → total.
+		const refunded = resolveCustomerCancelRefundAmount({
+			paymentCompleted: bookingRow.paymentCompleted,
+			paymentType,
+			totalAmount: bookingRow.totalAmount,
+			subTotal: bookingRow.subTotal,
+			debitTotal,
+			escrowAmount,
+		});
 		if (refunded <= 0) {
 			return NextResponse.json({
 				ok: true,
@@ -189,17 +219,20 @@ export async function POST(request: Request) {
 
 		const balance = asNumber(customerRow.wallet_amount);
 		const newBalance = Math.round((balance + refunded) * 100) / 100;
-		const txUserId = String(debits?.[0]?.userId ?? customerId);
+		const txUserId = String(
+			debits?.[0]?.userId ?? bookingCustomerId ?? customerId,
+		);
+		const orderShort = bookingId.slice(0, 6);
 		const { error: txError } = await admin.from("wallet_transaction").insert({
-			id: bookingId,
+			id: crypto.randomUUID(),
 			userId: txUserId,
 			amount: refunded.toFixed(2),
 			createdDate: new Date().toISOString(),
-			paymentType: "wallet",
+			paymentType: paymentType.trim() || "wallet",
 			transactionId: refundTransactionId,
 			isCredit: true,
 			type: "customer",
-			note: `Booking cancellation refund (${bookingId})`,
+			note: `Order #${orderShort} cancel refund`,
 		});
 		if (txError) {
 			console.error("cancel booking refund transaction", txError);
