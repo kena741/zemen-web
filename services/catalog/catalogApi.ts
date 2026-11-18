@@ -1,15 +1,24 @@
+import { isBackendMode } from "@/lib/env";
 import { getSupabase } from "@/lib/supabase/client";
 import { mapServiceRow, type ProviderService, type ServiceCategory } from "@/services/services/types";
-import { fetchCategories, fetchSubCategories } from "@/services/services/servicesApi";
+import {
+	fetchCategories as fetchCategoriesSupabase,
+	fetchSubCategories as fetchSubCategoriesSupabase,
+} from "@/services/services/servicesApi";
+import * as backend from "./backend";
+import type { BannerItem } from "./types";
 
-export type { ServiceCategory };
-export { fetchCategories, fetchSubCategories };
+export type { ServiceCategory, BannerItem };
 
-export interface BannerItem {
-	id: string;
-	image: string | null;
-	title: string | null;
-	isActive: boolean;
+export async function fetchCategories() {
+	if (isBackendMode()) return backend.fetchCategories();
+	return fetchCategoriesSupabase();
+}
+
+export async function fetchSubCategories(categoryId?: string) {
+	if (isBackendMode()) return backend.fetchSubCategories(categoryId);
+	if (!categoryId) return { subCategories: [], error: null };
+	return fetchSubCategoriesSupabase(categoryId);
 }
 
 function mapBanner(row: Record<string, unknown>): BannerItem {
@@ -65,6 +74,8 @@ export async function fetchCatalogServices(params?: {
 	limit?: number;
 	search?: string;
 }): Promise<{ services: ProviderService[]; error: string | null }> {
+	if (isBackendMode()) return backend.fetchCatalogServices(params);
+
 	let query = getSupabase()
 		.from("service")
 		.select("*")
@@ -110,6 +121,8 @@ export async function fetchCatalogServices(params?: {
 export async function fetchCatalogServiceById(
 	id: string,
 ): Promise<{ service: ProviderService | null; error: string | null }> {
+	if (isBackendMode()) return backend.fetchCatalogServiceById(id);
+
 	const { data, error } = await getSupabase()
 		.from("service")
 		.select("*")
@@ -131,6 +144,8 @@ export async function fetchBanners(): Promise<{
 	banners: BannerItem[];
 	error: string | null;
 }> {
+	if (isBackendMode()) return backend.fetchBanners();
+
 	const { data, error } = await getSupabase()
 		.from("banner")
 		.select("*")
@@ -152,6 +167,7 @@ export async function fetchBanners(): Promise<{
 export async function fetchFavoriteServices(
 	userId: string,
 ): Promise<{ services: ProviderService[]; error: string | null }> {
+	if (isBackendMode()) return backend.fetchFavoriteServices(userId);
 	if (!userId) return { services: [], error: "Missing user id" };
 
 	const { data, error } = await getSupabase()
@@ -178,6 +194,8 @@ export async function toggleServiceFavorite(params: {
 	userId: string;
 	likedUser: string[];
 }): Promise<{ likedUser: string[]; error: string | null }> {
+	if (isBackendMode()) return backend.toggleServiceFavorite(params);
+
 	const set = new Set(params.likedUser);
 	if (set.has(params.userId)) set.delete(params.userId);
 	else set.add(params.userId);
@@ -202,6 +220,8 @@ export async function fetchHomeFeed(): Promise<{
 	services: ProviderService[];
 	error: string | null;
 }> {
+	if (isBackendMode()) return backend.fetchHomeFeed();
+
 	const [cats, banners, featured, services] = await Promise.all([
 		fetchCategories(),
 		fetchBanners(),

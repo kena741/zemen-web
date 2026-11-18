@@ -1,4 +1,5 @@
-import { WEB_APP_CONFIG_KEY } from "@/lib/env";
+import { apiFetch } from "@/lib/backend/client";
+import { WEB_APP_CONFIG_KEY, isBackendMode } from "@/lib/env";
 import { getSupabase } from "@/lib/supabase/client";
 
 export interface WebAppConfig {
@@ -13,6 +14,19 @@ export async function fetchWebAppConfig(): Promise<WebAppConfig> {
 	};
 
 	try {
+		if (isBackendMode()) {
+			const row = await apiFetch<Record<string, unknown>>(
+				`/config/mobile/${WEB_APP_CONFIG_KEY}`,
+			);
+			return {
+				maintenanceMode: row.maintenance_mode === true,
+				maintenanceMessage:
+					row.maintenance_message != null
+						? String(row.maintenance_message)
+						: null,
+			};
+		}
+
 		const { data, error } = await getSupabase()
 			.from("mobile_app_config")
 			.select("maintenance_mode, maintenance_message")

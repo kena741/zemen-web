@@ -1,3 +1,4 @@
+import { isBackendMode } from "@/lib/env";
 import { getPublicSupabase } from "@/lib/supabase/public";
 import { slugifyCategoryName } from "@/lib/seo-services";
 import {
@@ -6,6 +7,7 @@ import {
 	type ServiceCategory,
 	type ServiceSubCategory,
 } from "@/services/services/types";
+import * as backend from "./backend";
 
 export type PublicCategory = ServiceCategory & { slug: string };
 
@@ -38,6 +40,8 @@ const VIRTUAL_SUBCATEGORIES: {
 ];
 
 export async function fetchPublicCategories(): Promise<PublicCategory[]> {
+	if (isBackendMode()) return backend.fetchPublicCategories();
+
 	const { data, error } = await getPublicSupabase()
 		.from("category")
 		.select("*")
@@ -76,6 +80,10 @@ const CATEGORY_SLUG_ALIASES: Record<string, string[]> = {
 export async function fetchPublicCategoryBySlug(
 	slug: string,
 ): Promise<PublicCategory | null> {
+	if (isBackendMode()) {
+		const exact = await backend.fetchPublicCategoryBySlug(slug);
+		if (exact) return exact;
+	}
 	const categories = await fetchPublicCategories();
 	const exact = categories.find((c) => c.slug === slug);
 	if (exact) return exact;
@@ -96,6 +104,11 @@ export async function fetchPublicSubCategories(
 	categorySlug: string,
 ): Promise<PublicSubCategory[]> {
 	if (!categoryId) return [];
+
+	if (isBackendMode()) {
+		const subs = await backend.fetchPublicSubCategories(categoryId);
+		return subs.map((s) => ({ ...s, categorySlug }));
+	}
 
 	const { data, error } = await getPublicSupabase()
 		.from("sub_category")
@@ -180,6 +193,10 @@ export async function fetchPublicServicesByCategory(
 	categoryId: string,
 	limit = 12,
 ): Promise<ProviderService[]> {
+	if (isBackendMode()) {
+		return backend.fetchPublicServices({ categoryId, limit });
+	}
+
 	const { data, error } = await getPublicSupabase()
 		.from("service")
 		.select("*")
@@ -223,6 +240,10 @@ export async function fetchPublicServicesBySubCategory(
 ): Promise<ProviderService[]> {
 	if (!subCategoryId) return [];
 
+	if (isBackendMode()) {
+		return backend.fetchPublicServices({ subCategoryId, limit });
+	}
+
 	const { data, error } = await getPublicSupabase()
 		.from("service")
 		.select("*")
@@ -245,6 +266,14 @@ export async function fetchPublicServicesBySubCategory(
 export async function fetchPublicFeaturedServices(
 	limit = 8,
 ): Promise<ProviderService[]> {
+	if (isBackendMode()) {
+		const { services } = await backend.fetchCatalogServices({
+			featuredOnly: true,
+			limit,
+		});
+		return services;
+	}
+
 	const { data, error } = await getPublicSupabase()
 		.from("service")
 		.select("*")

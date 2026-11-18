@@ -1,3 +1,5 @@
+import { apiFetch } from "@/lib/backend/client";
+import { isBackendMode } from "@/lib/env";
 import { getSupabase } from "@/lib/supabase/client";
 import { parseObjectValue } from "@/lib/chapa";
 
@@ -30,13 +32,25 @@ export async function fetchPaymentMethodsConfig(): Promise<PaymentMethodsConfig>
 		flutterWaveName: "Flutterwave",
 	};
 
-	const { data } = await getSupabase()
-		.from("app_settings")
-		.select("data")
-		.eq("id", "payment")
-		.maybeSingle();
+	let root: Record<string, unknown> = {};
+	if (isBackendMode()) {
+		try {
+			const settings = await apiFetch<Record<string, unknown>>(
+				"/payments/settings",
+			);
+			root = parseObjectValue(settings);
+		} catch {
+			return defaults;
+		}
+	} else {
+		const { data } = await getSupabase()
+			.from("app_settings")
+			.select("data")
+			.eq("id", "payment")
+			.maybeSingle();
+		root = parseObjectValue(data?.data);
+	}
 
-	const root = parseObjectValue(data?.data);
 	const chapa = (root.chapa ?? {}) as Record<string, unknown>;
 	const telebirr = (root.telebirr ?? {}) as TelebirrConfig;
 	const flutterWave = (root.flutterWave ?? root.flutterwave ?? {}) as FlutterWaveConfig;
