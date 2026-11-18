@@ -1,3 +1,6 @@
+import { apiFetch } from "@/lib/backend/client";
+import { isBackendMode } from "@/lib/env";
+
 function smsBase(): string {
 	// Browser → same-origin proxy (betegna-ai CORS blocks web origins)
 	if (typeof window !== "undefined") return "/api/sms";
@@ -89,6 +92,27 @@ export async function sendPhoneOtp(phone: string): Promise<SmsOtpResult> {
 	const recipient = otpRecipient(phone);
 	if (!recipient) return { success: false, error: "Invalid phone number" };
 
+	if (isBackendMode()) {
+		try {
+			const data = await apiFetch<Record<string, unknown>>("/auth/otp/send", {
+				method: "POST",
+				body: {
+					recipient,
+					phone: recipient,
+					code_length: 6,
+					ttl: 300,
+					message_prefix: "Your verification code is",
+				},
+			});
+			return parseSendOtpResponse(data);
+		} catch (e) {
+			return {
+				success: false,
+				error: e instanceof Error ? e.message : "Failed to send OTP",
+			};
+		}
+	}
+
 	try {
 		const res = await fetch(`${smsBase()}/send-otp`, {
 			method: "POST",
@@ -131,6 +155,26 @@ export async function verifyPhoneOtp(
 	const recipient = otpRecipient(phone);
 	if (!recipient || !verificationId.trim()) {
 		return { success: false, error: "Invalid verification details" };
+	}
+
+	if (isBackendMode()) {
+		try {
+			const data = await apiFetch<Record<string, unknown>>("/auth/otp/verify", {
+				method: "POST",
+				body: {
+					code: code.trim(),
+					recipient,
+					phone: recipient,
+					verification_id: verificationId,
+				},
+			});
+			return parseVerifyOtpResponse(data, true);
+		} catch (e) {
+			return {
+				success: false,
+				error: e instanceof Error ? e.message : "Invalid code",
+			};
+		}
 	}
 
 	try {

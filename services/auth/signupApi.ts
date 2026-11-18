@@ -1,5 +1,7 @@
 import type { AppMode } from "@/lib/brand";
-import { getEdgeFunctionsBaseUrl } from "@/lib/env";
+import { apiFetch } from "@/lib/backend/client";
+import { applySession, normalizeSession } from "@/lib/auth/session";
+import { getEdgeFunctionsBaseUrl, isBackendMode } from "@/lib/env";
 import {
 	normalizeLocalEthiopianPhone,
 	validateEmail,
@@ -34,13 +36,98 @@ export interface ProviderSignupInput {
 }
 
 function slugFromName(first: string, last: string): string {
-	const base = `${first}-${last}`.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+	const base = `${first}-${last}`
+		.toLowerCase()
+		.replace(/[^a-z0-9]+/g, "-")
+		.replace(/^-|-$/g, "");
 	return base || `provider-${Date.now()}`;
+}
+
+async function signUpCustomerBackend(
+	input: CustomerSignupInput,
+): Promise<{ userId: string | null; error: string | null }> {
+	const phoneErr = validateLoginPhoneNumber(input.phone);
+	if (phoneErr) return { userId: null, error: phoneErr };
+
+	const email =
+		input.email?.trim() ||
+		(input.phoneVerified ? syntheticEmailFromPhone(input.phone) : null);
+	if (!email) return { userId: null, error: "Email or verified phone is required" };
+	if (input.email?.trim()) {
+		const emailErr = validateEmail(input.email);
+		if (emailErr) return { userId: null, error: emailErr };
+	}
+
+	try {
+		const raw = await apiFetch<Record<string, unknown>>("/auth/signup/customer", {
+			method: "POST",
+			body: {
+				email,
+				password: input.password,
+				first_name: input.firstName.trim(),
+				last_name: input.lastName.trim(),
+				user_name:
+					input.userName?.trim() ||
+					`${input.firstName} ${input.lastName}`.trim(),
+				phone: normalizeLocalEthiopianPhone(input.phone),
+				country_code: input.countryCode || "+251",
+				address: input.address?.trim() || null,
+				login_type: "app",
+			},
+		});
+		const session = normalizeSession(raw);
+		applySession(session);
+		const userId =
+			(session.user?.id != null ? String(session.user.id) : null) ||
+			session.customerId ||
+			null;
+		return { userId, error: null };
+	} catch (e) {
+		const msg = e instanceof Error ? e.message : "Signup failed";
+		return { userId: null, error: friendlyLoginError(msg) };
+	}
+}
+
+async function signUpProviderBackend(
+	input: ProviderSignupInput,
+): Promise<{ userId: string | null; error: string | null }> {
+	const emailErr = validateEmail(input.email);
+	if (emailErr) return { userId: null, error: emailErr };
+	const phoneErr = validateLoginPhoneNumber(input.phone);
+	if (phoneErr) return { userId: null, error: phoneErr };
+
+	try {
+		const raw = await apiFetch<Record<string, unknown>>("/auth/signup/provider", {
+			method: "POST",
+			body: {
+				email: input.email.trim().toLowerCase(),
+				password: input.password,
+				first_name: input.firstName.trim(),
+				last_name: input.lastName.trim(),
+				user_name: `${input.firstName.trim()} ${input.lastName.trim()}`.trim(),
+				phone: normalizeLocalEthiopianPhone(input.phone),
+				country_code: input.countryCode || "+251",
+				address: input.address?.trim() || null,
+			},
+		});
+		const session = normalizeSession(raw);
+		applySession(session);
+		const userId =
+			(session.user?.id != null ? String(session.user.id) : null) ||
+			session.providerId ||
+			null;
+		return { userId, error: null };
+	} catch (e) {
+		const msg = e instanceof Error ? e.message : "Signup failed";
+		return { userId: null, error: friendlyLoginError(msg) };
+	}
 }
 
 export async function signUpCustomer(
 	input: CustomerSignupInput,
 ): Promise<{ userId: string | null; error: string | null }> {
+	if (isBackendMode()) return signUpCustomerBackend(input);
+
 	const phoneErr = validateLoginPhoneNumber(input.phone);
 	if (phoneErr) return { userId: null, error: phoneErr };
 
@@ -67,7 +154,9 @@ export async function signUpCustomer(
 				password: input.password,
 				first_name: input.firstName.trim(),
 				last_name: input.lastName.trim(),
-				user_name: input.userName?.trim() || `${input.firstName} ${input.lastName}`.trim(),
+				user_name:
+					input.userName?.trim() ||
+					`${input.firstName} ${input.lastName}`.trim(),
 				phone: normalizeLocalEthiopianPhone(input.phone),
 				country_code: input.countryCode || "+251",
 				address: input.address?.trim() || "",
@@ -79,9 +168,16 @@ export async function signUpCustomer(
 				signup_source: input.signupSource || undefined,
 			}),
 		});
-		const data = (await res.json()) as { success?: boolean; userId?: string; error?: string };
+		const data = (await res.json()) as {
+			success?: boolean;
+			userId?: string;
+			error?: string;
+		};
 		if (!res.ok || !data.success || !data.userId) {
-			return { userId: null, error: friendlyLoginError(data.error || "Signup failed") };
+			return {
+				userId: null,
+				error: friendlyLoginError(data.error || "Signup failed"),
+			};
 		}
 		return { userId: data.userId, error: null };
 	} catch {
@@ -92,6 +188,8 @@ export async function signUpCustomer(
 export async function signUpProvider(
 	input: ProviderSignupInput,
 ): Promise<{ userId: string | null; error: string | null }> {
+	if (isBackendMode()) return signUpProviderBackend(input);
+
 	const emailErr = validateEmail(input.email);
 	if (emailErr) return { userId: null, error: emailErr };
 	const phoneErr = validateLoginPhoneNumber(input.phone);
@@ -121,7 +219,10 @@ export async function signUpProvider(
 	});
 
 	if (error || !data.user) {
-		return { userId: null, error: friendlyLoginError(error?.message || "Signup failed") };
+		return {
+			userId: null,
+			error: friendlyLoginError(error?.message || "Signup failed"),
+		};
 	}
 
 	const uid = data.user.id;
@@ -150,7 +251,6 @@ export async function signUpProvider(
 			...base,
 			...(input.signupSource ? { signupSource: input.signupSource } : {}),
 		});
-		// ponytail: column may not exist until SQL migration runs
 		if (upsertErr && input.signupSource) {
 			({ error: upsertErr } = await supabase.from("provider").upsert(base));
 		}
@@ -167,20 +267,34 @@ export async function finishSignupLogin(
 	password: string,
 	mode: AppMode,
 ): Promise<{ error: string | null }> {
+	if (isBackendMode()) {
+		const { loginWithEmailOrPhone } = await import("./index");
+		const result = await loginWithEmailOrPhone({
+			identifier: email,
+			password,
+			mode,
+		});
+		return { error: result.error };
+	}
+
 	const { error } = await getSupabase().auth.signInWithPassword({
 		email: email.trim().toLowerCase(),
 		password,
 	});
 	if (error) return { error: friendlyLoginError(error.message) };
-	if (mode === "provider") return { error: null };
 	return { error: null };
 }
 
-/** Stamp attribution after the user is authenticated (customer path). */
 export async function stampCustomerSignupSource(
 	userId: string,
 	signupSource: string,
 ): Promise<void> {
+	if (isBackendMode()) {
+		// ponytail: attribution via backend profile patch when available
+		void userId;
+		void signupSource;
+		return;
+	}
 	await getSupabase()
 		.from("customer")
 		.update({ signup_source: signupSource })

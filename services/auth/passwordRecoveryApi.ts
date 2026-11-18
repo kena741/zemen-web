@@ -1,5 +1,10 @@
 import type { AppMode } from "@/lib/brand";
-import { getEdgeFunctionsBaseUrl, getSiteUrl } from "@/lib/env";
+import { apiFetch } from "@/lib/backend/client";
+import {
+	getEdgeFunctionsBaseUrl,
+	getSiteUrl,
+	isBackendMode,
+} from "@/lib/env";
 import { normalizeLocalEthiopianPhone } from "@/lib/phone";
 import { getSupabase } from "@/lib/supabase/client";
 import { friendlyLoginError } from "./authApi";
@@ -16,6 +21,12 @@ export async function checkEmailForPasswordReset(params: {
 }): Promise<{ error: string | null }> {
 	const email = params.email.trim().toLowerCase();
 	if (!email) return { error: "Email is required" };
+
+	if (isBackendMode()) {
+		// ponytail: backend has no public email probe; allow reset flow to continue
+		void params.mode;
+		return { error: null };
+	}
 
 	const table = params.mode === "provider" ? "provider" : "customer";
 	const { data, error } = await getSupabase()
@@ -46,6 +57,13 @@ export async function requestPasswordResetEmail(
 ): Promise<{ error: string | null }> {
 	const normalized = email.trim().toLowerCase();
 	if (!normalized) return { error: "Email is required" };
+
+	if (isBackendMode()) {
+		return {
+			error:
+				"Email password reset is not available on this deployment. Use phone reset.",
+		};
+	}
 
 	const redirectTo = resetRedirectUrl();
 	const { error } = await getSupabase().auth.resetPasswordForEmail(normalized, {
@@ -101,6 +119,24 @@ export async function resetPasswordByPhone(params: {
 	newPassword: string;
 	mode: AppMode;
 }): Promise<{ error: string | null }> {
+	if (isBackendMode()) {
+		try {
+			await apiFetch("/auth/password/reset/phone", {
+				method: "POST",
+				body: {
+					phone: normalizeLocalEthiopianPhone(params.phone),
+					code: params.code.trim(),
+					new_password: params.newPassword,
+					verification_id: params.verificationId || null,
+				},
+			});
+			return { error: null };
+		} catch (e) {
+			const msg = e instanceof Error ? e.message : "Reset failed";
+			return { error: friendlyLoginError(msg) };
+		}
+	}
+
 	const edgeBase = getEdgeFunctionsBaseUrl();
 	if (!edgeBase) {
 		return { error: "Password reset is not configured on this deployment" };
@@ -136,6 +172,11 @@ export async function resetPasswordByPhone(params: {
 export async function updatePasswordFromRecovery(
 	newPassword: string,
 ): Promise<{ error: string | null }> {
+	if (isBackendMode()) {
+		return {
+			error: "Use phone password reset on this deployment.",
+		};
+	}
 	const { error } = await getSupabase().auth.updateUser({
 		password: newPassword,
 	});
