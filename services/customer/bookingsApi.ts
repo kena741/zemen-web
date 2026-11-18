@@ -2,11 +2,13 @@ import {
 	isRecurringPricingType,
 	stampRecurringPeriod,
 } from "@/lib/recurring";
+import { isBackendMode } from "@/lib/env";
 import { getSupabase } from "@/lib/supabase/client";
 import {
 	mapBookingRow,
 	type Booking,
 } from "@/services/bookings/types";
+import * as backend from "./bookingsBackend";
 
 async function attachServiceNames(bookings: Booking[]): Promise<Booking[]> {
 	const ids = [
@@ -49,6 +51,7 @@ async function attachServiceNames(bookings: Booking[]): Promise<Booking[]> {
 export async function fetchCustomerBookings(
 	customerId: string,
 ): Promise<{ bookings: Booking[]; error: string | null }> {
+	if (isBackendMode()) return backend.fetchCustomerBookings(customerId);
 	if (!customerId) return { bookings: [], error: "Missing customer id" };
 
 	const { data, error } = await getSupabase()
@@ -71,6 +74,8 @@ export async function fetchCustomerBookings(
 export async function fetchCustomerBookingById(
 	id: string,
 ): Promise<{ booking: Booking | null; error: string | null }> {
+	if (isBackendMode()) return backend.fetchCustomerBookingById(id);
+
 	const { data, error } = await getSupabase()
 		.from("booked_service")
 		.select("*")
@@ -124,6 +129,8 @@ export type CreateBookingInput = {
 export async function createCustomerBooking(
 	input: CreateBookingInput,
 ): Promise<{ bookingId: string | null; error: string | null }> {
+	if (isBackendMode()) return backend.createCustomerBooking(input);
+
 	const id = crypto.randomUUID();
 	const otp = String(Math.floor(100000 + Math.random() * 900000));
 	const lineGross = input.price * input.quantity;
@@ -349,6 +356,8 @@ export async function cancelCustomerBooking(
 	refunded: number;
 	error: string | null;
 }> {
+	if (isBackendMode()) return backend.cancelCustomerBooking(bookingId, reason);
+
 	const { data, error: sessionError } = await getSupabase().auth.getSession();
 	if (sessionError) {
 		return {
@@ -402,6 +411,8 @@ export async function cancelCustomerBooking(
 export async function completeCustomerBooking(
 	bookingId: string,
 ): Promise<{ ok: boolean; error: string | null }> {
+	if (isBackendMode()) return backend.completeCustomerBooking(bookingId);
+
 	const { data } = await getSupabase().auth.getSession();
 	const token = data.session?.access_token;
 	if (!token) return { ok: false, error: "You must be signed in." };
@@ -424,6 +435,8 @@ export async function completeCustomerBooking(
 export async function fetchCustomerJobRequests(
 	customerId: string,
 ): Promise<{ jobs: Record<string, unknown>[]; error: string | null }> {
+	if (isBackendMode()) return backend.fetchCustomerJobRequests(customerId);
+
 	const supabase = getSupabase();
 
 	const primary = await supabase
@@ -456,6 +469,32 @@ export async function createJobRequest(params: {
 	price?: string;
 	serviceModelList?: Array<Record<string, unknown>>;
 }): Promise<{ id: string | null; error: string | null }> {
+	if (isBackendMode()) {
+		try {
+			const row = await (
+				await import("@/lib/backend/client")
+			).apiFetch<Record<string, unknown>>("/jobs", {
+				method: "POST",
+				auth: true,
+				body: {
+					title: params.title.trim(),
+					description: params.description.trim(),
+					price: params.price?.trim() || null,
+					service_model_list: params.serviceModelList ?? null,
+				},
+			});
+			return {
+				id: row.id != null ? String(row.id) : null,
+				error: null,
+			};
+		} catch (e) {
+			return {
+				id: null,
+				error: e instanceof Error ? e.message : "Failed to create job",
+			};
+		}
+	}
+
 	const id = crypto.randomUUID();
 	const payload: Record<string, unknown> = {
 		id,
@@ -485,6 +524,8 @@ export async function createJobRequest(params: {
 export async function deleteJobRequest(
 	id: string,
 ): Promise<{ ok: boolean; error: string | null }> {
+	if (isBackendMode()) return backend.deleteJobRequest(id);
+
 	const { error } = await getSupabase().from("job_request").delete().eq("id", id);
 	if (error) {
 		console.error("deleteJobRequest", error);

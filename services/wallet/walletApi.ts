@@ -1,3 +1,5 @@
+import { apiFetch } from "@/lib/backend/client";
+import { isBackendMode } from "@/lib/env";
 import { getSupabase } from "@/lib/supabase/client";
 import {
 	mapWalletTxRow,
@@ -16,6 +18,24 @@ function ownerIds(authUserId: string, providerId: string | null): string[] {
 export async function fetchWalletBalance(
 	providerId: string,
 ): Promise<{ balance: number; error: string | null }> {
+	if (isBackendMode()) {
+		try {
+			const row = await apiFetch<{ balance?: number; walletAmount?: string }>(
+				"/wallet/balance",
+				{ auth: true },
+			);
+			return {
+				balance: Number(row.balance ?? row.walletAmount ?? 0) || 0,
+				error: null,
+			};
+		} catch (e) {
+			return {
+				balance: 0,
+				error: e instanceof Error ? e.message : "Failed to load balance",
+			};
+		}
+	}
+
 	const { data, error } = await getSupabase()
 		.from("provider")
 		.select("walletAmount")
@@ -37,6 +57,24 @@ export async function fetchWalletTransactions(params: {
 	providerId: string | null;
 	type?: "provider" | "customer";
 }): Promise<{ transactions: WalletTransaction[]; error: string | null }> {
+	if (isBackendMode()) {
+		try {
+			const page = await apiFetch<
+				{ items?: Record<string, unknown>[] } | Record<string, unknown>[]
+			>("/wallet/transactions", { auth: true });
+			const rows = Array.isArray(page) ? page : (page.items ?? []);
+			return {
+				transactions: rows.map((row) => mapWalletTxRow(row)),
+				error: null,
+			};
+		} catch (e) {
+			return {
+				transactions: [],
+				error: e instanceof Error ? e.message : "Failed to load transactions",
+			};
+		}
+	}
+
 	const ids = ownerIds(params.authUserId, params.providerId);
 	if (!ids.length) return { transactions: [], error: "Missing user id" };
 
@@ -64,6 +102,24 @@ export async function fetchWithdrawals(params: {
 	authUserId: string;
 	providerId: string | null;
 }): Promise<{ withdrawals: WithdrawRequest[]; error: string | null }> {
+	if (isBackendMode()) {
+		try {
+			const page = await apiFetch<
+				{ items?: Record<string, unknown>[] } | Record<string, unknown>[]
+			>("/wallet/withdrawals", { auth: true });
+			const rows = Array.isArray(page) ? page : (page.items ?? []);
+			return {
+				withdrawals: rows.map((row) => mapWithdrawRow(row)),
+				error: null,
+			};
+		} catch (e) {
+			return {
+				withdrawals: [],
+				error: e instanceof Error ? e.message : "Failed to load withdrawals",
+			};
+		}
+	}
+
 	const ids = ownerIds(params.authUserId, params.providerId);
 	if (!ids.length) return { withdrawals: [], error: "Missing user id" };
 
@@ -103,6 +159,26 @@ export async function requestWithdrawal(params: {
 }): Promise<{ ok: boolean; error: string | null; updatedPending?: boolean }> {
 	if (params.amount <= 0) {
 		return { ok: false, error: "Enter a valid amount" };
+	}
+
+	if (isBackendMode()) {
+		try {
+			await apiFetch("/wallet/withdrawals", {
+				method: "POST",
+				auth: true,
+				body: {
+					amount: params.amount,
+					paymentMethodId: params.paymentMethodId,
+					note: params.note?.trim() || null,
+				},
+			});
+			return { ok: true, error: null };
+		} catch (e) {
+			return {
+				ok: false,
+				error: e instanceof Error ? e.message : "Withdrawal failed",
+			};
+		}
 	}
 
 	const supabase = getSupabase();
@@ -194,6 +270,11 @@ export async function restorePrematureWithdrawalDeducts(): Promise<{
 	refunded: number;
 	error: string | null;
 }> {
+	if (isBackendMode()) {
+		// ponytail: backend owns wallet correction; no Next refund route in API mode
+		return { refunded: 0, error: null };
+	}
+
 	try {
 		const { data } = await getSupabase().auth.getSession();
 		const token = data.session?.access_token;

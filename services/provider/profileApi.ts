@@ -1,3 +1,5 @@
+import { apiFetch } from "@/lib/backend/client";
+import { isBackendMode } from "@/lib/env";
 import { getSupabase } from "@/lib/supabase/client";
 import { mapProviderRow, type ProviderProfile } from "@/services/auth/types";
 import { uploadServiceImages } from "@/services/services/servicesApi";
@@ -34,6 +36,28 @@ export async function updateProviderProfile(params: {
 		address: params.address.trim() || null,
 	};
 	if (profileImage) payload.profileImage = profileImage;
+
+	if (isBackendMode()) {
+		try {
+			const data = await apiFetch<Record<string, unknown>>("/providers/me", {
+				method: "PATCH",
+				auth: true,
+				body: {
+					first_name: firstName,
+					last_name: lastName,
+					phone_number: params.phoneNumber.trim() || null,
+					address: params.address.trim() || null,
+					profile_image: profileImage ?? undefined,
+				},
+			});
+			return { provider: mapProviderRow(data), error: null };
+		} catch (e) {
+			return {
+				provider: null,
+				error: e instanceof Error ? e.message : "Update failed",
+			};
+		}
+	}
 
 	const { data, error } = await getSupabase()
 		.from("provider")

@@ -187,6 +187,32 @@ export async function uploadServiceImages(params: {
 	authUserId: string;
 	files: File[];
 }): Promise<{ urls: string[]; error: string | null }> {
+	const { isBackendMode } = await import("@/lib/env");
+	if (isBackendMode()) {
+		const { apiFetch } = await import("@/lib/backend/client");
+		const urls: string[] = [];
+		for (const file of params.files) {
+			const form = new FormData();
+			form.append("file", file);
+			form.append("folder", `serviceImages/${params.authUserId}`);
+			try {
+				const res = await apiFetch<{ url?: string; publicUrl?: string }>(
+					"/storage/upload",
+					{ method: "POST", auth: true, formData: form },
+				);
+				const url = res.url ?? res.publicUrl;
+				if (!url) return { urls, error: "Upload returned no URL" };
+				urls.push(String(url));
+			} catch (e) {
+				return {
+					urls,
+					error: e instanceof Error ? e.message : "Upload failed",
+				};
+			}
+		}
+		return { urls, error: null };
+	}
+
 	const urls: string[] = [];
 	const supabase = getSupabase();
 

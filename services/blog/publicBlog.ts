@@ -1,3 +1,4 @@
+import { isBackendMode } from "@/lib/env";
 import { getPublicSupabase } from "@/lib/supabase/public";
 
 export type PublicBlogPost = {
@@ -63,6 +64,9 @@ const CARD_SELECT =
 const DETAIL_SELECT = `${CARD_SELECT}, content_html`;
 
 export async function fetchPublishedBlogPosts(): Promise<PublicBlogPost[]> {
+	// No public blog API on zemen_backend yet — empty in backend mode (no Supabase fallback).
+	if (isBackendMode()) return [];
+
 	const { data, error } = await getPublicSupabase()
 		.from("blog_post")
 		.select(CARD_SELECT)
@@ -81,6 +85,7 @@ export async function fetchPublishedBlogPostBySlug(
 	slug: string,
 ): Promise<PublicBlogPost | null> {
 	if (!slug.trim()) return null;
+	if (isBackendMode()) return null;
 
 	const { data, error } = await getPublicSupabase()
 		.from("blog_post")
@@ -101,6 +106,8 @@ export async function fetchPublishedBlogPostBySlug(
 export async function fetchPublishedBlogSlugs(): Promise<
 	{ slug: string; updatedAt: string }[]
 > {
+	if (isBackendMode()) return [];
+
 	const { data, error } = await getPublicSupabase()
 		.from("blog_post")
 		.select("slug, updated_at, published_at")
@@ -121,6 +128,7 @@ export async function fetchApprovedBlogComments(
 	postId: string,
 ): Promise<PublicBlogComment[]> {
 	if (!postId) return [];
+	if (isBackendMode()) return [];
 
 	const { data, error } = await getPublicSupabase()
 		.from("blog_comment")

@@ -1,3 +1,5 @@
+import { apiFetch } from "@/lib/backend/client";
+import { isBackendMode } from "@/lib/env";
 import { getSupabase } from "@/lib/supabase/client";
 import {
 	mapServiceRow,
@@ -461,6 +463,33 @@ export async function fetchOpenJobRequests(params?: {
 	jobs: ProviderJobRequest[];
 	error: string | null;
 }> {
+	if (isBackendMode()) {
+		try {
+			const page = await apiFetch<
+				{ items?: Record<string, unknown>[] } | Record<string, unknown>[]
+			>("/jobs/open", { auth: true });
+			let jobs = (Array.isArray(page) ? page : (page.items ?? [])).map(
+				(row) => mapJobRequestRow(row),
+			);
+			if (params?.providerId) {
+				const scope = await providerMatchingScope(params.providerId);
+				if (scope.categoryIds.size === 0 && scope.subCategoryIds.size === 0) {
+					jobs = [];
+				} else {
+					jobs = jobs.filter((job) =>
+						jobMatchesProviderCategories(job, scope),
+					);
+				}
+			}
+			return { jobs, error: null };
+		} catch (e) {
+			return {
+				jobs: [],
+				error: e instanceof Error ? e.message : "Failed to load jobs",
+			};
+		}
+	}
+
 	const { data, error } = await getSupabase()
 		.from("job_request")
 		.select("*")
@@ -500,6 +529,21 @@ export async function fetchJobRequestById(
 	id: string,
 ): Promise<{ job: ProviderJobRequest | null; error: string | null }> {
 	if (!id) return { job: null, error: "Missing id" };
+
+	if (isBackendMode()) {
+		try {
+			const row = await apiFetch<Record<string, unknown>>(`/jobs/${id}`, {
+				auth: true,
+			});
+			return { job: mapJobRequestRow(row), error: null };
+		} catch (e) {
+			return {
+				job: null,
+				error: e instanceof Error ? e.message : "Job not found",
+			};
+		}
+	}
+
 	const { data, error } = await getSupabase()
 		.from("job_request")
 		.select("*")
@@ -565,29 +609,45 @@ export async function fetchJobServiceForBooking(
 			error: "Missing job id",
 		};
 	}
-	const { data, error } = await getSupabase()
-		.from("job_request")
-		.select("*")
-		.eq("id", jobId)
-		.maybeSingle();
-	if (error) {
-		console.error("fetchJobServiceForBooking", error);
-		return {
-			service: null,
-			job: null,
-			serviceDetails: [],
-			error: error.message,
-		};
+	let row: Record<string, unknown> | null = null;
+	if (isBackendMode()) {
+		try {
+			row = await apiFetch<Record<string, unknown>>(`/jobs/${jobId}`, {
+				auth: true,
+			});
+		} catch (e) {
+			return {
+				service: null,
+				job: null,
+				serviceDetails: [],
+				error: e instanceof Error ? e.message : "Job not found",
+			};
+		}
+	} else {
+		const { data, error } = await getSupabase()
+			.from("job_request")
+			.select("*")
+			.eq("id", jobId)
+			.maybeSingle();
+		if (error) {
+			console.error("fetchJobServiceForBooking", error);
+			return {
+				service: null,
+				job: null,
+				serviceDetails: [],
+				error: error.message,
+			};
+		}
+		if (!data) {
+			return {
+				service: null,
+				job: null,
+				serviceDetails: [],
+				error: "Job not found",
+			};
+		}
+		row = data as Record<string, unknown>;
 	}
-	if (!data) {
-		return {
-			service: null,
-			job: null,
-			serviceDetails: [],
-			error: "Job not found",
-		};
-	}
-	const row = data as Record<string, unknown>;
 	const list = serviceModelListOf(row);
 	const serviceDetails = Array.isArray(list)
 		? list.filter(
@@ -617,6 +677,17 @@ export async function markJobRequestPaid(
 ): Promise<{ ok: boolean; error: string | null }> {
 	const id = jobId.trim();
 	if (!id) return { ok: false, error: "Missing job id" };
+	if (isBackendMode()) {
+		try {
+			await apiFetch(`/jobs/${id}/pay`, { method: "POST", auth: true, body: {} });
+			return { ok: true, error: null };
+		} catch (e) {
+			return {
+				ok: false,
+				error: e instanceof Error ? e.message : "Failed to mark paid",
+			};
+		}
+	}
 	const { error } = await getSupabase()
 		.from("job_request")
 		.update({ is_paid: true })
@@ -633,6 +704,23 @@ export async function fetchMyBidJobs(
 	providerId: string,
 ): Promise<{ jobs: ProviderJobRequest[]; error: string | null }> {
 	if (!providerId) return { jobs: [], error: "Missing provider id" };
+
+	if (isBackendMode()) {
+		try {
+			const page = await apiFetch<
+				{ items?: Record<string, unknown>[] } | Record<string, unknown>[]
+			>("/jobs/my-bids", { auth: true });
+			const jobs = (Array.isArray(page) ? page : (page.items ?? [])).map(
+				(row) => mapJobRequestRow(row),
+			);
+			return { jobs, error: null };
+		} catch (e) {
+			return {
+				jobs: [],
+				error: e instanceof Error ? e.message : "Failed to load bids",
+			};
+		}
+	}
 
 	const { data, error } = await getSupabase()
 		.from("job_request")
@@ -666,6 +754,22 @@ export async function placeJobBid(params: {
 	const amount = Number(price);
 	if (!price || Number.isNaN(amount) || amount < 1) {
 		return { ok: false, error: "Enter a valid bid amount (min 1 ETB)." };
+	}
+
+	if (isBackendMode()) {
+		try {
+			await apiFetch(`/jobs/${params.jobId}/bid`, {
+				method: "POST",
+				auth: true,
+				body: { price: amount },
+			});
+			return { ok: true, error: null };
+		} catch (e) {
+			return {
+				ok: false,
+				error: e instanceof Error ? e.message : "Bid failed",
+			};
+		}
 	}
 
 	const current = await fetchJobRequestById(params.jobId);

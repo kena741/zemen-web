@@ -1,4 +1,6 @@
 import { isUpcomingBooking } from "@/lib/booking-status";
+import { apiFetch } from "@/lib/backend/client";
+import { isBackendMode } from "@/lib/env";
 import { getSupabase } from "@/lib/supabase/client";
 import {
 	mapBookingRow,
@@ -75,6 +77,24 @@ export async function fetchProviderBookings(
 		return { bookings: [], error: "Missing provider id" };
 	}
 
+	if (isBackendMode()) {
+		try {
+			const page = await apiFetch<
+				{ items?: Record<string, unknown>[] } | Record<string, unknown>[]
+			>("/bookings/provider", { auth: true });
+			const rows = Array.isArray(page) ? page : (page.items ?? []);
+			return {
+				bookings: rows.map((row) => mapBookingRow(row)),
+				error: null,
+			};
+		} catch (e) {
+			return {
+				bookings: [],
+				error: e instanceof Error ? e.message : "Failed to load bookings",
+			};
+		}
+	}
+
 	const { data, error } = await getSupabase()
 		.from("booked_service")
 		.select("*")
@@ -101,6 +121,20 @@ export async function fetchBookingById(
 	id: string,
 ): Promise<{ booking: Booking | null; error: string | null }> {
 	if (!id) return { booking: null, error: "Missing booking id" };
+
+	if (isBackendMode()) {
+		try {
+			const row = await apiFetch<Record<string, unknown>>(`/bookings/${id}`, {
+				auth: true,
+			});
+			return { booking: mapBookingRow(row), error: null };
+		} catch (e) {
+			return {
+				booking: null,
+				error: e instanceof Error ? e.message : "Booking not found",
+			};
+		}
+	}
 
 	const { data, error } = await getSupabase()
 		.from("booked_service")
@@ -129,6 +163,22 @@ export async function updateBookingStatus(params: {
 }): Promise<{ ok: boolean; error: string | null }> {
 	const payload: Record<string, unknown> = { status: params.status };
 	if (params.reason != null) payload.reason = params.reason;
+
+	if (isBackendMode()) {
+		try {
+			await apiFetch(`/bookings/${params.bookingId}/status`, {
+				method: "PATCH",
+				auth: true,
+				body: payload,
+			});
+			return { ok: true, error: null };
+		} catch (e) {
+			return {
+				ok: false,
+				error: e instanceof Error ? e.message : "Update failed",
+			};
+		}
+	}
 
 	const { data, error } = await getSupabase()
 		.from("booked_service")
@@ -162,6 +212,30 @@ export async function assignBookingWorker(params: {
 		handyman_id: params.providerMySelf ? null : (params.handymanId ?? null),
 	};
 
+	if (isBackendMode()) {
+		try {
+			if (!params.providerMySelf && params.handymanId) {
+				await apiFetch(`/bookings/${params.bookingId}/assign-handyman`, {
+					method: "POST",
+					auth: true,
+					body: { handyman_id: params.handymanId },
+				});
+			} else {
+				await apiFetch(`/bookings/${params.bookingId}/accept`, {
+					method: "POST",
+					auth: true,
+					body: { provider_my_self: true },
+				});
+			}
+			return { ok: true, error: null };
+		} catch (e) {
+			return {
+				ok: false,
+				error: e instanceof Error ? e.message : "Assign failed",
+			};
+		}
+	}
+
 	const { data, error } = await getSupabase()
 		.from("booked_service")
 		.update(payload)
@@ -183,6 +257,22 @@ export async function updateBookingFields(params: {
 	bookingId: string;
 	fields: Record<string, unknown>;
 }): Promise<{ ok: boolean; error: string | null }> {
+	if (isBackendMode()) {
+		try {
+			await apiFetch(`/bookings/${params.bookingId}`, {
+				method: "PATCH",
+				auth: true,
+				body: params.fields,
+			});
+			return { ok: true, error: null };
+		} catch (e) {
+			return {
+				ok: false,
+				error: e instanceof Error ? e.message : "Update failed",
+			};
+		}
+	}
+
 	const { data, error } = await getSupabase()
 		.from("booked_service")
 		.update(params.fields)
@@ -262,6 +352,30 @@ export async function uploadProofImages(params: {
 	authUserId: string;
 	files: File[];
 }): Promise<{ urls: string[]; error: string | null }> {
+	if (isBackendMode()) {
+		const urls: string[] = [];
+		for (const file of params.files) {
+			const form = new FormData();
+			form.append("file", file);
+			form.append("folder", `serviceProof/${params.authUserId}`);
+			try {
+				const res = await apiFetch<{ url?: string; publicUrl?: string }>(
+					"/storage/upload",
+					{ method: "POST", auth: true, formData: form },
+				);
+				const url = res.url ?? res.publicUrl;
+				if (!url) return { urls, error: "Upload returned no URL" };
+				urls.push(String(url));
+			} catch (e) {
+				return {
+					urls,
+					error: e instanceof Error ? e.message : "Upload failed",
+				};
+			}
+		}
+		return { urls, error: null };
+	}
+
 	const urls: string[] = [];
 	const supabase = getSupabase();
 	const bucket = "betegnabucket";
@@ -306,6 +420,44 @@ export async function fetchDashboardSnapshot(providerId: string): Promise<{
 	};
 
 	if (!providerId) return { ...empty, error: "Missing provider id" };
+
+	if (isBackendMode()) {
+		const { bookings, error } = await fetchProviderBookings(providerId);
+		if (error) return { ...empty, error };
+		const pending = bookings.filter((b) =>
+			["pending", "placed", "requested"].includes(
+				String(b.status ?? "").toLowerCase(),
+			),
+		).length;
+		const upcoming = bookings
+			.filter((b) => {
+				const s = String(b.status ?? "").toLowerCase();
+				return s === "accepted" || s === "inprogress" || s === "in_progress";
+			})
+			.slice(0, 8);
+		const now = new Date();
+		const month = now.getMonth();
+		const year = now.getFullYear();
+		let completedThisMonth = 0;
+		let revenueThisMonth = 0;
+		for (const b of bookings) {
+			if (String(b.status ?? "").toLowerCase() !== "completed") continue;
+			const created = b.createdAt ? new Date(b.createdAt) : null;
+			if (!created || created.getMonth() !== month || created.getFullYear() !== year)
+				continue;
+			completedThisMonth += 1;
+			revenueThisMonth += Number(b.totalAmount ?? 0) || 0;
+		}
+		return {
+			pending,
+			upcoming,
+			totalBookings: bookings.length,
+			activeServices: 0,
+			completedThisMonth,
+			revenueThisMonth,
+			error: null,
+		};
+	}
 
 	const now = new Date();
 	const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();

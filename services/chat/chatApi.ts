@@ -1,3 +1,5 @@
+import { apiFetch } from "@/lib/backend/client";
+import { isBackendMode } from "@/lib/env";
 import { getSupabase } from "@/lib/supabase/client";
 import { sanitizeImageUrl } from "@/lib/media";
 import {
@@ -71,6 +73,39 @@ export async function fetchInbox(
 ): Promise<{ threads: InboxThread[]; error: string | null }> {
 	if (!currentUserId) return { threads: [], error: "Missing user id" };
 
+	if (isBackendMode()) {
+		try {
+			const page = await apiFetch<
+				{ items?: Record<string, unknown>[] } | Record<string, unknown>[]
+			>("/chats/inbox", { auth: true });
+			const rows = Array.isArray(page) ? page : (page.items ?? []);
+			const threads = rows.map((row) => {
+				const base = mapInboxRow(row, currentUserId);
+				return {
+					...base,
+					peerName:
+						row.peerName != null
+							? String(row.peerName)
+							: row.peer_name != null
+								? String(row.peer_name)
+								: "User",
+					peerImage:
+						row.peerImage != null
+							? String(row.peerImage)
+							: row.peer_image != null
+								? String(row.peer_image)
+								: null,
+				};
+			});
+			return { threads, error: null };
+		} catch (e) {
+			return {
+				threads: [],
+				error: e instanceof Error ? e.message : "Failed to load inbox",
+			};
+		}
+	}
+
 	const { data, error } = await getSupabase()
 		.from("chat_inbox")
 		.select("*")
@@ -107,6 +142,25 @@ export async function fetchChatMessages(params: {
 	peerId: string;
 }): Promise<{ messages: ChatMessage[]; error: string | null }> {
 	const { currentUserId, peerId } = params;
+
+	if (isBackendMode()) {
+		try {
+			const page = await apiFetch<
+				{ items?: Record<string, unknown>[] } | Record<string, unknown>[]
+			>(`/chats/${peerId}/messages`, { auth: true });
+			const rows = Array.isArray(page) ? page : (page.items ?? []);
+			return {
+				messages: rows.map((row) => mapChatRow(row)),
+				error: null,
+			};
+		} catch (e) {
+			return {
+				messages: [],
+				error: e instanceof Error ? e.message : "Failed to load messages",
+			};
+		}
+	}
+
 	const { data, error } = await getSupabase()
 		.from("chat")
 		.select("*")
@@ -142,6 +196,26 @@ export async function sendChatMessage(params: {
 }): Promise<{ ok: boolean; error: string | null }> {
 	const text = params.message.trim();
 	if (!text) return { ok: false, error: "Message is empty" };
+
+	if (isBackendMode()) {
+		try {
+			await apiFetch("/chats/send", {
+				method: "POST",
+				auth: true,
+				body: {
+					receiver_id: params.receiverId,
+					message: text,
+					type: "text",
+				},
+			});
+			return { ok: true, error: null };
+		} catch (e) {
+			return {
+				ok: false,
+				error: e instanceof Error ? e.message : "Send failed",
+			};
+		}
+	}
 
 	const supabase = getSupabase();
 	const now = new Date().toISOString();
@@ -180,6 +254,18 @@ export async function markChatSeen(params: {
 	currentUserId: string;
 	peerId: string;
 }): Promise<void> {
+	if (isBackendMode()) {
+		try {
+			await apiFetch(`/chats/${params.peerId}/seen`, {
+				method: "POST",
+				auth: true,
+			});
+		} catch (e) {
+			console.error("markChatSeen backend", e);
+		}
+		return;
+	}
+
 	await getSupabase()
 		.from("chat")
 		.update({ seen: true })
@@ -192,6 +278,25 @@ export async function fetchNotifications(
 	providerId: string,
 ): Promise<{ notifications: AppNotification[]; error: string | null }> {
 	if (!providerId) return { notifications: [], error: "Missing provider id" };
+
+	if (isBackendMode()) {
+		try {
+			const page = await apiFetch<
+				{ items?: Record<string, unknown>[] } | Record<string, unknown>[]
+			>("/notifications", { auth: true });
+			const rows = Array.isArray(page) ? page : (page.items ?? []);
+			return {
+				notifications: rows.map((row) => mapNotificationRow(row)),
+				error: null,
+			};
+		} catch (e) {
+			return {
+				notifications: [],
+				error:
+					e instanceof Error ? e.message : "Failed to load notifications",
+			};
+		}
+	}
 
 	const { data, error } = await getSupabase()
 		.from("notification")
@@ -218,6 +323,25 @@ export async function fetchCustomerNotifications(
 ): Promise<{ notifications: AppNotification[]; error: string | null }> {
 	if (!customerId) {
 		return { notifications: [], error: "Missing customer id" };
+	}
+
+	if (isBackendMode()) {
+		try {
+			const page = await apiFetch<
+				{ items?: Record<string, unknown>[] } | Record<string, unknown>[]
+			>("/notifications", { auth: true });
+			const rows = Array.isArray(page) ? page : (page.items ?? []);
+			return {
+				notifications: rows.map((row) => mapNotificationRow(row)),
+				error: null,
+			};
+		} catch (e) {
+			return {
+				notifications: [],
+				error:
+					e instanceof Error ? e.message : "Failed to load notifications",
+			};
+		}
 	}
 
 	const { data, error } = await getSupabase()

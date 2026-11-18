@@ -1,3 +1,5 @@
+import { apiFetch } from "@/lib/backend/client";
+import { isBackendMode } from "@/lib/env";
 import { getSupabase } from "@/lib/supabase/client";
 import { formatAmount } from "@/services/bookings/types";
 
@@ -114,6 +116,21 @@ export async function fetchProviderOffers(
 		return { offers: [], error: "Missing provider id" };
 	}
 
+	if (isBackendMode()) {
+		try {
+			const page = await apiFetch<
+				{ items?: Record<string, unknown>[] } | Record<string, unknown>[]
+			>("/offers", { auth: true });
+			const rows = Array.isArray(page) ? page : (page.items ?? []);
+			return { offers: rows.map((r) => mapOffer(r)), error: null };
+		} catch (e) {
+			return {
+				offers: [],
+				error: e instanceof Error ? e.message : "Failed to load offers",
+			};
+		}
+	}
+
 	const ids = [...new Set([providerId, authUserId].filter(Boolean))] as string[];
 
 	const { data, error } = await getSupabase()
@@ -177,6 +194,21 @@ export async function fetchOfferById(
 	offerId: string,
 ): Promise<{ offer: ServiceOffer | null; error: string | null }> {
 	if (!offerId) return { offer: null, error: "Missing offer id" };
+
+	if (isBackendMode()) {
+		try {
+			const row = await apiFetch<Record<string, unknown>>(
+				`/offers/${offerId}`,
+				{ auth: true },
+			);
+			return { offer: mapOffer(row), error: null };
+		} catch (e) {
+			return {
+				offer: null,
+				error: e instanceof Error ? e.message : "Offer not found",
+			};
+		}
+	}
 
 	const { data, error } = await getSupabase()
 		.from("service_offer")
@@ -253,6 +285,23 @@ export async function respondToOffer(params: {
 	offerId: string;
 	accept: boolean;
 }): Promise<{ ok: boolean; error: string | null }> {
+	if (isBackendMode()) {
+		try {
+			const action = params.accept ? "accept" : "reject";
+			await apiFetch(`/offers/${params.offerId}/${action}`, {
+				method: "POST",
+				auth: true,
+				body: {},
+			});
+			return { ok: true, error: null };
+		} catch (e) {
+			return {
+				ok: false,
+				error: e instanceof Error ? e.message : "Update failed",
+			};
+		}
+	}
+
 	const { error } = await getSupabase()
 		.from("service_offer")
 		.update({
