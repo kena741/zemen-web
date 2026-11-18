@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 
+import { isBackendMode } from "@/lib/env";
+
 export const runtime = "nodejs";
 
 function serverEdgeBase(): string {
@@ -13,6 +15,13 @@ export async function POST(
 	request: Request,
 	context: { params: Promise<{ name: string }> },
 ) {
+	if (isBackendMode()) {
+		return NextResponse.json(
+			{ error: "Edge functions are unavailable in backend data mode" },
+			{ status: 404 },
+		);
+	}
+
 	const { name } = await context.params;
 	if (!/^[a-z0-9-]+$/i.test(name)) {
 		return NextResponse.json({ error: "Invalid function name" }, { status: 400 });

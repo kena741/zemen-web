@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { proxyToBackend } from "@/lib/backend/proxy";
 import {
 	getAuthUserFromRequest,
 	getSupabaseAdmin,
@@ -17,6 +18,21 @@ function asNumber(value: unknown): number {
 }
 
 export async function POST(request: Request) {
+	const cloned = request.clone();
+	const body = (await cloned.json().catch(() => ({}))) as {
+		bookingId?: string;
+		reason?: string;
+	};
+	const bookingId = body.bookingId?.trim();
+	if (bookingId) {
+		const proxied = await proxyToBackend(
+			`/bookings/${bookingId}/cancel`,
+			request,
+			{ method: "POST", body: { reason: body.reason ?? null } },
+		);
+		if (proxied) return proxied;
+	}
+
 	const auth = await getAuthUserFromRequest(request);
 	if (!auth.userId || auth.error) {
 		return NextResponse.json(
@@ -26,11 +42,6 @@ export async function POST(request: Request) {
 	}
 
 	try {
-		const body = (await request.json()) as {
-			bookingId?: string;
-			reason?: string;
-		};
-		const bookingId = body.bookingId?.trim();
 		if (!bookingId) {
 			return NextResponse.json({ error: "Missing booking id" }, { status: 400 });
 		}

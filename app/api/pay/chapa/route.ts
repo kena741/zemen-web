@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 
-import { getSiteUrl } from "@/lib/env";
+import { getSiteUrl, isBackendMode } from "@/lib/env";
 import { loadChapaSecretKey, normalizeChapaPhone } from "@/lib/chapa";
+import { proxyToBackend } from "@/lib/backend/proxy";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 export const runtime = "nodejs";
@@ -42,8 +43,31 @@ export async function POST(request: Request) {
 			);
 		}
 
-		const admin = getSupabaseAdmin();
-		const chapaSecretKey = await loadChapaSecretKey(admin);
+		if (isBackendMode() && body.booking_id?.trim()) {
+			const proxied = await proxyToBackend(
+				`/admin/bookings/${body.booking_id.trim()}/payment`,
+				request,
+				{
+					method: "POST",
+					body: {
+						amount,
+						email: body.email,
+						first_name: body.first_name,
+						last_name: body.last_name,
+						phone_number: body.phone_number,
+						return_path: body.return_path,
+						purpose: body.purpose,
+					},
+				},
+			);
+			if (proxied) return proxied;
+		}
+
+		let chapaSecretKey = (process.env.CHAPA_SECRET_KEY || "").trim();
+		if (!isBackendMode()) {
+			const admin = getSupabaseAdmin();
+			chapaSecretKey = await loadChapaSecretKey(admin);
+		}
 		if (!chapaSecretKey) {
 			return NextResponse.json({ error: "Chapa is not configured" }, { status: 500 });
 		}
@@ -92,7 +116,12 @@ export async function POST(request: Request) {
 			);
 		}
 
-		if (purpose === "activation" && body.provider_id?.trim()) {
+		if (
+			!isBackendMode() &&
+			purpose === "activation" &&
+			body.provider_id?.trim()
+		) {
+			const admin = getSupabaseAdmin();
 			await admin
 				.from("provider")
 				.update({ activation_tx_ref: txRef })

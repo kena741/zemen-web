@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { isBackendMode } from "@/lib/env";
 import { getPublicSupabase } from "@/lib/supabase/public";
 import { fetchPublishedBlogPostBySlug } from "@/services/blog/publicBlog";
 
@@ -15,6 +16,10 @@ type EngageBody = {
 };
 
 export async function POST(request: Request, context: RouteContext) {
+	if (isBackendMode()) {
+		return NextResponse.json({ error: "Not found" }, { status: 404 });
+	}
+
 	const { slug } = await context.params;
 	const post = await fetchPublishedBlogPostBySlug(slug);
 	if (!post) {

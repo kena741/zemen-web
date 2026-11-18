@@ -14,6 +14,8 @@ import {
 	verifyProviderActivation as verifyProviderActivationTelebirr,
 	verifyServiceTierPayment as verifyServiceTierPaymentTelebirr,
 } from "@/services/payments/telebirrServer";
+import { proxyToBackend } from "@/lib/backend/proxy";
+import { isBackendMode } from "@/lib/env";
 import {
 	getAuthUserFromRequest,
 	getSupabaseAdmin,
@@ -48,6 +50,25 @@ async function sleep(ms: number) {
 }
 
 export async function POST(request: Request) {
+	if (isBackendMode()) {
+		const cloned = request.clone();
+		const body = (await cloned.json().catch(() => ({}))) as VerifyBody;
+		const purpose = (body.purpose ?? "wallet").trim();
+		let path = "/payments/chapa/verify";
+		if (purpose === "activation") path = "/payments/provider-activation/verify";
+		else if (purpose === "tier" || purpose === "service-tier")
+			path = "/payments/service-tier/verify";
+		else if (purpose === "featured") path = "/payments/featured-request/verify";
+		else if (purpose === "booking" && body.bookingId?.trim()) {
+			path = `/payments/bookings/${body.bookingId.trim()}/complete`;
+		}
+		const proxied = await proxyToBackend(path, request, {
+			method: "POST",
+			body,
+		});
+		if (proxied) return proxied;
+	}
+
 	const auth = await getAuthUserFromRequest(request);
 	if (!auth.userId) {
 		return NextResponse.json(
