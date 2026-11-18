@@ -107,6 +107,8 @@ export function ServiceCard({
 						<img
 							src={image}
 							alt=""
+							loading="lazy"
+							decoding="async"
 							className="size-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
 							onError={() => setImgFailed(true)}
 						/>

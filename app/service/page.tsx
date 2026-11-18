@@ -3,7 +3,13 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState, useTransition } from "react";
+import {
+	useEffect,
+	useMemo,
+	useRef,
+	useState,
+	useTransition,
+} from "react";
 import {
 	BellIcon,
 	HeartIcon,
@@ -16,6 +22,7 @@ import appIcon from "@/assets/images/optimized/app_icon_sm.png";
 import { ServiceCard } from "@/components/provider/service-card";
 import { BannerCarousel } from "@/components/service/banner-carousel";
 import { ServiceLoading } from "@/components/service/service-loading";
+import { AppLoading } from "@/components/ui/app-loading";
 import { Input } from "@/components/ui/input";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { BRAND_NAME } from "@/lib/brand";
@@ -25,6 +32,8 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/store/useAuth";
 import { useCachedHomeFeed } from "@/store/useCustomerCache";
 
+const PAGE_SIZE = 12;
+
 export default function ServiceHomePage() {
 	const { t } = useLocale();
 	const router = useRouter();
@@ -33,6 +42,10 @@ export default function ServiceHomePage() {
 	const [pending, startTransition] = useTransition();
 	const [query, setQuery] = useState("");
 	const [sortMode, setSortMode] = useState<"popular" | "nearby">("popular");
+	const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+	const [loadingMore, setLoadingMore] = useState(false);
+	const loadingMoreRef = useRef(false);
+	const sentinelRef = useRef<HTMLDivElement>(null);
 	const {
 		data,
 		loading,
@@ -72,6 +85,46 @@ export default function ServiceHomePage() {
 			return rb - ra;
 		});
 	}, [services, query, sortMode]);
+
+	useEffect(() => {
+		setVisibleCount(PAGE_SIZE);
+		loadingMoreRef.current = false;
+		setLoadingMore(false);
+	}, [query, sortMode, services]);
+
+	const visible = filtered.slice(0, visibleCount);
+	const hasMore = visibleCount < filtered.length;
+
+	useEffect(() => {
+		const el = sentinelRef.current;
+		if (!el || !hasMore) return;
+
+		let cancelled = false;
+		const obs = new IntersectionObserver(
+			(entries) => {
+				if (!entries[0]?.isIntersecting || cancelled || loadingMoreRef.current) {
+					return;
+				}
+				loadingMoreRef.current = true;
+				setLoadingMore(true);
+				// Yield so the footer spinner paints before mounting the next batch.
+				requestAnimationFrame(() => {
+					window.setTimeout(() => {
+						if (cancelled) return;
+						setVisibleCount((c) => Math.min(c + PAGE_SIZE, filtered.length));
+						loadingMoreRef.current = false;
+						setLoadingMore(false);
+					}, 120);
+				});
+			},
+			{ rootMargin: "320px 0px" },
+		);
+		obs.observe(el);
+		return () => {
+			cancelled = true;
+			obs.disconnect();
+		};
+	}, [hasMore, visibleCount, filtered.length]);
 
 	const isGuestBrowse = !user && isGuest;
 	const greeting =
@@ -375,17 +428,36 @@ export default function ServiceHomePage() {
 									) : null}
 								</div>
 							) : (
-								<div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-									{filtered.map((s) => (
-										<ServiceCard
-											key={s.id}
-											service={s}
-											compact
-											href={`/service/services/${s.id}`}
-											showFeaturedPending={false}
-										/>
-									))}
-								</div>
+								<>
+									<div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+										{visible.map((s) => (
+											<ServiceCard
+												key={s.id}
+												service={s}
+												compact
+												href={`/service/services/${s.id}`}
+												showFeaturedPending={false}
+											/>
+										))}
+									</div>
+									{hasMore ? (
+										<div
+											ref={sentinelRef}
+											className="flex justify-center py-4"
+											aria-hidden={!loadingMore}
+										>
+											{loadingMore ? (
+												<AppLoading
+													compact
+													label={t("homeLoadingMore")}
+													className="py-2"
+												/>
+											) : (
+												<span className="h-8" />
+											)}
+										</div>
+									) : null}
+								</>
 							)}
 						</section>
 					</div>

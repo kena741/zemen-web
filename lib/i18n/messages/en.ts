@@ -491,6 +491,7 @@ export const en = {
 	homeNearby: "Nearby",
 	homeNoMatch: "No services match \"{query}\".",
 	homeNoServices: "No services found.",
+	homeLoadingMore: "Loading more…",
 	homeRequestCustom: "Request a custom service",
 	homeResults: "Results",
 

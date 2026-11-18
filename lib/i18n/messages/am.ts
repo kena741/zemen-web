@@ -479,6 +479,7 @@ export const am: Record<MessageKey, string> = {
 	homeNearby: "በአቅራቢያ",
 	homeNoMatch: "ከ\"{query}\" ጋር የሚዛመዱ አገልግሎቶች የሉም።",
 	homeNoServices: "አገልግሎት አልተገኘም።",
+	homeLoadingMore: "ተጨማሪ በመጫን ላይ…",
 	homeRequestCustom: "ልዩ አገልግሎት ጠይቅ",
 	homeResults: "ውጤቶች",
 
