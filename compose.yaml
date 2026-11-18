@@ -23,4 +23,6 @@ services:
       PASSWORD_RESET_REDIRECT_URL: ${PASSWORD_RESET_REDIRECT_URL:-}
     expose:
       - "3000"
+    ports:
+      - "3000:3000"
     restart: unless-stopped
