@@ -74,10 +74,16 @@ export async function POST(req: Request) {
 			);
 		}
 
-		const gross = Math.max(
-			0,
-			asNumber(row.totalAmount) || asNumber(row.subTotal),
-		);
+		const paid = Math.max(0, asNumber(row.totalAmount));
+		const full = Math.max(0, asNumber(row.subTotal) || paid);
+		// Prepaid leftover must be settled before completion (provider credit = paid).
+		if (status === "pending_approval" && full - paid >= 0.01) {
+			return NextResponse.json(
+				{ error: "Pay the remaining balance before completing" },
+				{ status: 400 },
+			);
+		}
+		const gross = paid || full;
 		// ponytail: unpaid bookings must not mint provider wallet credit
 		if (gross > 0 && row.paymentCompleted !== true) {
 			return NextResponse.json(

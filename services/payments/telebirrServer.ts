@@ -253,6 +253,8 @@ export async function finalizeBookingTelebirrPayment(params: {
 	txRef: string;
 	bookingId: string;
 	fallbackAmount: string;
+	remainingBalance?: boolean;
+	extraPayment?: boolean;
 }): Promise<{ ok: boolean; pending?: boolean; error: string | null }> {
 	const verified = await verifyTelebirrPaid({
 		admin: params.admin,
@@ -269,20 +271,29 @@ export async function finalizeBookingTelebirrPayment(params: {
 
 	const { data: booking } = await params.admin
 		.from("booked_service")
-		.select("id, customer_id, customerId, paymentCompleted, totalAmount")
+		.select(
+			"id, customer_id, customerId, paymentCompleted, totalAmount, subTotal, status",
+		)
 		.eq("id", params.bookingId)
 		.maybeSingle();
 
 	if (!booking) return { ok: false, error: "Booking not found" };
 
 	const row = booking as Record<string, unknown>;
-	if (row.paymentCompleted === true) {
+	const customerId = String(row.customer_id ?? row.customerId ?? "").trim();
+	const paidAmount = Number(params.fallbackAmount);
+	const isTopUp =
+		params.remainingBalance === true || params.extraPayment === true;
+	if (row.paymentCompleted === true && !isTopUp) {
 		return { ok: true, error: null };
 	}
 
-	const customerId = String(row.customer_id ?? row.customerId ?? "").trim();
-	const paidAmount = Number(params.fallbackAmount);
 	if (customerId && Number.isFinite(paidAmount) && paidAmount > 0) {
+		const note = params.remainingBalance
+			? `Remaining balance via Telebirr:${params.txRef}`
+			: params.extraPayment
+				? `Extra charge via Telebirr:${params.txRef}`
+				: "Service fee paid via Telebirr";
 		const { data: existingPayment } = await params.admin
 			.from("wallet_transaction")
 			.select("id")
@@ -290,33 +301,61 @@ export async function finalizeBookingTelebirrPayment(params: {
 			.eq("type", "customer")
 			.eq("paymentType", "telebirr")
 			.eq("isCredit", false)
+			.eq("note", note)
 			.maybeSingle();
 		if (!existingPayment) {
-			const { error: paymentError } = await params.admin
-				.from("wallet_transaction")
-				.insert({
-					id: crypto.randomUUID(),
-					userId: customerId,
-					amount: paidAmount.toFixed(2),
-					createdDate: new Date().toISOString(),
-					paymentType: "telebirr",
-					transactionId: params.bookingId,
-					isCredit: false,
-					type: "customer",
-					note: "Service fee paid via Telebirr",
-				});
-			if (paymentError) {
-				return { ok: false, error: paymentError.message };
+			let shouldInsert = true;
+			if (!isTopUp) {
+				const { data: anyPrior } = await params.admin
+					.from("wallet_transaction")
+					.select("id")
+					.eq("transactionId", params.bookingId)
+					.eq("type", "customer")
+					.eq("paymentType", "telebirr")
+					.eq("isCredit", false)
+					.maybeSingle();
+				if (anyPrior) shouldInsert = false;
+			}
+			if (shouldInsert) {
+				const { error: paymentError } = await params.admin
+					.from("wallet_transaction")
+					.insert({
+						id: crypto.randomUUID(),
+						userId: customerId,
+						amount: paidAmount.toFixed(2),
+						createdDate: new Date().toISOString(),
+						paymentType: "telebirr",
+						transactionId: params.bookingId,
+						isCredit: false,
+						type: "customer",
+						note,
+					});
+				if (paymentError) {
+					return { ok: false, error: paymentError.message };
+				}
 			}
 		}
 	}
 
+	const bookUpdate: Record<string, unknown> = {
+		paymentCompleted: true,
+		paymentType: "telebirr",
+	};
+	if (params.extraPayment) {
+		bookUpdate.status = "pending_approval";
+	} else if (params.remainingBalance) {
+		const full = Math.max(
+			0,
+			Number(row.subTotal) || Number(row.totalAmount) || paidAmount,
+		);
+		bookUpdate.totalAmount = String(Math.round(full * 100) / 100);
+	} else {
+		bookUpdate.totalAmount = paidAmount.toFixed(2);
+	}
+
 	const { error } = await params.admin
 		.from("booked_service")
-		.update({
-			paymentCompleted: true,
-			paymentType: "telebirr",
-		})
+		.update(bookUpdate)
 		.eq("id", params.bookingId);
 
 	if (error) return { ok: false, error: error.message };

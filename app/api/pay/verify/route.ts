@@ -37,6 +37,8 @@ interface VerifyBody {
 	toTierMax?: number;
 	userId?: string;
 	nextCycle?: boolean;
+	remainingBalance?: boolean;
+	extraPayment?: boolean;
 	billingInterval?: string;
 	billingIntervalCount?: number;
 }
@@ -171,12 +173,16 @@ export async function POST(request: Request) {
 									txRef,
 									bookingId,
 									fallbackAmount: amount,
+									remainingBalance: body.remainingBalance === true,
+									extraPayment: body.extraPayment === true,
 								})
 							: await finalizeBookingTelebirrPayment({
 									admin,
 									txRef,
 									bookingId,
 									fallbackAmount: amount,
+									remainingBalance: body.remainingBalance === true,
+									extraPayment: body.extraPayment === true,
 								});
 					if (result.ok && body.nextCycle) {
 						const advanced = await advanceRecurringBookingPeriod({

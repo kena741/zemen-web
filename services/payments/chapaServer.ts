@@ -152,6 +152,8 @@ export async function finalizeBookingChapaPayment(params: {
 	txRef: string;
 	bookingId: string;
 	fallbackAmount: string;
+	remainingBalance?: boolean;
+	extraPayment?: boolean;
 }): Promise<{ ok: boolean; pending?: boolean; error: string | null }> {
 	const secret = await loadChapaSecretKey(params.admin);
 	if (!secret) return { ok: false, error: "Chapa is not configured" };
@@ -203,22 +205,31 @@ export async function finalizeBookingChapaPayment(params: {
 
 	const { data: booking } = await params.admin
 		.from("booked_service")
-		.select("id, customer_id, customerId, paymentCompleted, totalAmount")
+		.select(
+			"id, customer_id, customerId, paymentCompleted, totalAmount, subTotal, status",
+		)
 		.eq("id", params.bookingId)
 		.maybeSingle();
 
 	if (!booking) return { ok: false, error: "Booking not found" };
 
 	const row = booking as Record<string, unknown>;
-	if (row.paymentCompleted === true) {
-		return { ok: true, error: null };
-	}
-
 	const customerId = String(row.customer_id ?? row.customerId ?? "").trim();
 	const paidAmount = Number(verified.data.amount ?? params.fallbackAmount);
 	if (!customerId || !Number.isFinite(paidAmount) || paidAmount <= 0) {
 		return { ok: false, error: "Unable to record booking payment." };
 	}
+
+	const isTopUp = params.remainingBalance === true || params.extraPayment === true;
+	if (row.paymentCompleted === true && !isTopUp) {
+		return { ok: true, error: null };
+	}
+
+	const note = params.remainingBalance
+		? `Remaining balance via Chapa:${params.txRef}`
+		: params.extraPayment
+			? `Extra charge via Chapa:${params.txRef}`
+			: "Service fee paid via Chapa";
 
 	const { data: existingPayment, error: paymentLookupError } = await params.admin
 		.from("wallet_transaction")
@@ -227,35 +238,79 @@ export async function finalizeBookingChapaPayment(params: {
 		.eq("type", "customer")
 		.eq("paymentType", "chapa")
 		.eq("isCredit", false)
+		.eq("note", note)
 		.maybeSingle();
 	if (paymentLookupError) {
 		return { ok: false, error: paymentLookupError.message };
 	}
 	if (!existingPayment) {
-		const { error: paymentError } = await params.admin
-			.from("wallet_transaction")
-			.insert({
-				id: crypto.randomUUID(),
-				userId: customerId,
-				amount: paidAmount.toFixed(2),
-				createdDate: new Date().toISOString(),
-				paymentType: "chapa",
-				transactionId: params.bookingId,
-				isCredit: false,
-				type: "customer",
-				note: "Service fee paid via Chapa",
-			});
-		if (paymentError) {
-			return { ok: false, error: paymentError.message };
+		// Initial pay: also skip if any prior Chapa debit exists for this booking.
+		if (!isTopUp) {
+			const { data: anyPrior } = await params.admin
+				.from("wallet_transaction")
+				.select("id")
+				.eq("transactionId", params.bookingId)
+				.eq("type", "customer")
+				.eq("paymentType", "chapa")
+				.eq("isCredit", false)
+				.maybeSingle();
+			if (!anyPrior) {
+				const { error: paymentError } = await params.admin
+					.from("wallet_transaction")
+					.insert({
+						id: crypto.randomUUID(),
+						userId: customerId,
+						amount: paidAmount.toFixed(2),
+						createdDate: new Date().toISOString(),
+						paymentType: "chapa",
+						transactionId: params.bookingId,
+						isCredit: false,
+						type: "customer",
+						note,
+					});
+				if (paymentError) {
+					return { ok: false, error: paymentError.message };
+				}
+			}
+		} else {
+			const { error: paymentError } = await params.admin
+				.from("wallet_transaction")
+				.insert({
+					id: crypto.randomUUID(),
+					userId: customerId,
+					amount: paidAmount.toFixed(2),
+					createdDate: new Date().toISOString(),
+					paymentType: "chapa",
+					transactionId: params.bookingId,
+					isCredit: false,
+					type: "customer",
+					note,
+				});
+			if (paymentError) {
+				return { ok: false, error: paymentError.message };
+			}
 		}
+	}
+
+	const bookUpdate: Record<string, unknown> = {
+		paymentCompleted: true,
+		paymentType: "chapa",
+	};
+	if (params.extraPayment) {
+		bookUpdate.status = "pending_approval";
+	} else if (params.remainingBalance) {
+		const full = Math.max(
+			0,
+			Number(row.subTotal) || Number(row.totalAmount) || paidAmount,
+		);
+		bookUpdate.totalAmount = String(Math.round(full * 100) / 100);
+	} else {
+		bookUpdate.totalAmount = paidAmount.toFixed(2);
 	}
 
 	const { error } = await params.admin
 		.from("booked_service")
-		.update({
-			paymentCompleted: true,
-			paymentType: "chapa",
-		})
+		.update(bookUpdate)
 		.eq("id", params.bookingId);
 
 	if (error) return { ok: false, error: error.message };

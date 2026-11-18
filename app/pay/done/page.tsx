@@ -77,6 +77,8 @@ function PayDoneContent() {
 				fromTierMax: pending?.fromTierMax,
 				toTierMax: pending?.toTierMax,
 				nextCycle: pending?.nextCycle,
+				remainingBalance: pending?.remainingBalance,
+				extraPayment: pending?.extraPayment,
 				billingInterval: pending?.billingInterval,
 				billingIntervalCount: pending?.billingIntervalCount,
 			};

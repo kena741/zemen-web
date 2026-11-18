@@ -458,6 +458,8 @@ function BookServiceForm() {
 				price: unitPrice,
 				paymentType: "",
 				paymentCompleted: false,
+				subTotal: total,
+				// Unpaid custom offer: store full price; pay flow charges subTotal.
 				totalAmount: total,
 				pricingType: service.pricingType,
 				billingInterval: service.billingInterval,
@@ -512,7 +514,8 @@ function BookServiceForm() {
 			paymentCompleted: dueNow <= 0,
 			coupon: couponSnapshot,
 			discount: serviceDiscount + discount,
-			totalAmount: total,
+			subTotal: total,
+			totalAmount: dueNow,
 			postJob,
 			serviceDetails: postJob ? jobServiceDetails : null,
 			pricingType: service.pricingType,

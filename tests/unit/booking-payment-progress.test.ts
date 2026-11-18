@@ -47,4 +47,30 @@ describe("booking payment progress", () => {
 		expect(remainingServiceBalance(row)).toBe(0);
 		expect(resolveBookingPaymentSettlement(row)).toBe("paid");
 	});
+
+	it("uses discounted subTotal as obligation for prepaid remaining", () => {
+		const row = {
+			paymentCompleted: true,
+			totalAmount: "360",
+			subTotal: "900",
+			status: "pending_approval",
+		};
+		expect(paidPercentage(row)).toBe(40);
+		expect(remainingServiceBalance(row)).toBe(540);
+		expect(resolveBookingPaymentSettlement(row)).toBe("partial");
+	});
+
+	it("nets legacy gross subTotal + ETB discount", () => {
+		const row = {
+			paymentCompleted: true,
+			totalAmount: "2",
+			subTotal: "200",
+			discount: "180",
+			servicePrice: "200",
+			quantity: "1",
+			status: "pending",
+		};
+		expect(paidPercentage(row)).toBe(10);
+		expect(remainingServiceBalance(row)).toBe(18);
+	});
 });

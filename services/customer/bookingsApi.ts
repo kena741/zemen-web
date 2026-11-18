@@ -107,7 +107,11 @@ export type CreateBookingInput = {
 	paymentCompleted?: boolean;
 	/** Persist coupon snapshot when applied */
 	coupon?: Record<string, unknown> | null;
+	/** ETB discount+coupon snapshot (informational). */
 	discount?: number | null;
+	/** Full obligation after discount (mobile `subTotal`). */
+	subTotal?: number | null;
+	/** Amount charged now / currently paid (mobile `totalAmount`). */
 	totalAmount?: number | null;
 	postJob?: boolean;
 	/** Embedded job service snapshot (mobile serviceDetails). */
@@ -122,12 +126,15 @@ export async function createCustomerBooking(
 ): Promise<{ bookingId: string | null; error: string | null }> {
 	const id = crypto.randomUUID();
 	const otp = String(Math.floor(100000 + Math.random() * 900000));
-	const subTotal = input.price * input.quantity;
+	const lineGross = input.price * input.quantity;
 	const discount = Number(input.discount ?? 0) || 0;
-	const total =
-		input.totalAmount != null
-			? Number(input.totalAmount)
-			: Math.max(0, subTotal - discount);
+	// Mobile contract: subTotal = full after discount; totalAmount = due-now / paid.
+	const subTotal =
+		input.subTotal != null
+			? Number(input.subTotal)
+			: Math.max(0, lineGross - discount);
+	const totalAmount =
+		input.totalAmount != null ? Number(input.totalAmount) : subTotal;
 	const now = new Date().toISOString();
 
 	const isPostJob = Boolean(input.postJob);
@@ -145,7 +152,7 @@ export async function createCustomerBooking(
 		status: "pending",
 		quantity: input.quantity,
 		subTotal,
-		totalAmount: total,
+		totalAmount,
 		paymentType:
 			input.paymentType?.trim() ||
 			(input.paymentCompleted ? "cash" : ""),
@@ -288,15 +295,16 @@ export async function payBookingWithWallet(params: {
 		};
 		if (params.extraPayment) {
 			bookUpdate.status = "pending_approval";
-		}
-		if (params.remainingBalance) {
+		} else if (params.remainingBalance) {
 			const full =
 				params.fullObligation != null && params.fullObligation > 0
 					? params.fullObligation
 					: amount;
-			const fullStr = String(Math.round(full * 100) / 100);
-			bookUpdate.totalAmount = fullStr;
-			bookUpdate.subTotal = fullStr;
+			// Keep subTotal as full obligation; bump paid to full.
+			bookUpdate.totalAmount = String(Math.round(full * 100) / 100);
+		} else {
+			// Initial prepaid/full pay: persist charged amount.
+			bookUpdate.totalAmount = String(Math.round(amount * 100) / 100);
 		}
 		const { error: bookErr } = await supabase
 			.from("booked_service")

@@ -12,6 +12,11 @@ import { AppLoading } from "@/components/ui/app-loading";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+	bookingAmountsFromRow,
+	customerObligationAmount,
+	remainingServiceBalance,
+} from "@/lib/booking-payment-progress";
 import { useLocale } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { BOOKING_STATUS } from "@/lib/booking-status";
@@ -250,6 +255,16 @@ export default function BookingDetailPage() {
 		Boolean(booking?.nextCycleDue) ||
 		Boolean(booking?.currentPeriodEnd);
 	const daysLeft = calendarDaysUntil(booking?.currentPeriodEnd);
+	const paymentAmounts = booking ? bookingAmountsFromRow(booking) : null;
+	const paidAmount = booking
+		? Number(booking.totalAmount ?? 0) || 0
+		: 0;
+	const serviceTotal = paymentAmounts
+		? customerObligationAmount(paymentAmounts)
+		: 0;
+	const remainingDue = paymentAmounts
+		? remainingServiceBalance(paymentAmounts)
+		: 0;
 
 	return (
 		<div className="mx-auto max-w-2xl">
@@ -310,9 +325,19 @@ export default function BookingDetailPage() {
 						/>
 						<DetailRow label={t("bookingAddress")} value={address} />
 						<DetailRow
-							label={t("bookingAmount")}
-							value={formatAmount(booking.totalAmount ?? booking.subTotal)}
+							label={t("bookingSubTotal")}
+							value={formatAmount(serviceTotal || booking.subTotal)}
 						/>
+						<DetailRow
+							label={t("bookingAmount")}
+							value={formatAmount(paidAmount || booking.totalAmount)}
+						/>
+						{remainingDue > 0 ? (
+							<DetailRow
+								label={t("bookingRemaining")}
+								value={formatAmount(remainingDue)}
+							/>
+						) : null}
 						{booking.extraChargeAmount || booking.extraCharge?.extraCharge ? (
 							<DetailRow
 								label={t("providerExtraCharge")}

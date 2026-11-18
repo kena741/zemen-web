@@ -51,6 +51,8 @@ export interface Booking {
 	description: string | null;
 	totalAmount: string | null;
 	subTotal: string | null;
+	/** Stored ETB discount snapshot when present. */
+	discount: string | null;
 	quantity: string | null;
 	reason: string | null;
 	status: string | null;
@@ -255,6 +257,7 @@ export function mapBookingRow(row: Record<string, unknown>): Booking {
 		description: asString(row.description),
 		totalAmount: asString(row.totalAmount),
 		subTotal: asString(row.subTotal),
+		discount: asString(row.discount),
 		quantity: asString(row.quantity),
 		reason: asString(row.reason),
 		status: asString(row.status),

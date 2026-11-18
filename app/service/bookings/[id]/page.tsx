@@ -25,6 +25,7 @@ import { ServiceLoading } from "@/components/service/service-loading";
 import {
 	bookingAmountsFromRow,
 	customerObligationAmount,
+	customerPaidAmount,
 	paidPercentage,
 	remainingServiceBalance,
 	resolveBookingPaymentSettlement,
@@ -139,6 +140,8 @@ export default function CustomerBookingDetailPage() {
 	const [recurringSettings, setRecurringSettings] =
 		useState<RecurringPaymentSettings>(RECURRING_PAYMENT_SETTINGS_DEFAULT);
 	const [showNextCycleConfirm, setShowNextCycleConfirm] = useState(false);
+	const [showRemainingPay, setShowRemainingPay] = useState(false);
+	const [showExtraPay, setShowExtraPay] = useState(false);
 	const [showCancel, setShowCancel] = useState(false);
 	const [cancelReason, setCancelReason] = useState("");
 	const [proofOpen, setProofOpen] = useState(false);
@@ -284,9 +287,23 @@ export default function CustomerBookingDetailPage() {
 		refresh();
 	}
 
-	async function onPayNextCycleGateway(gateway: "chapa" | "telebirr") {
+	async function onPayGateway(
+		gateway: "chapa" | "telebirr",
+		opts?: {
+			amount: number;
+			nextCycle?: boolean;
+			remainingBalance?: boolean;
+			extraPayment?: boolean;
+		},
+	) {
 		if (!booking || !user?.id || busy) return;
-		const amount = Number(booking.subTotal ?? booking.totalAmount ?? 0) || 0;
+		const amount =
+			opts?.amount ??
+			(Number(booking.subTotal ?? booking.totalAmount ?? 0) || 0);
+		if (amount <= 0) {
+			setActionError(t("bookServicePriceRequired"));
+			return;
+		}
 		savePaymentPending({
 			purpose: "booking",
 			userId: user.id,
@@ -294,12 +311,16 @@ export default function CustomerBookingDetailPage() {
 			amount: String(amount),
 			gateway,
 			bookingId: booking.id,
-			nextCycle: true,
+			nextCycle: opts?.nextCycle === true,
+			remainingBalance: opts?.remainingBalance === true,
+			extraPayment: opts?.extraPayment === true,
 			billingInterval: booking.service?.billingInterval ?? undefined,
 			billingIntervalCount: booking.service?.billingIntervalCount ?? undefined,
 		});
 		setBusy(true);
 		setShowNextCycleConfirm(false);
+		setShowRemainingPay(false);
+		setShowExtraPay(false);
 		const res = await fetch(
 			gateway === "chapa" ? "/api/pay/chapa" : "/api/pay/telebirr",
 			{
@@ -348,7 +369,9 @@ export default function CustomerBookingDetailPage() {
 				amount: String(amount),
 				gateway,
 				bookingId: booking.id,
-				nextCycle: true,
+				nextCycle: opts?.nextCycle === true,
+				remainingBalance: opts?.remainingBalance === true,
+				extraPayment: opts?.extraPayment === true,
 				billingInterval: booking.service?.billingInterval ?? undefined,
 				billingIntervalCount: booking.service?.billingIntervalCount ?? undefined,
 				txRef: data.tx_ref,
@@ -364,6 +387,11 @@ export default function CustomerBookingDetailPage() {
 		if (!launched.ok && !launched.canceled) {
 			setActionError(launched.error || t("bookServiceTelebirrFailed"));
 		}
+	}
+
+	async function onPayNextCycleGateway(gateway: "chapa" | "telebirr") {
+		const amount = Number(booking?.subTotal ?? booking?.totalAmount ?? 0) || 0;
+		await onPayGateway(gateway, { amount, nextCycle: true });
 	}
 
 	async function onReview() {
@@ -411,13 +439,17 @@ export default function CustomerBookingDetailPage() {
 		!booking.paymentCompleted && offerStatus === "accepted";
 	const isAwaitingOfferApproval =
 		!booking.paymentCompleted && offerStatus === "pending";
+	// Remaining balance only after work is submitted for approval.
+	const workDoneForRemaining =
+		status === "pending_approval" || status === "pending_extra_payment";
 	const isRemainingBalanceDue =
-		remainingDue > 0 && !booking.nextCycleDue;
+		remainingDue > 0 && !booking.nextCycleDue && workDoneForRemaining;
 	const canCancel =
 		(status === "pending" || status === "accepted") &&
 		!isAwaitingCustomPricePayment;
 	const canComplete =
-		status === "pending_approval" || status === "pending_extra_payment";
+		(status === "pending_approval" && remainingDue <= 0) ||
+		status === "pending_extra_payment";
 	const showWalletPay =
 		isAwaitingCustomPricePayment || status === "pending_extra_payment";
 	const canReview = status === "completed" && !hasReview && booking.serviceId;
@@ -458,22 +490,29 @@ export default function CustomerBookingDetailPage() {
 	const qty = Number(booking.quantity) || 1;
 	const offeredPrice =
 		offer?.offeredPrice != null ? Number(offer.offeredPrice) : null;
-	const bookingTotal =
-		Number(booking.totalAmount ?? booking.subTotal ?? 0) || 0;
+	const obligationAmount = customerObligationAmount(paymentAmounts);
+	const paidAmount = customerPaidAmount(paymentAmounts);
 	const unitPrice =
 		offeredPrice != null && Number.isFinite(offeredPrice)
 			? offeredPrice
 			: Number(booking.service?.price ?? 0) || 0;
+	const priceLineAmount =
+		offeredPrice != null && Number.isFinite(offeredPrice)
+			? offeredPrice
+			: unitPrice > 0
+				? unitPrice * qty
+				: obligationAmount + (Number(booking.discount ?? 0) || 0);
 	const priceLine =
 		offeredPrice != null && Number.isFinite(offeredPrice)
 			? formatAmount(offeredPrice)
 			: unitPrice > 0
 				? `${formatAmount(unitPrice)}${qty > 1 ? ` × ${qty}` : ""}`
-				: formatAmount(booking.subTotal ?? booking.totalAmount);
-	const showSubTotal =
-		!offer &&
-		booking.subTotal != null &&
-		Math.abs(Number(booking.subTotal) - bookingTotal) > 0.001;
+				: formatAmount(obligationAmount);
+	const discountEtb = Math.max(
+		0,
+		Number(booking.discount ?? 0) ||
+			Math.round((priceLineAmount - obligationAmount) * 100) / 100,
+	);
 	const paymentLabel =
 		settlement === "partial"
 			? t("bookingPartiallyPaid", { percent: String(paidPct) })
@@ -645,24 +684,34 @@ export default function CustomerBookingDetailPage() {
 							value={formatAmount(
 								offeredPrice != null && Number.isFinite(offeredPrice)
 									? offeredPrice
-									: booking.totalAmount ?? booking.subTotal,
+									: booking.subTotal ?? booking.totalAmount,
 							)}
 							strong
 						/>
 					) : (
 						<>
 							<MoneyRow label={t("bookServicePriceLine")} value={priceLine} />
-							{showSubTotal ? (
+							{discountEtb > 0.009 ? (
 								<MoneyRow
-									label={t("bookingSubTotal")}
-									value={formatAmount(booking.subTotal)}
+									label={t("commonDiscount")}
+									value={`−${formatAmount(discountEtb)}`}
 								/>
 							) : null}
 							<MoneyRow
+								label={t("bookingSubTotal")}
+								value={formatAmount(obligationAmount)}
+							/>
+							<MoneyRow
 								label={t("bookingTotalAmount")}
-								value={formatAmount(booking.totalAmount ?? booking.subTotal)}
+								value={formatAmount(paidAmount)}
 								strong
 							/>
+							{remainingDue > 0 ? (
+								<MoneyRow
+									label={t("bookingRemaining")}
+									value={formatAmount(remainingDue)}
+								/>
+							) : null}
 						</>
 					)}
 					<div className="border-t border-border/60 px-3.5 py-3 text-[13px]">
@@ -924,29 +973,66 @@ export default function CustomerBookingDetailPage() {
 					</Button>
 				) : null}
 
-				{isRemainingBalanceDue && !showNextCyclePay && !isAwaitingCustomPricePayment ? (
+				{isRemainingBalanceDue &&
+				!showNextCyclePay &&
+				!isAwaitingCustomPricePayment &&
+				!showRemainingPay ? (
 					<Button
 						className="w-full"
 						disabled={busy}
-						onClick={() => void onPayWallet({ remainingBalance: true })}
+						onClick={() => setShowRemainingPay(true)}
 					>
-						{busy
-							? t("bookingPaying")
-							: t("bookingPayRemaining", { amount: formatAmount(remainingDue) })}
+						{t("bookingPayRemaining", { amount: formatAmount(remainingDue) })}
 					</Button>
 				) : null}
 
-				{status === "pending_extra_payment" && !isAwaitingCustomPricePayment ? (
+				{showRemainingPay && isRemainingBalanceDue ? (
+					<div className="space-y-2 rounded-xl bg-white p-3 shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
+						<p className="text-sm font-medium">
+							{t("bookingPayRemaining", { amount: formatAmount(remainingDue) })}
+						</p>
+						<Button
+							className="w-full"
+							disabled={busy}
+							onClick={() => void onPayWallet({ remainingBalance: true })}
+						>
+							{busy ? t("bookingPaying") : t("bookingPayWithWallet")}
+						</Button>
+						<Button
+							variant="outline"
+							className="w-full"
+							disabled={busy}
+							onClick={() =>
+								void onPayGateway("chapa", {
+									amount: remainingDue,
+									remainingBalance: true,
+								})
+							}
+						>
+							{busy ? t("bookingStarting") : t("bookingPayWithChapa")}
+						</Button>
+						<Button
+							variant="ghost"
+							className="w-full"
+							disabled={busy}
+							onClick={() => setShowRemainingPay(false)}
+						>
+							{t("commonCancel")}
+						</Button>
+					</div>
+				) : null}
+
+				{status === "pending_extra_payment" &&
+				!isAwaitingCustomPricePayment &&
+				!showExtraPay ? (
 					<>
 						{extraAmount ? (
 							<Button
 								className="w-full"
 								disabled={busy}
-								onClick={() => void onPayWallet()}
+								onClick={() => setShowExtraPay(true)}
 							>
-								{busy
-									? t("bookingPaying")
-									: t("bookingPayExtra", { amount: formatAmount(extraAmount) })}
+								{t("bookingPayExtra", { amount: formatAmount(extraAmount) })}
 							</Button>
 						) : null}
 						<Button
@@ -960,6 +1046,45 @@ export default function CustomerBookingDetailPage() {
 					</>
 				) : null}
 
+				{showExtraPay &&
+				status === "pending_extra_payment" &&
+				extraAmount != null &&
+				Number(extraAmount) > 0 ? (
+					<div className="space-y-2 rounded-xl bg-white p-3 shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
+						<p className="text-sm font-medium">
+							{t("bookingPayExtra", { amount: formatAmount(extraAmount) })}
+						</p>
+						<Button
+							className="w-full"
+							disabled={busy}
+							onClick={() => void onPayWallet()}
+						>
+							{busy ? t("bookingPaying") : t("bookingPayWithWallet")}
+						</Button>
+						<Button
+							variant="outline"
+							className="w-full"
+							disabled={busy}
+							onClick={() =>
+								void onPayGateway("chapa", {
+									amount: Number(extraAmount) || 0,
+									extraPayment: true,
+								})
+							}
+						>
+							{busy ? t("bookingStarting") : t("bookingPayWithChapa")}
+						</Button>
+						<Button
+							variant="ghost"
+							className="w-full"
+							disabled={busy}
+							onClick={() => setShowExtraPay(false)}
+						>
+							{t("commonCancel")}
+						</Button>
+					</div>
+				) : null}
+
 				{status === "pending_approval" ? (
 					<>
 						{hasProof ? (
@@ -971,13 +1096,15 @@ export default function CustomerBookingDetailPage() {
 								{t("bookingViewServiceProof")}
 							</Button>
 						) : null}
-						<Button
-							className="w-full"
-							disabled={busy}
-							onClick={() => void onComplete()}
-						>
-							{busy ? t("bookingCompleting") : t("bookingComplete")}
-						</Button>
+						{canComplete ? (
+							<Button
+								className="w-full"
+								disabled={busy}
+								onClick={() => void onComplete()}
+							>
+								{busy ? t("bookingCompleting") : t("bookingComplete")}
+							</Button>
+						) : null}
 					</>
 				) : null}
 

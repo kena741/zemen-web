@@ -20,6 +20,8 @@ export interface PaymentPending {
 	fromTierMax?: number;
 	toTierMax?: number;
 	nextCycle?: boolean;
+	remainingBalance?: boolean;
+	extraPayment?: boolean;
 	billingInterval?: string;
 	billingIntervalCount?: number;
 }
