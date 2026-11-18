@@ -426,6 +426,8 @@ export const en = {
 	telegramCommunity: "Telegram community",
 	whatsappChat: "WhatsApp",
 
+	recurringEveryMinute: "Every minute",
+	recurringHourly: "Hourly",
 	recurringWeekly: "Weekly",
 	recurringMonthly: "Monthly",
 	recurringQuarterly: "Quarterly",
@@ -928,6 +930,8 @@ export const en = {
 	guestProfileTitle: "Guest",
 	guestProfileBody: "Sign in to manage bookings, wallet, and favorites.",
 	rememberMe: "Remember me",
+	cyclePeriodMinute: "minute",
+	cyclePeriodHour: "hour",
 	cyclePeriodWeek: "week",
 	cyclePeriodMonth: "month",
 	cyclePeriodQuarter: "quarter",

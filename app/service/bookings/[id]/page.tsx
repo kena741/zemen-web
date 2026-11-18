@@ -464,6 +464,7 @@ export default function CustomerBookingDetailPage() {
 		nextCycleDue: booking.nextCycleDue,
 		currentPeriodEnd: booking.currentPeriodEnd,
 		paymentWindowDays: recurringSettings.paymentWindowDays,
+		billingInterval: booking.service?.billingInterval,
 	});
 	const daysLeft = calendarDaysUntil(booking.currentPeriodEnd);
 	const periodNoun = t(periodNounKey(booking.service?.billingInterval));

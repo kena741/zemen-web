@@ -4,6 +4,8 @@ import { useLocale } from "@/lib/i18n";
 import type { MessageKey } from "@/lib/i18n/messages/en";
 import {
 	normalizeBillingInterval,
+	RECURRING_HOUR,
+	RECURRING_MINUTE,
 	RECURRING_QUARTER,
 	RECURRING_WEEK,
 	RECURRING_YEAR,
@@ -12,6 +14,10 @@ import { cn } from "@/lib/utils";
 
 function intervalKey(interval?: string | null): MessageKey {
 	switch (normalizeBillingInterval(interval)) {
+		case RECURRING_MINUTE:
+			return "recurringEveryMinute";
+		case RECURRING_HOUR:
+			return "recurringHourly";
 		case RECURRING_WEEK:
 			return "recurringWeekly";
 		case RECURRING_QUARTER:

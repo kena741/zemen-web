@@ -414,6 +414,8 @@ export const am: Record<MessageKey, string> = {
 	telegramCommunity: "የቴሌግራም ማህበረሰብ",
 	whatsappChat: "ዋትስአፕ",
 
+	recurringEveryMinute: "በየደቂቃው",
+	recurringHourly: "በየሰዓቱ",
 	recurringWeekly: "ሳምንታዊ",
 	recurringMonthly: "ወርሃዊ",
 	recurringQuarterly: "ሩብ ዓመት",
@@ -904,6 +906,8 @@ export const am: Record<MessageKey, string> = {
 	guestProfileTitle: "እንግዳ",
 	guestProfileBody: "ቦታ ማስያዝ፣ ዋሌት እና ተወዳጆችን ለማስተዳደር ይግቡ።",
 	rememberMe: "አስታውሰኝ",
+	cyclePeriodMinute: "ደቂቃ",
+	cyclePeriodHour: "ሰዓት",
 	cyclePeriodWeek: "ሳምንት",
 	cyclePeriodMonth: "ወር",
 	cyclePeriodQuarter: "ሦስት ወር",

@@ -68,4 +68,24 @@ describe("recurring stamp", () => {
 		expect(period.currentPeriodStart).toBe(from.toISOString());
 		expect(new Date(period.currentPeriodEnd).getUTCMonth()).toBe(1);
 	});
+
+	it("supports minute and hour test cycles", () => {
+		const from = new Date("2026-01-01T00:00:00.000Z");
+		const minute = stampRecurringPeriod({
+			billingInterval: "MINUTE",
+			billingIntervalCount: 1,
+			from,
+		});
+		expect(new Date(minute.currentPeriodEnd).getTime() - from.getTime()).toBe(
+			60_000,
+		);
+		const hour = stampRecurringPeriod({
+			billingInterval: "HOUR",
+			billingIntervalCount: 2,
+			from,
+		});
+		expect(new Date(hour.currentPeriodEnd).getTime() - from.getTime()).toBe(
+			7_200_000,
+		);
+	});
 });

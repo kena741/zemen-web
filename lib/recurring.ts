@@ -1,13 +1,23 @@
+export const RECURRING_MINUTE = "MINUTE";
+export const RECURRING_HOUR = "HOUR";
 export const RECURRING_WEEK = "WEEK";
 export const RECURRING_MONTH = "MONTH";
 export const RECURRING_QUARTER = "QUARTER";
 export const RECURRING_YEAR = "YEAR";
 
-export const RECURRING_CYCLES = [
+/** Production defaults when settings are empty / monthly-only seed. */
+export const RECURRING_CYCLES_DEFAULT = [
 	RECURRING_WEEK,
 	RECURRING_MONTH,
 	RECURRING_QUARTER,
 	RECURRING_YEAR,
+] as const;
+
+/** All known cycles, including admin test short cycles (MINUTE/HOUR). */
+export const RECURRING_CYCLES = [
+	RECURRING_MINUTE,
+	RECURRING_HOUR,
+	...RECURRING_CYCLES_DEFAULT,
 ] as const;
 
 export type RecurringCycle = (typeof RECURRING_CYCLES)[number];
@@ -20,15 +30,29 @@ export interface RecurringPaymentSettings {
 
 export const RECURRING_PAYMENT_SETTINGS_DEFAULT: RecurringPaymentSettings = {
 	enabled: true,
-	availableCycles: [...RECURRING_CYCLES],
+	availableCycles: [...RECURRING_CYCLES_DEFAULT],
 	paymentWindowDays: 3,
 };
 
-/** Provider-facing cycles only. Admin may also store MINUTE/HOUR for testing — those are ignored. */
+export function isShortRecurringCycle(
+	raw: string | null | undefined,
+): boolean {
+	const cycle = parseBillingCycle(raw);
+	return cycle === RECURRING_MINUTE || cycle === RECURRING_HOUR;
+}
+
 export function parseBillingCycle(
 	raw: string | null | undefined,
 ): RecurringCycle | null {
 	switch ((raw ?? "").trim().toUpperCase()) {
+		case "MINUTE":
+		case "EVERY_MINUTE":
+		case "MINUTES":
+			return RECURRING_MINUTE;
+		case "HOUR":
+		case "HOURLY":
+		case "HOURS":
+			return RECURRING_HOUR;
 		case "WEEK":
 		case "WEEKLY":
 			return RECURRING_WEEK;
@@ -63,14 +87,14 @@ export function parseRecurringPaymentSettings(
 			if (cycle && !cycles.includes(cycle)) cycles.push(cycle);
 		}
 	}
-	// Match mobile: empty or monthly-only seed → all provider cycles.
+	// Empty or monthly-only seed → production defaults (not test short cycles).
 	if (
 		cycles.length === 0 ||
 		(cycles.length === 1 && cycles[0] === RECURRING_MONTH)
 	) {
 		return {
 			enabled,
-			availableCycles: [...RECURRING_CYCLES],
+			availableCycles: [...RECURRING_CYCLES_DEFAULT],
 			paymentWindowDays: paymentWindowDaysFrom(map),
 		};
 	}
@@ -96,6 +120,10 @@ export function normalizeBillingInterval(raw: string | null | undefined): string
 
 export function billingIntervalLabel(raw: string | null | undefined): string {
 	switch (normalizeBillingInterval(raw)) {
+		case RECURRING_MINUTE:
+			return "Every minute";
+		case RECURRING_HOUR:
+			return "Hourly";
 		case RECURRING_WEEK:
 			return "Weekly";
 		case RECURRING_QUARTER:
@@ -109,8 +137,18 @@ export function billingIntervalLabel(raw: string | null | undefined): string {
 
 export function periodNounKey(
 	raw: string | null | undefined,
-): "cyclePeriodWeek" | "cyclePeriodMonth" | "cyclePeriodQuarter" | "cyclePeriodYear" {
+):
+	| "cyclePeriodMinute"
+	| "cyclePeriodHour"
+	| "cyclePeriodWeek"
+	| "cyclePeriodMonth"
+	| "cyclePeriodQuarter"
+	| "cyclePeriodYear" {
 	switch (normalizeBillingInterval(raw)) {
+		case RECURRING_MINUTE:
+			return "cyclePeriodMinute";
+		case RECURRING_HOUR:
+			return "cyclePeriodHour";
 		case RECURRING_WEEK:
 			return "cyclePeriodWeek";
 		case RECURRING_QUARTER:
@@ -130,6 +168,12 @@ export function addBillingInterval(
 	const n = count < 1 ? 1 : count;
 	const base = new Date(from);
 	switch (normalizeBillingInterval(interval)) {
+		case RECURRING_MINUTE:
+			base.setTime(base.getTime() + 60_000 * n);
+			return base;
+		case RECURRING_HOUR:
+			base.setTime(base.getTime() + 3_600_000 * n);
+			return base;
 		case RECURRING_WEEK:
 			base.setDate(base.getDate() + 7 * n);
 			return base;
@@ -218,6 +262,7 @@ export interface NextCycleDueInput {
 	nextCycleDue?: boolean;
 	currentPeriodEnd?: string | null;
 	paymentWindowDays?: number;
+	billingInterval?: string | null;
 }
 
 export function isNextCyclePaymentDue(input: NextCycleDueInput): boolean {
@@ -236,6 +281,10 @@ export function isNextCyclePaymentDue(input: NextCycleDueInput): boolean {
 	if (!input.currentPeriodEnd) return false;
 	const end = new Date(input.currentPeriodEnd);
 	if (Number.isNaN(end.getTime())) return false;
+	// Short test cycles: due at period end (day window would open immediately).
+	if (isShortRecurringCycle(input.billingInterval)) {
+		return Date.now() >= end.getTime();
+	}
 	const windowDays = Math.min(
 		365,
 		Math.max(0, input.paymentWindowDays ?? 3),

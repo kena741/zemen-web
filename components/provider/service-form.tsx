@@ -34,6 +34,8 @@ type ServiceFormProps = {
 };
 
 const INTERVAL_OPTIONS = [
+	{ value: "MINUTE", label: "Every minute" },
+	{ value: "HOUR", label: "Hourly" },
 	{ value: "WEEK", label: "Weekly" },
 	{ value: "MONTH", label: "Monthly" },
 	{ value: "QUARTER", label: "Quarterly" },
