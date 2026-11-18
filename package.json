@@ -7,10 +7,12 @@
 		"build": "next build",
 		"start": "next start",
 		"lint": "eslint",
-		"test": "vitest run",
-		"test:watch": "vitest",
-		"test:e2e": "playwright test",
-		"test:e2e:ui": "playwright test --ui"
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "check:backend-isolation": "node scripts/check-backend-isolation.mjs",
+    "check:prod-backend-gate": "node scripts/check-prod-backend-gate.mjs"
 	},
   "dependencies": {
     "@base-ui/react": "^1.7.0",
