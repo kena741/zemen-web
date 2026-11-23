@@ -27,6 +27,7 @@ const PUBLIC_SEO = [
 	"/locations",
 	"/legal",
 	"/blog",
+	"/videos",
 ];
 
 function isBypass(pathname: string | null): boolean {

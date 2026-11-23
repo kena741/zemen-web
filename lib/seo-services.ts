@@ -49,10 +49,17 @@ export type CategorySeoCopy = {
 	heroImage?: { src: string; alt: string; caption: string };
 	/** Vertical (9:16) video shown in the page hero; files live in public/. */
 	video?: {
+		/** Watch page at /videos/<slug>, where the video is the main content. */
+		slug: string;
 		src: string;
 		poster: string;
 		title: string;
 		caption: string;
+		/** What the video shows; used on the watch page and in structured data. */
+		description: string;
+		/** Service page the watch page links back to. */
+		servicePath: string;
+		serviceLabel: string;
 		/** ISO 8601 with a timezone offset (Google flags date-only values). */
 		uploadDate: string;
 		durationSeconds: number;
@@ -133,10 +140,15 @@ const CATEGORY_COPY: Record<string, CategorySeoCopy> = {
 			trust: ["Verified professionals", "Clear pricing", "One-time or regular"],
 		},
 		video: {
+			slug: "cleaning-service-addis-ababa",
 			src: "/marketing/video/cleaning.mp4",
 			poster: "/marketing/video/cleaning-poster.jpg",
 			title: "Zemen Service providers cleaning homes and offices in Addis Ababa",
 			caption: "See our cleaners in action",
+			description:
+				"Zemen Service providers deep cleaning an office in Addis Ababa: sofa and upholstery cleaning, and machine scrubbing of tiled floors. Book a verified cleaner on Zemen Service or call 8323.",
+			servicePath: "/services/domestic-help/cleaning-service",
+			serviceLabel: "Cleaning service",
 			uploadDate: "2026-10-30T00:00:00+03:00",
 			durationSeconds: 47,
 		},
@@ -1133,6 +1145,17 @@ function matchCategoryCopy(path: string): CategorySeoCopy | null {
 	const key = path.toLowerCase();
 	const copyKey = COPY_ALIASES[key] ?? key;
 	return CATEGORY_COPY[copyKey] ?? null;
+}
+
+export type ServiceVideo = NonNullable<CategorySeoCopy["video"]>;
+
+/** Every service video, for the /videos watch pages and the sitemap. */
+export function listServiceVideos(): ServiceVideo[] {
+	return Object.values(CATEGORY_COPY).flatMap((copy) => (copy.video ? [copy.video] : []));
+}
+
+export function getServiceVideo(slug: string): ServiceVideo | null {
+	return listServiceVideos().find((video) => video.slug === slug) ?? null;
 }
 
 /** Hand-written copy for a `category` or `category/subcategory` path, if any. */

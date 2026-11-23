@@ -136,6 +136,7 @@ export function blogPostingJsonLd(post: {
 }
 
 export function videoJsonLd(video: {
+	slug: string;
 	title: string;
 	description: string;
 	src: string;
@@ -149,6 +150,7 @@ export function videoJsonLd(video: {
 		"@type": "VideoObject",
 		name: video.title,
 		description: video.description,
+		url: `${base}/videos/${video.slug}`,
 		thumbnailUrl: `${base}${video.poster}`,
 		contentUrl: `${base}${video.src}`,
 		uploadDate: video.uploadDate,

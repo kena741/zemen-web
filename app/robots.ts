@@ -17,6 +17,7 @@ export default function robots(): MetadataRoute.Robots {
 					"/services",
 					"/services/",
 					"/locations/",
+					"/videos/",
 					"/legal/",
 				],
 				disallow: [

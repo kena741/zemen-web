@@ -9,7 +9,6 @@ import {
 	faqJsonLd,
 	JsonLd,
 	serviceJsonLd,
-	videoJsonLd,
 } from "@/components/marketing/seo-json-ld";
 import {
 	categoryIcon,
@@ -583,9 +582,6 @@ export function ServiceSubCategoryView({
 				})}
 			/>
 			{faqSchema ? <JsonLd data={faqSchema} /> : null}
-			{copy.video ? (
-				<JsonLd data={videoJsonLd({ ...copy.video, description: copy.description })} />
-			) : null}
 
 			{copy.hero ? (
 				<ServiceHero
