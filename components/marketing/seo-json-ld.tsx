@@ -1,5 +1,5 @@
 import { BRAND_NAME } from "@/lib/brand";
-import { OFFICE, SHORT_CODE } from "@/lib/marketing";
+import { OFFICE, WHATSAPP_PHONE } from "@/lib/marketing";
 import { getMetadataBaseUrl, SEO_DESCRIPTION, SEO_GEO } from "@/lib/seo";
 
 const AREA_SERVED = [
@@ -85,7 +85,15 @@ export function localBusinessJsonLd(): Record<string, unknown> {
 		url: base,
 		image: `${base}/og-image.jpg`,
 		logo: `${base}/app-icon.png`,
-		telephone: SHORT_CODE,
+		// Same number as the Google Business Profile; 8323 is listed on the Organization.
+		telephone: `+${WHATSAPP_PHONE}`,
+		// Matches the "Open 24 hours" shown on the Google Business Profile.
+		openingHoursSpecification: {
+			"@type": "OpeningHoursSpecification",
+			dayOfWeek: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
+			opens: "00:00",
+			closes: "23:59",
+		},
 		parentOrganization: { "@id": `${base}/#organization` },
 		areaServed: AREA_SERVED,
 		hasMap: OFFICE.mapsUrl,

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist_Mono, Plus_Jakarta_Sans } from "next/font/google";
 
+import { GoogleAnalytics } from "@/components/analytics/google-analytics";
 import { OrganizationJsonLd } from "@/components/marketing/json-ld";
 import { AppProviders } from "@/components/providers/app-providers";
 import { ReduxProvider } from "@/store/ReduxProvider";
@@ -96,6 +97,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
 					}}
 				/>
 				<OrganizationJsonLd />
+				<GoogleAnalytics />
 				<ReduxProvider>
 					<AppProviders>{children}</AppProviders>
 				</ReduxProvider>

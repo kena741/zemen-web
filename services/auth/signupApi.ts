@@ -1,3 +1,4 @@
+import { trackEvent } from "@/lib/analytics";
 import type { AppMode } from "@/lib/brand";
 import { getEdgeFunctionsBaseUrl } from "@/lib/env";
 import {
@@ -83,6 +84,7 @@ export async function signUpCustomer(
 		if (!res.ok || !data.success || !data.userId) {
 			return { userId: null, error: friendlyLoginError(data.error || "Signup failed") };
 		}
+		trackEvent("sign_up", { method: "customer" });
 		return { userId: data.userId, error: null };
 	} catch {
 		return { userId: null, error: "No internet connection" };
@@ -159,6 +161,7 @@ export async function signUpProvider(
 		}
 	}
 
+	trackEvent("sign_up", { method: "provider" });
 	return { userId: uid, error: null };
 }
 
