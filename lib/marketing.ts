@@ -6,6 +6,11 @@ export const WHATSAPP_DISPLAY = "+251 951 175 959";
 export const WHATSAPP_URL = `https://wa.me/${WHATSAPP_PHONE}`;
 export const PLAY_STORE_URL =
 	"https://play.google.com/store/apps/details?id=com.zemen.service";
+/** Provider app on the App Store (the Android listing is not linked yet). */
+export const PROVIDER_APP_STORE_URL =
+	"https://apps.apple.com/us/app/zemen-provider/id6763142218";
+/** Company that builds and runs Zemen Service. */
+export const OPERATOR_NAME = "Zulu Tech PLC";
 export const APP_STORE_URL =
 	"https://apps.apple.com/us/app/zemen-service/id6763512421";
 

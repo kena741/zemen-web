@@ -18,6 +18,8 @@ export default function robots(): MetadataRoute.Robots {
 					"/services/",
 					"/locations/",
 					"/videos/",
+					"/become-a-provider",
+					"/llms.txt",
 					"/legal/",
 				],
 				disallow: [
@@ -35,7 +37,7 @@ export default function robots(): MetadataRoute.Robots {
 					"/checkout",
 					"/provider",
 					"/provider/",
-					"/service",
+					"/service$",
 					"/service/",
 					"/pay",
 					"/pay/",

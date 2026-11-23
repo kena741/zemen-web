@@ -38,6 +38,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 			priority: 0.9,
 		},
 		{
+			url: `${base}/become-a-provider`,
+			lastModified: now,
+			changeFrequency: "monthly",
+			priority: 0.6,
+		},
+		{
 			url: `${base}/locations/addis-ababa`,
 			lastModified: now,
 			changeFrequency: "weekly",
