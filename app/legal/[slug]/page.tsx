@@ -1,67 +1,31 @@
-"use client";
+import { notFound } from "next/navigation";
 
-import Link from "next/link";
-import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
-
-import { ProfileBackLink } from "@/components/provider/profile-back-link";
-import { ServiceLoading } from "@/components/service/service-loading";
-import { useLocale } from "@/lib/i18n";
+import { LegalView } from "@/components/legal/legal-view";
+import { getPublicSupabase } from "@/lib/supabase/public";
 import { fetchPolicyHtml, type PolicySlug } from "@/services/config/policyApi";
 
-const SLUGS: PolicySlug[] = ["privacy", "terms", "about"];
+const SLUGS: PolicySlug[] = ["privacy", "terms"];
 
-function slugLabel(slug: PolicySlug, t: ReturnType<typeof useLocale>["t"]) {
-	if (slug === "privacy") return t("legalPrivacy");
-	if (slug === "terms") return t("legalTerms");
-	return t("legalAbout");
+export const dynamicParams = false;
+export const revalidate = 3600;
+
+export function generateStaticParams() {
+	return SLUGS.map((slug) => ({ slug }));
 }
 
-export default function LegalPage() {
-	const params = useParams<{ slug: string }>();
-	const { t } = useLocale();
-	const slug = (params.slug ?? "privacy") as PolicySlug;
-	const valid = SLUGS.includes(slug) ? slug : "privacy";
-	const [title, setTitle] = useState("");
-	const [html, setHtml] = useState("");
-	const [error, setError] = useState<string | null>(null);
-	const [loading, setLoading] = useState(true);
+export default async function LegalPage({
+	params,
+}: {
+	params: Promise<{ slug: string }>;
+}) {
+	const { slug } = await params;
+	const policySlug = SLUGS.find((item) => item === slug);
+	if (!policySlug) notFound();
 
-	useEffect(() => {
-		setLoading(true);
-		void fetchPolicyHtml(valid).then((res) => {
-			setTitle(res.title);
-			setHtml(res.html);
-			setError(res.error);
-			setLoading(false);
-		});
-	}, [valid]);
+	const policy = await fetchPolicyHtml(policySlug, getPublicSupabase()).catch((error) => {
+		console.error("LegalPage", error);
+		return { title: "", html: "", error: "Content not available yet." };
+	});
 
-	return (
-		<div className="mx-auto max-w-3xl px-4 py-8">
-			<ProfileBackLink href="/login" label={t("commonBack")} />
-			<h1 className="admin-page-title mt-4">{title || t("legalTitle")}</h1>
-			<div className="mt-4 flex flex-wrap gap-3 text-sm">
-				{SLUGS.map((s) => (
-					<Link
-						key={s}
-						href={`/legal/${s}`}
-						className={s === valid ? "font-semibold text-primary" : "text-muted-foreground"}
-					>
-						{slugLabel(s, t)}
-					</Link>
-				))}
-			</div>
-			{loading ? (
-				<ServiceLoading compact />
-			) : error ? (
-				<p className="mt-6 text-sm text-muted-foreground">{error || t("legalNotAvailable")}</p>
-			) : (
-				<article
-					className="prose prose-sm mt-6 max-w-none dark:prose-invert"
-					dangerouslySetInnerHTML={{ __html: html }}
-				/>
-			)}
-		</div>
-	);
+	return <LegalView slug={policySlug} {...policy} />;
 }

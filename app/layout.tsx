@@ -43,9 +43,8 @@ export const metadata: Metadata = {
 	creator: BRAND_NAME,
 	publisher: BRAND_NAME,
 	category: "home services",
-	alternates: {
-		canonical: "/",
-	},
+	// No default canonical: pages set their own, so a 404 or app page never
+	// claims to be the home page.
 	other: SEO_GEO_META,
 	verification: {
 		google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION || undefined,

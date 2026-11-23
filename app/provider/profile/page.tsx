@@ -376,7 +376,7 @@ export default function ProviderProfilePage() {
 					/>
 					<Divider />
 					<MenuItem
-						href="/legal/about"
+						href="/about"
 						icon={InfoIcon}
 						label={t("legalAbout")}
 					/>
