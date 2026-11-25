@@ -53,7 +53,7 @@ export function AuthShell({
 				)}
 			>
 				<Link
-					href="/"
+					href="/home"
 					className="inline-flex items-center gap-2.5"
 				>
 					<Image
