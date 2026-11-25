@@ -163,32 +163,30 @@ export default function ProviderDashboardPage() {
 							</section>
 						) : null}
 
-						<section className="mt-5">
-							<div className="mb-3 flex items-center justify-between">
-								<h2 className="text-lg font-bold text-[#464646]">
-									{t("providerJobRequestsHome")}
-								</h2>
-								<Link
-									href="/provider/jobs"
-									className="text-sm font-semibold text-primary"
-								>
-									{t("commonViewAll")}
-								</Link>
-							</div>
-							{jobsLoading ? (
-								<AppLoading compact />
-							) : jobRequests.length === 0 ? (
-								<p className="rounded-xl bg-white px-4 py-6 text-center text-sm text-muted-foreground">
-									{t("providerNoJobRequestsHome")}
-								</p>
-							) : (
-								<div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-1 scrollbar-none lg:mx-0 lg:px-0">
-									{jobRequests.map((job) => (
-										<JobRequestHomeCard key={job.id} job={job} />
-									))}
+						{jobsLoading || jobRequests.length > 0 ? (
+							<section className="mt-5">
+								<div className="mb-3 flex items-center justify-between">
+									<h2 className="text-lg font-bold text-[#464646]">
+										{t("providerJobRequestsHome")}
+									</h2>
+									<Link
+										href="/provider/jobs"
+										className="text-sm font-semibold text-primary"
+									>
+										{t("commonViewAll")}
+									</Link>
 								</div>
-							)}
-						</section>
+								{jobsLoading ? (
+									<AppLoading compact />
+								) : (
+									<div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-1 scrollbar-none lg:mx-0 lg:px-0">
+										{jobRequests.map((job) => (
+											<JobRequestHomeCard key={job.id} job={job} />
+										))}
+									</div>
+								)}
+							</section>
+						) : null}
 
 						<section className="mt-5 lg:mt-8">
 							<RevenueChart

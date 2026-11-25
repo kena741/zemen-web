@@ -14,14 +14,20 @@ import {
 	verifyProviderActivation as verifyProviderActivationTelebirr,
 	verifyServiceTierPayment as verifyServiceTierPaymentTelebirr,
 } from "@/services/payments/telebirrServer";
+import { createHmac } from "node:crypto";
+
 import { proxyToBackend } from "@/lib/backend/proxy";
-import { isBackendMode } from "@/lib/env";
+import { getApiBaseUrl, isBackendMode } from "@/lib/env";
 import {
 	getAuthUserFromRequest,
 	getSupabaseAdmin,
 	resolveProviderIdForAuthUser,
 } from "@/lib/supabase/admin";
-import { sanitizeMerchOrderId } from "@/lib/telebirr";
+import {
+	loadTelebirrConfig,
+	queryTelebirrOrderStatus,
+	sanitizeMerchOrderId,
+} from "@/lib/telebirr";
 import { advanceRecurringBookingPeriod } from "@/services/customer/recurringBookingsApi";
 
 export const runtime = "nodejs";
@@ -49,24 +55,182 @@ async function sleep(ms: number) {
 	await new Promise((r) => setTimeout(r, ms));
 }
 
+function paymentConfirmSecret(): string {
+	return (
+		process.env.PAYMENT_CONFIRM_SECRET?.trim() ||
+		process.env.TELEBIRR_APP_SECRET?.trim() ||
+		""
+	);
+}
+
+function signTierConfirm(params: {
+	txRef: string;
+	providerId: string;
+	tierMax: number | null;
+	amount: number | null;
+}): string | null {
+	const secret = paymentConfirmSecret();
+	if (!secret) return null;
+	const amt =
+		params.amount == null ? "" : Number(params.amount).toFixed(2);
+	const payload = `${params.txRef}:${params.providerId}:${params.tierMax ?? ""}:${amt}`;
+	return createHmac("sha256", secret).update(payload).digest("hex");
+}
+
+async function normalizeBackendResponse(
+	proxied: Response,
+	txRef: string,
+	purpose: string,
+): Promise<NextResponse> {
+	const text = await proxied.text();
+	let data: Record<string, unknown> = {};
+	try {
+		data = text ? (JSON.parse(text) as Record<string, unknown>) : {};
+	} catch {
+		data = { error: text || "Verification failed" };
+	}
+	if (proxied.ok && data.status == null) {
+		data = { ...data, status: "success", tx_ref: txRef, purpose };
+	}
+	return NextResponse.json(data, { status: proxied.status });
+}
+
 export async function POST(request: Request) {
 	if (isBackendMode()) {
 		const cloned = request.clone();
 		const body = (await cloned.json().catch(() => ({}))) as VerifyBody;
 		const purpose = (body.purpose ?? "wallet").trim();
+		const gateway = body.gateway === "chapa" ? "chapa" : "telebirr";
+		const rawTxRef = (body.tx_ref ?? "").trim();
+		const txRef =
+			gateway === "telebirr" ? sanitizeMerchOrderId(rawTxRef) : rawTxRef;
+		const amountNum = Number.parseFloat(String(body.amount ?? "").trim());
+		const amount = Number.isFinite(amountNum) ? amountNum : null;
+		const tierMax =
+			body.toTierMax != null && Number.isFinite(Number(body.toTierMax))
+				? Number(body.toTierMax)
+				: null;
+		const providerId = body.providerId?.trim() || "";
+
+		// Telebirr listing plan: confirm with Telebirr, then apply tier on backend.
+		if (
+			gateway === "telebirr" &&
+			(purpose === "tier" || purpose === "service-tier")
+		) {
+			if (!txRef) {
+				return NextResponse.json(
+					{ error: "tx_ref is required" },
+					{ status: 400 },
+				);
+			}
+			const config = await loadTelebirrConfig();
+			if (!config) {
+				return NextResponse.json(
+					{ error: "Telebirr is not configured" },
+					{ status: 500 },
+				);
+			}
+			try {
+				const order = await queryTelebirrOrderStatus({
+					config,
+					merchOrderId: txRef,
+				});
+				if (!order.paid) {
+					return NextResponse.json(
+						{
+							status: order.failed ? "failed" : "pending",
+							error: order.failed
+								? `Telebirr status is ${order.tradeStatus || "failed"}`
+								: "Payment not confirmed yet",
+							tx_ref: txRef,
+						},
+						{ status: order.failed ? 402 : 202 },
+					);
+				}
+			} catch (error: unknown) {
+				const message =
+					error instanceof Error ? error.message : "Telebirr verify failed";
+				return NextResponse.json({ error: message }, { status: 502 });
+			}
+
+			const sig = signTierConfirm({
+				txRef,
+				providerId,
+				tierMax,
+				amount,
+			});
+			const base = getApiBaseUrl();
+			if (!base || !sig || !providerId || tierMax == null) {
+				return NextResponse.json(
+					{
+						error:
+							!sig
+								? "PAYMENT_CONFIRM_SECRET (or TELEBIRR_APP_SECRET) required"
+								: "providerId and toTierMax are required",
+					},
+					{ status: 500 },
+				);
+			}
+			const auth = request.headers.get("authorization") || "";
+			const res = await fetch(`${base}/api/v1/payments/service-tier/verify`, {
+				method: "POST",
+				headers: {
+					Accept: "application/json",
+					"Content-Type": "application/json",
+					...(auth ? { Authorization: auth } : {}),
+					"X-Zemen-Pay-Sig": sig,
+				},
+				body: JSON.stringify({
+					txRef,
+					providerId,
+					amount,
+					tierMax,
+					skipGatewayVerify: true,
+				}),
+			});
+			return normalizeBackendResponse(res, txRef, purpose);
+		}
+
 		let path = "/payments/chapa/verify";
-		if (purpose === "activation") path = "/payments/provider-activation/verify";
-		else if (purpose === "tier" || purpose === "service-tier")
+		let proxyBody: Record<string, unknown> = {
+			txRef: rawTxRef,
+			purpose,
+			bookingId: body.bookingId?.trim() || null,
+		};
+		if (purpose === "activation") {
+			path = "/payments/provider-activation/verify";
+			proxyBody = {
+				txRef: rawTxRef,
+				providerId: providerId || null,
+				amount: amount ?? 0,
+			};
+		} else if (purpose === "tier" || purpose === "service-tier") {
 			path = "/payments/service-tier/verify";
-		else if (purpose === "featured") path = "/payments/featured-request/verify";
-		else if (purpose === "booking" && body.bookingId?.trim()) {
+			proxyBody = {
+				txRef: rawTxRef,
+				providerId: providerId || null,
+				amount,
+				tierMax,
+			};
+		} else if (purpose === "featured") {
+			path = "/payments/featured-request/verify";
+			proxyBody = {
+				txRef: rawTxRef,
+				providerId: providerId || null,
+				serviceId: body.serviceId?.trim() || null,
+				amount,
+			};
+		} else if (purpose === "booking" && body.bookingId?.trim()) {
 			path = `/payments/bookings/${body.bookingId.trim()}/complete`;
+			proxyBody = { txRef: rawTxRef, amount };
 		}
 		const proxied = await proxyToBackend(path, request, {
 			method: "POST",
-			body,
+			body: proxyBody,
 		});
-		if (proxied) return proxied;
+		if (proxied) {
+			return normalizeBackendResponse(proxied, rawTxRef, purpose);
+		}
 	}
 
 	const auth = await getAuthUserFromRequest(request);

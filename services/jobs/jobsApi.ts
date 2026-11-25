@@ -273,7 +273,7 @@ function subCategoryIdsFromServiceModelList(raw: unknown): string[] {
 }
 
 /**
- * Match job to provider on subcategory first.
+ * Match job to provider on subcategory of their listed services.
  * Parent category alone is too broad (Cleaning ≠ Catering under Domestic).
  */
 export function jobMatchesProviderCategories(
@@ -281,15 +281,9 @@ export function jobMatchesProviderCategories(
 	provider: { categoryIds: Set<string>; subCategoryIds: Set<string> },
 ): boolean {
 	if (provider.subCategoryIds.size > 0) {
-		if (job.subCategoryIds.some((id) => provider.subCategoryIds.has(id))) {
-			return true;
-		}
-		// Job missing subcategory ids — allow parent category only as last resort.
-		if (job.subCategoryIds.length === 0) {
-			return job.categoryIds.some((id) => provider.categoryIds.has(id));
-		}
-		return false;
+		return job.subCategoryIds.some((id) => provider.subCategoryIds.has(id));
 	}
+	// Provider has no subcategory on listings yet — fall back to parent category.
 	return job.categoryIds.some((id) => provider.categoryIds.has(id));
 }
 
@@ -317,8 +311,18 @@ export function mapJobRequestRow(
 		status: asString(row.status),
 		bidList,
 		createdAt: asString(row.createdAt ?? row.created_at),
-		categoryIds: categoryIdsFromServiceModelList(serviceModelList),
-		subCategoryIds: subCategoryIdsFromServiceModelList(serviceModelList),
+		categoryIds: (() => {
+			const fromList = categoryIdsFromServiceModelList(serviceModelList);
+			if (fromList.length) return fromList;
+			const top = asString(row.categoryId ?? row.category_id);
+			return top ? [top] : [];
+		})(),
+		subCategoryIds: (() => {
+			const fromList = subCategoryIdsFromServiceModelList(serviceModelList);
+			if (fromList.length) return fromList;
+			const top = asString(row.subCategoryId ?? row.sub_category_id);
+			return top ? [top] : [];
+		})(),
 		imageUrl: meta.imageUrl,
 		imageUrls: meta.imageUrls,
 		categoryName: meta.categoryName,
@@ -390,6 +394,26 @@ export async function fetchProviderVerifiedSubCategoryIds(
 	return raw.map((id) => String(id).trim()).filter(Boolean);
 }
 
+function scopeFromServiceRows(
+	rows: Record<string, unknown>[],
+): { categoryIds: string[]; subCategoryIds: string[] } {
+	const categoryIds = new Set<string>();
+	const subCategoryIds = new Set<string>();
+	for (const row of rows) {
+		const archived = row.isArchived === true || row.isArchived === "true";
+		const inactive = row.status === false || row.status === "false";
+		if (archived || inactive) continue;
+		const cat = asString(row.categoryId ?? row.category_id);
+		const sub = asString(row.subCategoryId ?? row.sub_category_id);
+		if (cat) categoryIds.add(cat);
+		if (sub) subCategoryIds.add(sub);
+	}
+	return {
+		categoryIds: [...categoryIds],
+		subCategoryIds: [...subCategoryIds],
+	};
+}
+
 /**
  * Categories + subcategories from the provider's own service listings.
  * This is the source of truth for "jobs in my category" — not verified_* alone.
@@ -398,6 +422,19 @@ export async function fetchProviderServiceCategoryScope(
 	providerId: string,
 ): Promise<{ categoryIds: string[]; subCategoryIds: string[] }> {
 	if (!providerId) return { categoryIds: [], subCategoryIds: [] };
+
+	if (isBackendMode()) {
+		try {
+			const rows = await apiFetch<Record<string, unknown>[]>(
+				"/providers/me/services",
+				{ auth: true, query: { includeArchived: false } },
+			);
+			return scopeFromServiceRows(rows ?? []);
+		} catch {
+			return { categoryIds: [], subCategoryIds: [] };
+		}
+	}
+
 	// Same lookup path as fetchProviderServices (provider_id, then providerId).
 	let { data, error } = await getSupabase()
 		.from("service")
@@ -412,23 +449,7 @@ export async function fetchProviderServiceCategoryScope(
 			.limit(200));
 	}
 	if (error || !data) return { categoryIds: [], subCategoryIds: [] };
-
-	const categoryIds = new Set<string>();
-	const subCategoryIds = new Set<string>();
-	for (const row of data) {
-		const r = row as Record<string, unknown>;
-		const archived = r.isArchived === true || r.isArchived === "true";
-		const inactive = r.status === false || r.status === "false";
-		if (archived || inactive) continue;
-		const cat = asString(r.categoryId);
-		const sub = asString(r.subCategoryId);
-		if (cat) categoryIds.add(cat);
-		if (sub) subCategoryIds.add(sub);
-	}
-	return {
-		categoryIds: [...categoryIds],
-		subCategoryIds: [...subCategoryIds],
-	};
+	return scopeFromServiceRows(data as Record<string, unknown>[]);
 }
 
 /** @deprecated use fetchProviderServiceCategoryScope */
@@ -443,16 +464,12 @@ async function providerMatchingScope(providerId: string): Promise<{
 	categoryIds: Set<string>;
 	subCategoryIds: Set<string>;
 }> {
+	// Only services the provider listed — not verified_* alone.
 	const scope = await fetchProviderServiceCategoryScope(providerId);
-	const categoryIds = new Set(scope.categoryIds);
-	const subCategoryIds = new Set(scope.subCategoryIds);
-	// If they have no active services yet, fall back to verified subcategories.
-	if (categoryIds.size === 0 && subCategoryIds.size === 0) {
-		for (const id of await fetchProviderVerifiedSubCategoryIds(providerId)) {
-			subCategoryIds.add(id);
-		}
-	}
-	return { categoryIds, subCategoryIds };
+	return {
+		categoryIds: new Set(scope.categoryIds),
+		subCategoryIds: new Set(scope.subCategoryIds),
+	};
 }
 
 /** Open marketplace jobs (not yet assigned to a provider). */
@@ -468,11 +485,19 @@ export async function fetchOpenJobRequests(params?: {
 			const page = await apiFetch<
 				{ items?: Record<string, unknown>[] } | Record<string, unknown>[]
 			>("/jobs/open", { auth: true });
-			// ponytail: trust API scoping; local category filter needs Supabase
-			const jobs = (Array.isArray(page) ? page : (page.items ?? [])).map(
+			let jobs = (Array.isArray(page) ? page : (page.items ?? [])).map(
 				(row) => mapJobRequestRow(row),
 			);
-			void params?.providerId;
+			if (params?.providerId) {
+				const scope = await providerMatchingScope(params.providerId);
+				if (scope.categoryIds.size === 0 && scope.subCategoryIds.size === 0) {
+					jobs = [];
+				} else {
+					jobs = jobs.filter((job) =>
+						jobMatchesProviderCategories(job, scope),
+					);
+				}
+			}
 			return { jobs, error: null };
 		} catch (e) {
 			return {

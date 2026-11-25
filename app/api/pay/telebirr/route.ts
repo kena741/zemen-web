@@ -26,6 +26,9 @@ interface PayBody {
 	provider_id?: string;
 	booking_id?: string;
 	service_id?: string;
+	plan_id?: number;
+	to_tier_max?: number;
+	from_tier_max?: number;
 	/** Client detects SuperApp and sends miniapp | h5. */
 	mode?: TelebirrCheckoutMode;
 }

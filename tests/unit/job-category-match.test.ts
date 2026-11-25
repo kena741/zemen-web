@@ -39,7 +39,7 @@ describe("jobMatchesProviderCategories", () => {
 		).toBe(false);
 	});
 
-	it("falls back to category when job has no subcategory", () => {
+	it("rejects job with no subcategory when provider has subcategories", () => {
 		expect(
 			jobMatchesProviderCategories(
 				{ categoryIds: ["domestic"], subCategoryIds: [] },
@@ -48,7 +48,7 @@ describe("jobMatchesProviderCategories", () => {
 					subCategoryIds: new Set(["cleaning"]),
 				},
 			),
-		).toBe(true);
+		).toBe(false);
 	});
 
 	it("matches category when provider has no subcategories", () => {

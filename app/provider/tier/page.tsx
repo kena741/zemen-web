@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { CheckCircle2Icon, CircleIcon } from "lucide-react";
+import { CheckCircle2Icon, CircleIcon, ShieldCheckIcon } from "lucide-react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 
 import { TelebirrCheckout } from "@/components/payments/telebirr-checkout";
@@ -223,9 +224,27 @@ export default function ProviderTierPage() {
 										{formatAmount(payAmount)}
 									</span>
 								</div>
-								<p className="text-xs text-muted-foreground">
-									{t("providerTelebirrPayHint")}
-								</p>
+								<div className="flex items-center gap-3 rounded-[10px] bg-muted/60 px-3 py-3 ring-1 ring-border">
+									<Image
+										src="/marketing/partners/telebirr.png"
+										alt=""
+										width={40}
+										height={40}
+										className="size-10 shrink-0 object-contain"
+									/>
+									<div className="min-w-0 flex-1">
+										<p className="text-[15px] font-semibold leading-tight">
+											{t("paymentTelebirr")}
+										</p>
+										<p className="mt-0.5 flex items-center gap-1 text-[12px] text-muted-foreground">
+											<ShieldCheckIcon
+												className="size-3.5 shrink-0 text-primary"
+												aria-hidden
+											/>
+											{t("providerTelebirrPayHint")}
+										</p>
+									</div>
+								</div>
 								<TelebirrCheckout
 									variant="cta"
 									email={user?.email}

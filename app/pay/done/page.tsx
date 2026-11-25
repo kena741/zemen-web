@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 
 import { AuthShell } from "@/components/auth/auth-shell";
+import { getAccessToken } from "@/lib/auth/tokenStore";
 import { useLocale } from "@/lib/i18n";
 import { getSupabase } from "@/lib/supabase/client";
 import {
@@ -20,19 +21,26 @@ function continueHref(purpose: string): string {
 	return "/service/wallet";
 }
 
+function cleanTxRef(raw: string): string {
+	const base = raw.trim().split("?")[0]?.split("&")[0]?.split("#")[0] ?? "";
+	if (!base) return "";
+	// Chapa tier refs keep hyphens (tier-…); Telebirr merch ids are alnum-only.
+	if (base.startsWith("tier-") || base.startsWith("web-")) return base.slice(0, 80);
+	return sanitizeMerchOrderId(base);
+}
+
 function resolveTxRef(search: URLSearchParams): string {
 	const pending = readPaymentPending();
-	const fromPending = sanitizeMerchOrderId(pending?.txRef ?? "");
+	const fromPending = cleanTxRef(pending?.txRef ?? "");
 	if (fromPending) return fromPending;
 
-	const fromUrl = sanitizeMerchOrderId(
+	return cleanTxRef(
 		search.get("tx_ref") ??
 			search.get("merch_order_id") ??
 			search.get("trx_ref") ??
 			search.get("ref") ??
 			"",
 	);
-	return fromUrl;
 }
 
 function PayDoneContent() {
@@ -54,8 +62,11 @@ function PayDoneContent() {
 
 		async function verify() {
 			const pending = readPaymentPending();
-			const session = await getSupabase().auth.getSession();
-			const token = session.data.session?.access_token;
+			let token = getAccessToken();
+			if (!token) {
+				const session = await getSupabase().auth.getSession();
+				token = session.data.session?.access_token ?? null;
+			}
 			if (!token) {
 				if (!cancelled) {
 					setStatus("error");
