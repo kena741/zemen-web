@@ -76,7 +76,7 @@ export default async function BlogSlugPage({ params }: PageProps) {
 				data={[
 					blogPostingJsonLd(post),
 					breadcrumbJsonLd([
-						{ name: "Home", path: "/" },
+						{ name: "Home", path: "/home" },
 						{ name: "Blog", path: "/blog" },
 						{ name: post.title, path: `/blog/${post.slug}` },
 					]),

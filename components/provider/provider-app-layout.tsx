@@ -51,7 +51,7 @@ export function ProviderAppLayout({
 			return;
 		}
 		if (user.mode !== "provider") {
-			router.replace("/service");
+			router.replace("/");
 		}
 	}, [user, router, sessionPending]);
 

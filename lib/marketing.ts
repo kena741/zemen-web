@@ -47,15 +47,6 @@ export const PRIORITY_SERVICE_LINKS = [
 	{ label: "Movers", href: "/services/logistics/furniture-moving" },
 ] as const;
 
-export const SPONSORS = [
-	{ src: "/marketing/partners/chapa.png", alt: "Chapa" },
-	{ src: "/marketing/partners/telebirr.png", alt: "Telebirr" },
-	{ src: "/marketing/partners/cbe.png", alt: "CBE" },
-	{ src: "/marketing/partners/et.png", alt: "Ethio Telecom" },
-	{ src: "/marketing/partners/ibex.png", alt: "Ibex" },
-	{ src: "/marketing/partners/zulu.png", alt: "Zulu" },
-] as const;
-
 /** Home page FAQ — rendered on the page and emitted as FAQPage JSON-LD. */
 export const HOME_FAQS = [
 	{
@@ -120,7 +111,7 @@ export const HOME_FAQS = [
 	{
 		question: "How do I pay?",
 		answer:
-			"You can pay securely in the app or on the website using local payment options such as Telebirr, CBE, and Chapa. Listing prices are shown before you book.",
+			"You can pay securely in the app or on the website with Telebirr. Listing prices are shown before you book.",
 	},
 	{
 		question: "What if I am not satisfied with a service?",

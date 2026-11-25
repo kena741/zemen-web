@@ -21,7 +21,7 @@ const BYPASS = [
 
 /** Public marketing/SEO routes: render immediately for crawlers and users. */
 const PUBLIC_SEO = [
-	"/",
+	"/home",
 	"/about",
 	"/services",
 	"/locations",
@@ -36,8 +36,8 @@ function isBypass(pathname: string | null): boolean {
 
 function isPublicSeo(pathname: string | null): boolean {
 	if (!pathname) return false;
-	return PUBLIC_SEO.some((p) =>
-		p === "/" ? pathname === "/" : pathname === p || pathname.startsWith(`${p}/`),
+	return PUBLIC_SEO.some(
+		(p) => pathname === p || pathname.startsWith(`${p}/`),
 	);
 }
 

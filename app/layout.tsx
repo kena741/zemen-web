@@ -44,7 +44,7 @@ export const metadata: Metadata = {
 	publisher: BRAND_NAME,
 	category: "home services",
 	alternates: {
-		canonical: "/",
+		canonical: "/home",
 	},
 	other: SEO_GEO_META,
 	verification: {
@@ -56,7 +56,7 @@ export const metadata: Metadata = {
 	openGraph: buildOpenGraph({
 		title: SEO_TITLE_DEFAULT,
 		description: SEO_OG_DESCRIPTION,
-		path: "/",
+		path: "/home",
 	}),
 	twitter: buildTwitter({
 		title: SEO_TITLE_DEFAULT,

@@ -11,6 +11,7 @@ export default function robots(): MetadataRoute.Robots {
 				userAgent: "*",
 				allow: [
 					"/",
+					"/home",
 					"/about",
 					"/blog",
 					"/blog/",

@@ -20,8 +20,12 @@ import { selectAuthSessionPending } from "@/store/authSlice";
 import { useAppSelector } from "@/store/hooks";
 import { useAuth } from "@/store/useAuth";
 
+function isHomePath(pathname: string | null) {
+	return pathname === "/" || pathname === "/service";
+}
+
 function isTabActive(pathname: string | null, href: string) {
-	if (href === "/service") return pathname === "/service";
+	if (href === "/") return isHomePath(pathname);
 	return Boolean(pathname?.startsWith(href));
 }
 
@@ -31,9 +35,7 @@ function showBottomNav(
 ) {
 	if (!pathname) return false;
 	return tabs.some((tab) =>
-		tab.href === "/service"
-			? pathname === "/service"
-			: pathname === tab.href,
+		tab.href === "/" ? isHomePath(pathname) : pathname === tab.href,
 	);
 }
 
@@ -46,11 +48,10 @@ export function ServiceAppLayout({
 	const pathname = usePathname();
 	const { user } = useAuth();
 	const { t } = useLocale();
-	const tabNav = useServiceTabNavItems();
 	const sessionPending = useAppSelector(selectAuthSessionPending);
-	const bottomVisible = showBottomNav(pathname, tabNav);
-
 	const guest = !user && isGuestBrowse();
+	const tabNav = useServiceTabNavItems(guest);
+	const bottomVisible = showBottomNav(pathname, tabNav);
 	const guestOk = guest && isGuestAllowedPath(pathname);
 
 	useEffect(() => {
@@ -80,7 +81,7 @@ export function ServiceAppLayout({
 		<div className="min-h-svh bg-[#f6faf4]">
 			<header className="sticky top-0 z-30 hidden border-b border-border/60 bg-white/90 backdrop-blur-md md:block">
 				<div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-6 py-3">
-					<Link href="/service" className="flex items-center gap-2.5">
+					<Link href="/" className="flex items-center gap-2.5">
 						<Image
 							src={appIcon}
 							alt=""
