@@ -1,3 +1,4 @@
+import { trackEvent } from "@/lib/analytics";
 import {
 	isRecurringPricingType,
 	stampRecurringPeriod,
@@ -198,6 +199,7 @@ export async function createCustomerBooking(
 		console.error("createCustomerBooking", error);
 		return { bookingId: null, error: error.message };
 	}
+	trackEvent("booking_created", { value: totalAmount, currency: "ETB" });
 	return { bookingId: id, error: null };
 }
 

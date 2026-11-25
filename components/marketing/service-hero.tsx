@@ -76,6 +76,7 @@ function HeroMedia({ media }: { media: ServiceHeroMedia }) {
 				poster={video.poster}
 				title={video.title}
 				caption={video.caption}
+				captionHref={`/videos/${video.slug}`}
 				durationSeconds={video.durationSeconds}
 				className={`aspect-[13/18] ${MEDIA_CLASS}`}
 			/>

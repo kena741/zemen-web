@@ -87,6 +87,7 @@ const nextConfig: NextConfig = {
 				destination: `https://${CANONICAL_HOST}/:path*`,
 				permanent: true,
 			},
+			{ source: "/legal/about", destination: "/about", permanent: true },
 			...LEGACY_SERVICE_REDIRECTS.map(([source, destination]) => ({
 				source,
 				destination,

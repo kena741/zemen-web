@@ -1,3 +1,5 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
+
 import { getSupabase } from "@/lib/supabase/client";
 import { parseObjectValue } from "@/lib/chapa";
 
@@ -20,16 +22,21 @@ function pickHtml(map: Record<string, unknown>, slug: PolicySlug): string {
 function normalizePolicyHtml(raw: string): string {
 	const trimmed = raw.trim();
 	if (!trimmed) return "";
-	if (trimmed.startsWith("<")) return trimmed;
-	return trimmed
+	const html = trimmed.startsWith("<")
+		? trimmed
+		: trimmed
 		.replace(/&lt;/g, "<")
 		.replace(/&gt;/g, ">")
 		.replace(/&amp;/g, "&")
 		.replace(/&quot;/g, '"');
+	// Stored policies are full documents; keep only the body for embedding.
+	const body = /<body[^>]*>([\s\S]*)<\/body>/i.exec(html);
+	return (body ? body[1] : html).trim();
 }
 
 export async function fetchPolicyHtml(
 	slug: PolicySlug,
+	supabase: SupabaseClient = getSupabase(),
 ): Promise<{ title: string; html: string; error: string | null }> {
 	const titles: Record<PolicySlug, string> = {
 		privacy: "Privacy Policy",
@@ -37,7 +44,7 @@ export async function fetchPolicyHtml(
 		about: "About Zemen",
 	};
 
-	const { data: constantRow } = await getSupabase()
+	const { data: constantRow } = await supabase
 		.from("settings")
 		.select("value")
 		.eq("id", "constant")
@@ -49,7 +56,7 @@ export async function fetchPolicyHtml(
 	let html = pickHtml(constantMap, slug);
 
 	if (!html) {
-		const { data: settingsRow } = await getSupabase()
+		const { data: settingsRow } = await supabase
 			.from("app_settings")
 			.select("data")
 			.in("id", ["settings", "policy"])

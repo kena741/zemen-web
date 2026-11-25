@@ -349,6 +349,11 @@ export function MarketingFooter() {
 							</Link>
 						</li>
 						<li>
+							<Link href="/become-a-provider" className="transition hover:text-white">
+								Become a provider
+							</Link>
+						</li>
+						<li>
 							<Link
 								href="/locations/addis-ababa"
 								className="transition hover:text-white"

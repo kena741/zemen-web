@@ -7,7 +7,6 @@ import { buildOpenGraph, buildTwitter } from "@/lib/seo";
 const LABELS: Record<string, string> = {
 	privacy: "Privacy Policy",
 	terms: "Terms of Service",
-	about: "Legal About",
 };
 
 export async function generateMetadata({

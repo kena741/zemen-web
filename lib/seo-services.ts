@@ -49,10 +49,17 @@ export type CategorySeoCopy = {
 	heroImage?: { src: string; alt: string; caption: string };
 	/** Vertical (9:16) video shown in the page hero; files live in public/. */
 	video?: {
+		/** Watch page at /videos/<slug>, where the video is the main content. */
+		slug: string;
 		src: string;
 		poster: string;
 		title: string;
 		caption: string;
+		/** What the video shows; used on the watch page and in structured data. */
+		description: string;
+		/** Service page the watch page links back to. */
+		servicePath: string;
+		serviceLabel: string;
 		/** ISO 8601 with a timezone offset (Google flags date-only values). */
 		uploadDate: string;
 		durationSeconds: number;
@@ -133,10 +140,15 @@ const CATEGORY_COPY: Record<string, CategorySeoCopy> = {
 			trust: ["Verified professionals", "Clear pricing", "One-time or regular"],
 		},
 		video: {
+			slug: "cleaning-service-addis-ababa",
 			src: "/marketing/video/cleaning.mp4",
 			poster: "/marketing/video/cleaning-poster.jpg",
 			title: "Zemen Service providers cleaning homes and offices in Addis Ababa",
 			caption: "See our cleaners in action",
+			description:
+				"Zemen Service providers deep cleaning an office in Addis Ababa: sofa and upholstery cleaning, and machine scrubbing of tiled floors. Book a verified cleaner on Zemen Service or call 8323.",
+			servicePath: "/services/domestic-help/cleaning-service",
+			serviceLabel: "Cleaning service",
 			uploadDate: "2026-10-30T00:00:00+03:00",
 			durationSeconds: 47,
 		},
@@ -226,6 +238,16 @@ const CATEGORY_COPY: Record<string, CategorySeoCopy> = {
 				answer:
 					"Yes. Browse cooking services on Zemen Service and book a verified provider that matches your needs.",
 			},
+			{
+				question: "Are ingredients included in the price?",
+				answer:
+					"It depends on the provider. Confirm who buys the ingredients before you book.",
+			},
+			{
+				question: "How are cooks on Zemen Service checked?",
+				answer:
+					"Each provider submits a Fayda National ID and the documents for the services they offer, which the Zemen Service team reviews before they can take jobs. Each listing is also reviewed before it is published.",
+			},
 		],
 	},
 	babysitting: {
@@ -271,6 +293,21 @@ const CATEGORY_COPY: Record<string, CategorySeoCopy> = {
 				question: "How does Zemen Service vet babysitters and nannies?",
 				answer:
 					"We verify identity and documents, review training or work history where available, require medical checkup for childcare where applicable, and continue monitoring after placement.",
+			},
+			{
+				question: "How are babysitters on Zemen Service checked?",
+				answer:
+					"Each provider submits a Fayda National ID and the documents for the services they offer, which the Zemen Service team reviews before they can take jobs. Each listing is also reviewed before it is published. Childcare providers also complete a medical checkup.",
+			},
+			{
+				question: "Can I book a babysitter for one time only?",
+				answer:
+					"Many providers offer one-time bookings as well as regular care. Check the listing, or call 8323 to ask.",
+			},
+			{
+				question: "How do I contact Zemen Service about childcare?",
+				answer:
+					"Call 8323, or call or WhatsApp +251 951 175 959.",
 			},
 		],
 	},
@@ -782,7 +819,7 @@ const CATEGORY_COPY: Record<string, CategorySeoCopy> = {
 		title: "Maid Agency Near Me | Housemaid Services Addis Ababa",
 		h1: "Maid Agency and Housemaid Services in Addis Ababa",
 		description:
-			"Looking for a maid agency near you in Addis Ababa, Ethiopia? Book verified housemaids and domestic help through Zemen Service — identity-checked providers with clear listing prices.",
+			"Find verified maids and housemaids in Addis Ababa, Ethiopia. Compare domestic help with clear listing prices and book online, in the app, or by calling 8323.",
 		intro:
 			"Searching “maid agency near me”? Zemen Service is a trusted maid and housemaid platform in Addis Ababa, Ethiopia. Compare verified domestic help for everyday cleaning, home care, and reliable in-home support — then book online, in the app, or by phone.",
 		offered: [
@@ -821,6 +858,26 @@ const CATEGORY_COPY: Record<string, CategorySeoCopy> = {
 				question: "How do I book a housemaid in Addis Ababa?",
 				answer:
 					"Browse Housemaid listings on Zemen Service, choose a verified provider, and book through the website or app. You can also call short code 8323 or WhatsApp for help.",
+			},
+			{
+				question: "How can I contact a maid service in Addis Ababa?",
+				answer:
+					"Call the Zemen Service short code 8323, or call or WhatsApp +251 951 175 959. You can also book a housemaid directly on this page or in the Zemen Service app.",
+			},
+			{
+				question: "How much does a maid cost in Addis Ababa?",
+				answer:
+					"Prices depend on the provider, the hours and the tasks. Listing prices are shown on this page before you book. Ask whether a price is per day or per month.",
+			},
+			{
+				question: "How are Zemen Service maids checked?",
+				answer:
+					"Each provider submits a Fayda National ID and the documents for the services they offer, which the Zemen Service team reviews before they can take jobs. Each listing is also reviewed before it is published.",
+			},
+			{
+				question: "Can I hire a live-in maid?",
+				answer:
+					"Only where a provider's listing offers live-in work. Check the listing details, or call 8323 and we will help you find one.",
 			},
 		],
 	},
@@ -1133,6 +1190,17 @@ function matchCategoryCopy(path: string): CategorySeoCopy | null {
 	const key = path.toLowerCase();
 	const copyKey = COPY_ALIASES[key] ?? key;
 	return CATEGORY_COPY[copyKey] ?? null;
+}
+
+export type ServiceVideo = NonNullable<CategorySeoCopy["video"]>;
+
+/** Every service video, for the /videos watch pages and the sitemap. */
+export function listServiceVideos(): ServiceVideo[] {
+	return Object.values(CATEGORY_COPY).flatMap((copy) => (copy.video ? [copy.video] : []));
+}
+
+export function getServiceVideo(slug: string): ServiceVideo | null {
+	return listServiceVideos().find((video) => video.slug === slug) ?? null;
 }
 
 /** Hand-written copy for a `category` or `category/subcategory` path, if any. */

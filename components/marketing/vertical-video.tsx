@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { PauseIcon, PlayIcon, Volume2Icon, VolumeXIcon } from "lucide-react";
 
@@ -20,6 +21,7 @@ export function VerticalVideo({
 	poster,
 	title,
 	caption,
+	captionHref,
 	durationSeconds,
 	className,
 }: {
@@ -29,6 +31,8 @@ export function VerticalVideo({
 	title: string;
 	/** Short line in the bottom bar, next to the play button. */
 	caption?: string;
+	/** Makes the caption a link, e.g. to the video's watch page. */
+	captionHref?: string;
 	/** Shown as time left until the file's metadata loads. */
 	durationSeconds?: number;
 	className?: string;
@@ -164,7 +168,16 @@ export function VerticalVideo({
 				</button>
 				{caption ? (
 					<figcaption className="min-w-0 flex-1 truncate text-[15px] font-medium">
-						{caption}
+						{captionHref ? (
+							<Link
+								href={captionHref}
+								className="pointer-events-auto underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-white"
+							>
+								{caption}
+							</Link>
+						) : (
+							caption
+						)}
 					</figcaption>
 				) : (
 					<span className="flex-1" />

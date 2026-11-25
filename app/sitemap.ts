@@ -1,7 +1,7 @@
 import type { MetadataRoute } from "next";
 
 import { getMetadataBaseUrl } from "@/lib/seo";
-import { getSeoCopyForPath } from "@/lib/seo-services";
+import { listServiceVideos } from "@/lib/seo-services";
 import { fetchPublishedBlogSlugs } from "@/services/blog/publicBlog";
 import {
 	fetchAllPublicSubCategoryParams,
@@ -38,6 +38,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 			priority: 0.9,
 		},
 		{
+			url: `${base}/become-a-provider`,
+			lastModified: now,
+			changeFrequency: "monthly",
+			priority: 0.6,
+		},
+		{
 			url: `${base}/locations/addis-ababa`,
 			lastModified: now,
 			changeFrequency: "weekly",
@@ -68,34 +74,34 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 			priority: 0.7,
 		}));
 		const pairs = await fetchAllPublicSubCategoryParams();
-		subcategoryRoutes = pairs.map(({ slug, subSlug }) => {
-			const copy = getSeoCopyForPath(`${slug}/${subSlug}`);
-			const video = copy?.video;
-			return {
-				url: `${base}/services/${slug}/${subSlug}`,
-				lastModified: now,
-				changeFrequency: "weekly" as const,
-				priority: 0.65,
-				...(video && copy
-					? {
-							videos: [
-								{
-									title: video.title,
-									description: copy.description,
-									thumbnail_loc: `${base}${video.poster}`,
-									content_loc: `${base}${video.src}`,
-									duration: video.durationSeconds,
-									publication_date: video.uploadDate,
-									family_friendly: "yes" as const,
-								},
-							],
-						}
-					: {}),
-			};
-		});
+		subcategoryRoutes = pairs.map(({ slug, subSlug }) => ({
+			url: `${base}/services/${slug}/${subSlug}`,
+			lastModified: now,
+			changeFrequency: "weekly" as const,
+			priority: 0.65,
+		}));
 	} catch (error) {
 		console.error("sitemap categories", error);
 	}
+
+	// Videos are listed on their watch pages, where they are the main content.
+	const videoRoutes: MetadataRoute.Sitemap = listServiceVideos().map((video) => ({
+		url: `${base}/videos/${video.slug}`,
+		lastModified: now,
+		changeFrequency: "monthly" as const,
+		priority: 0.6,
+		videos: [
+			{
+				title: video.title,
+				description: video.description,
+				thumbnail_loc: `${base}${video.poster}`,
+				content_loc: `${base}${video.src}`,
+				duration: video.durationSeconds,
+				publication_date: video.uploadDate,
+				family_friendly: "yes" as const,
+			},
+		],
+	}));
 
 	let blogRoutes: MetadataRoute.Sitemap = [];
 	try {
@@ -114,6 +120,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 		...staticRoutes,
 		...categoryRoutes,
 		...subcategoryRoutes,
+		...videoRoutes,
 		...blogRoutes,
 	];
 }

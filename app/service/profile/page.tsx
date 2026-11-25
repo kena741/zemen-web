@@ -203,7 +203,7 @@ export default function CustomerProfilePage() {
 				<Link href="/legal/terms" className="hover:text-primary">
 					{t("legalTerms")}
 				</Link>
-				<Link href="/legal/about" className="hover:text-primary">
+				<Link href="/about" className="hover:text-primary">
 					{t("legalAbout")}
 				</Link>
 			</div>

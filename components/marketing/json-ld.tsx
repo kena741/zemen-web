@@ -1,5 +1,14 @@
 import { BRAND_NAME } from "@/lib/brand";
-import { OFFICE, SHORT_CODE, WHATSAPP_DISPLAY } from "@/lib/marketing";
+import {
+	APP_STORE_URL,
+	OFFICE,
+	OPERATOR_NAME,
+	PLAY_STORE_URL,
+	PROVIDER_APP_STORE_URL,
+	SHORT_CODE,
+	TELEGRAM_URL,
+	WHATSAPP_DISPLAY,
+} from "@/lib/marketing";
 import {
 	getMetadataBaseUrl,
 	SEO_DESCRIPTION,
@@ -20,7 +29,8 @@ export function OrganizationJsonLd() {
 				logo: `${base}/app-icon.png`,
 				description: SEO_DESCRIPTION,
 				slogan: "Premium home services in Addis Ababa, Ethiopia",
-				sameAs: ["https://t.me/zemenservicediscussion"],
+				sameAs: [TELEGRAM_URL, PLAY_STORE_URL, APP_STORE_URL],
+				parentOrganization: { "@type": "Organization", name: OPERATOR_NAME },
 				address: {
 					"@type": "PostalAddress",
 					streetAddress: OFFICE.building,
@@ -95,6 +105,28 @@ export function OrganizationJsonLd() {
 				description: SEO_DESCRIPTION,
 				publisher: { "@id": `${base}/#organization` },
 				inLanguage: ["en", "am"],
+			},
+			{
+				"@type": "MobileApplication",
+				"@id": `${base}/#customer-app`,
+				name: BRAND_NAME,
+				description:
+					"Book verified home service professionals in Addis Ababa, Ethiopia.",
+				operatingSystem: "Android, iOS",
+				applicationCategory: "LifestyleApplication",
+				installUrl: [PLAY_STORE_URL, APP_STORE_URL],
+				publisher: { "@id": `${base}/#organization` },
+			},
+			{
+				"@type": "MobileApplication",
+				"@id": `${base}/#provider-app`,
+				name: "Zemen Provider",
+				description:
+					"For service professionals on Zemen Service: manage services, bookings and earnings.",
+				operatingSystem: "iOS",
+				applicationCategory: "BusinessApplication",
+				installUrl: PROVIDER_APP_STORE_URL,
+				publisher: { "@id": `${base}/#organization` },
 			},
 			{
 				"@type": "WebPage",

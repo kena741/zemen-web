@@ -1,3 +1,4 @@
+import { trackEvent } from "@/lib/analytics";
 import type { AppMode } from "@/lib/brand";
 import { apiFetch } from "@/lib/backend/client";
 import { applySession, normalizeSession } from "@/lib/auth/session";
@@ -179,6 +180,7 @@ export async function signUpCustomer(
 				error: friendlyLoginError(data.error || "Signup failed"),
 			};
 		}
+		trackEvent("sign_up", { method: "customer" });
 		return { userId: data.userId, error: null };
 	} catch {
 		return { userId: null, error: "No internet connection" };
@@ -259,6 +261,7 @@ export async function signUpProvider(
 		}
 	}
 
+	trackEvent("sign_up", { method: "provider" });
 	return { userId: uid, error: null };
 }
 

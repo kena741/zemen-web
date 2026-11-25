@@ -9,7 +9,6 @@ import {
 	faqJsonLd,
 	JsonLd,
 	serviceJsonLd,
-	videoJsonLd,
 } from "@/components/marketing/seo-json-ld";
 import {
 	categoryIcon,
@@ -18,7 +17,7 @@ import {
 } from "@/components/marketing/service-hero";
 import { buttonVariants } from "@/components/ui/button";
 import { BRAND_NAME } from "@/lib/brand";
-import { SHORT_CODE, WHATSAPP_URL } from "@/lib/marketing";
+import { OFFICE, SHORT_CODE, WHATSAPP_URL } from "@/lib/marketing";
 import { pricePackages, type CategorySeoCopy } from "@/lib/seo-services";
 import { cn } from "@/lib/utils";
 import type {
@@ -583,9 +582,6 @@ export function ServiceSubCategoryView({
 				})}
 			/>
 			{faqSchema ? <JsonLd data={faqSchema} /> : null}
-			{copy.video ? (
-				<JsonLd data={videoJsonLd({ ...copy.video, description: copy.description })} />
-			) : null}
 
 			{copy.hero ? (
 				<ServiceHero
@@ -924,6 +920,25 @@ export function ServiceSubCategoryView({
 	);
 }
 
+const ADDIS_FAQS = [
+	{
+		question: "Which areas of Addis Ababa does Zemen Service cover?",
+		answer: `Providers on ${BRAND_NAME} work across Addis Ababa, including Bole, CMC, Kazanchis, Sarbet and Ayat. Call ${SHORT_CODE} to check availability for your neighborhood.`,
+	},
+	{
+		question: "How do I hire a verified maid or cleaner in Addis Ababa?",
+		answer: `Open the cleaning or housemaid service page on ${BRAND_NAME}, compare listings from verified providers, and book online or by calling ${SHORT_CODE}.`,
+	},
+	{
+		question: "Can businesses and offices book through Zemen Service?",
+		answer: `Yes. Offices can book cleaning, repairs, IT support, CCTV installation and other services the same way households do. Call ${SHORT_CODE} for help with a larger job.`,
+	},
+	{
+		question: "Where is the Zemen Service office?",
+		answer: `Our office is at ${OFFICE.building}, ${OFFICE.city}, Ethiopia.`,
+	},
+];
+
 export function LocationAddisView({
 	categories,
 	services,
@@ -933,6 +948,7 @@ export function LocationAddisView({
 }) {
 	return (
 		<MarketingShell active="home">
+			<JsonLd data={faqJsonLd(ADDIS_FAQS) ?? {}} />
 			<JsonLd
 				data={breadcrumbJsonLd([
 					{ name: "Home", path: "/home" },
@@ -984,6 +1000,64 @@ export function LocationAddisView({
 							))}
 						</ul>
 					)}
+				</div>
+			</section>
+
+			<section className="border-t border-primary/8 bg-white py-12 sm:py-14">
+				<div className="mx-auto grid max-w-6xl gap-10 px-4 sm:px-6 lg:grid-cols-2">
+					<div>
+						<h2 className="text-2xl font-bold tracking-tight text-[#0f1a0c]">
+							How to book a home service in Addis Ababa
+						</h2>
+						<ol className="mt-5 list-decimal space-y-2 pl-5 text-[15px] leading-relaxed text-[#3d5240]">
+							<li>Choose a service category, such as cleaning, cooking or plumbing.</li>
+							<li>Compare listings from verified providers, with prices shown before you book.</li>
+							<li>
+								Book on the website or the {BRAND_NAME} app, or call {SHORT_CODE} and our
+								team books for you.
+							</li>
+							<li>The provider does the job, and our support team stays available afterward.</li>
+						</ol>
+					</div>
+					<div>
+						<h2 className="text-2xl font-bold tracking-tight text-[#0f1a0c]">
+							How providers are verified
+						</h2>
+						<p className="mt-5 text-[15px] leading-relaxed text-[#3d5240]">
+							Before a provider can take jobs, the {BRAND_NAME} team checks their Fayda
+							National ID, the documents for each service they offer, and their training or
+							work history. Childcare providers also complete a medical checkup. Each
+							service listing is reviewed before it is published.
+						</p>
+						<p className="mt-4 text-[15px] leading-relaxed text-[#3d5240]">
+							Are you a professional?{" "}
+							<Link
+								href="/become-a-provider"
+								className="font-medium text-primary underline underline-offset-4"
+							>
+								Become a provider
+							</Link>
+							.
+						</p>
+					</div>
+				</div>
+			</section>
+
+			<section className="bg-[#eef5ea] py-12 sm:py-14">
+				<div className="mx-auto max-w-3xl px-4 sm:px-6">
+					<h2 className="text-2xl font-bold tracking-tight text-[#0f1a0c]">
+						Questions about Zemen Service in Addis Ababa
+					</h2>
+					<div className="mt-4 divide-y divide-black/10">
+						{ADDIS_FAQS.map((faq) => (
+							<div key={faq.question} className="py-4">
+								<h3 className="font-semibold text-[#0f1a0c]">{faq.question}</h3>
+								<p className="mt-1.5 text-[15px] leading-relaxed text-[#3d5240]">
+									{faq.answer}
+								</p>
+							</div>
+						))}
+					</div>
 				</div>
 			</section>
 
