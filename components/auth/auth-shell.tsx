@@ -44,7 +44,7 @@ export function AuthShell({
 			</div>
 
 			<header className="relative z-10 flex shrink-0 items-center justify-between gap-2.5 px-6 py-5 sm:px-8">
-				<Link href="/" className="flex items-center gap-2.5">
+				<Link href="/home" className="flex items-center gap-2.5">
 					<Image
 						src={appIcon}
 						alt=""

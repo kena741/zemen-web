@@ -87,6 +87,7 @@ export const en = {
 	navBookings: "Bookings",
 	navRequests: "Requests",
 	navProfile: "Profile",
+	navWebsite: "Website",
 	navDashboard: "Dashboard",
 	navOffers: "Offers",
 	navJobs: "Jobs",
