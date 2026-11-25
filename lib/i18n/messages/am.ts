@@ -85,6 +85,7 @@ export const am: Record<MessageKey, string> = {
 	navBookings: "ቦታ ማስያዝ",
 	navRequests: "ጥያቄዎች",
 	navProfile: "መገለጫ",
+	navWebsite: "ድረ-ገጽ",
 	navDashboard: "ዳሽቦርድ",
 	navOffers: "ቅናሾች",
 	navJobs: "ስራዎች",

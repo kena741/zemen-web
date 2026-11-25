@@ -12,6 +12,7 @@ import {
 } from "react";
 import {
 	BellIcon,
+	GlobeIcon,
 	HeartIcon,
 	MapPinIcon,
 	MessagesSquareIcon,
@@ -159,42 +160,51 @@ export function ServiceHomePage() {
 									{BRAND_NAME}
 								</p>
 							</div>
-							<p className="mt-2 text-sm text-primary-foreground/85">
-								{t("welcomeBack", { name: greeting })}
-							</p>
-							{isGuestBrowse ? (
-								<p className="mt-0.5 text-xs text-primary-foreground/70">
-									{t("guestBrowseHint")}
-								</p>
-							) : (
-								<p className="mt-0.5 flex items-center gap-1 text-xs text-primary-foreground/70">
-									<MapPinIcon className="size-3.5 shrink-0" />
-									<span className="truncate">{t("homeFindNearby")}</span>
-								</p>
-							)}
+							{!isGuestBrowse ? (
+								<>
+									<p className="mt-2 text-sm text-primary-foreground/85">
+										{t("welcomeBack", { name: greeting })}
+									</p>
+									<p className="mt-0.5 flex items-center gap-1 text-xs text-primary-foreground/70">
+										<MapPinIcon className="size-3.5 shrink-0" />
+										<span className="truncate">{t("homeFindNearby")}</span>
+									</p>
+								</>
+							) : null}
 						</div>
 						<div className="flex shrink-0 items-center gap-1">
 							<Link
-								href="/service/favorites"
+								href="/home"
 								className="rounded-full p-2 hover:bg-white/10"
-								aria-label={t("favoritesTitle")}
+								aria-label={t("navWebsite")}
 							>
-								<HeartIcon className="size-5" />
+								<GlobeIcon className="size-5" />
 							</Link>
-							<Link
-								href="/service/inbox"
-								className="rounded-full p-2 hover:bg-white/10"
-								aria-label={t("inboxTitle")}
-							>
-								<MessagesSquareIcon className="size-5" />
-							</Link>
-							<Link
-								href="/service/notifications"
-								className="rounded-full p-2 hover:bg-white/10"
-								aria-label={t("notificationsTitle")}
-							>
-								<BellIcon className="size-5" />
-							</Link>
+							{!isGuestBrowse ? (
+								<>
+									<Link
+										href="/service/favorites"
+										className="rounded-full p-2 hover:bg-white/10"
+										aria-label={t("favoritesTitle")}
+									>
+										<HeartIcon className="size-5" />
+									</Link>
+									<Link
+										href="/service/inbox"
+										className="rounded-full p-2 hover:bg-white/10"
+										aria-label={t("inboxTitle")}
+									>
+										<MessagesSquareIcon className="size-5" />
+									</Link>
+									<Link
+										href="/service/notifications"
+										className="rounded-full p-2 hover:bg-white/10"
+										aria-label={t("notificationsTitle")}
+									>
+										<BellIcon className="size-5" />
+									</Link>
+								</>
+							) : null}
 						</div>
 					</div>
 
@@ -216,33 +226,48 @@ export function ServiceHomePage() {
 			<div className="hidden px-6 pt-8 md:block">
 				<div className="flex items-center justify-between gap-4">
 					<div>
-						<p className="admin-eyebrow">{t("customer")}</p>
-						<h1 className="admin-page-title mt-1">
-							{t("welcomeBack", { name: greeting })}
-						</h1>
-						<p className="mt-1 text-sm text-muted-foreground">
-							{isGuestBrowse ? t("guestBrowseHint") : t("homeSubtitle")}
-						</p>
+						{isGuestBrowse ? (
+							<h1 className="admin-page-title">{BRAND_NAME}</h1>
+						) : (
+							<>
+								<p className="admin-eyebrow">{t("customer")}</p>
+								<h1 className="admin-page-title mt-1">
+									{t("welcomeBack", { name: greeting })}
+								</h1>
+								<p className="mt-1 text-sm text-muted-foreground">
+									{t("homeSubtitle")}
+								</p>
+							</>
+						)}
 					</div>
-					<div className="flex items-center gap-2">
+					{!isGuestBrowse ? (
+						<div className="flex items-center gap-2">
+							<Link
+								href="/service/favorites"
+								className="rounded-lg border border-border bg-white px-3 py-2 text-sm"
+							>
+								{t("favoritesTitle")}
+							</Link>
+							<Link
+								href="/service/inbox"
+								className="rounded-lg border border-border bg-white px-3 py-2 text-sm"
+							>
+								{t("inboxTitle")}
+							</Link>
+							<UserAvatar
+								src={user?.customer?.profileImage}
+								name={user?.name}
+								size="md"
+							/>
+						</div>
+					) : (
 						<Link
-							href="/service/favorites"
+							href="/home"
 							className="rounded-lg border border-border bg-white px-3 py-2 text-sm"
 						>
-							{t("favoritesTitle")}
+							{t("navWebsite")}
 						</Link>
-						<Link
-							href="/service/inbox"
-							className="rounded-lg border border-border bg-white px-3 py-2 text-sm"
-						>
-							{t("inboxTitle")}
-						</Link>
-						<UserAvatar
-							src={user?.customer?.profileImage}
-							name={user?.name}
-							size="md"
-						/>
-					</div>
+					)}
 				</div>
 				<div className="relative mt-4 max-w-md">
 					<SearchIcon className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
