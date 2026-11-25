@@ -8,6 +8,7 @@ import {
 	CalendarDaysIcon,
 	ClipboardListIcon,
 	HomeIcon,
+	LogInIcon,
 	MessagesSquareIcon,
 	TagIcon,
 	UserIcon,
@@ -36,14 +37,16 @@ function withLabels<const T extends readonly NavItem[]>(
 	return items.map((item) => ({ ...item, label: t(item.labelKey) }));
 }
 
-export function useServiceTabNavItems(): NavItemWithLabel[] {
+export function useServiceTabNavItems(guest = false): NavItemWithLabel[] {
 	const { t } = useLocale();
 	return withLabels(
 		[
-			{ href: "/service", labelKey: "navHome", icon: HomeIcon },
+			{ href: "/", labelKey: "navHome", icon: HomeIcon },
 			{ href: "/service/bookings", labelKey: "navBookings", icon: CalendarDaysIcon },
 			{ href: "/service/requests", labelKey: "navRequests", icon: ClipboardListIcon },
-			{ href: "/service/profile", labelKey: "navProfile", icon: UserIcon },
+			guest
+				? { href: "/login", labelKey: "signIn", icon: LogInIcon }
+				: { href: "/service/profile", labelKey: "navProfile", icon: UserIcon },
 		] as const,
 		t,
 	);

@@ -34,7 +34,7 @@ export default function NotFound() {
 
 					<div className="mt-10 flex flex-wrap items-center justify-center gap-3">
 						<Link
-							href="/"
+							href="/home"
 							className="inline-flex h-12 items-center gap-2 rounded-lg bg-[#13452A] px-6 text-sm font-semibold text-white transition hover:bg-[#1a5c38]"
 						>
 							<HomeIcon className="size-4" aria-hidden />

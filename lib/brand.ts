@@ -13,5 +13,5 @@ export const APP_MODE_LABEL: Record<AppMode, string> = {
 export const APP_MODE_STORAGE_KEY = "zemen.appMode";
 
 export function homePathForMode(mode: AppMode): string {
-	return mode === "provider" ? "/provider" : "/service";
+	return mode === "provider" ? "/provider" : "/";
 }

@@ -48,7 +48,7 @@ export function MarketingHeader({
 		<header className="fixed inset-x-0 top-0 z-50 border-b border-black/5 bg-white/95 pt-[env(safe-area-inset-top)] backdrop-blur-md supports-[backdrop-filter]:bg-white/90">
 			<div className="mx-auto flex h-16 max-w-6xl items-center gap-3 px-4 sm:px-6">
 				<Link
-					href="/"
+					href="/home"
 					className="flex shrink-0 items-center gap-2.5"
 					aria-label={`${BRAND_NAME} home`}
 				>

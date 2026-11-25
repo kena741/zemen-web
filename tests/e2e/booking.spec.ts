@@ -15,7 +15,7 @@ test.describe("booking access", () => {
 		await expect(page).toHaveURL(/\/login/, { timeout: 15_000 });
 	});
 
-	test("guest can open service catalog without login", async ({ page }) => {
+	test("guest continue lands on customer home", async ({ page }) => {
 		await page.goto("/login");
 		await ensureEnglish(page);
 		const browse = page.getByRole("button", {
@@ -23,11 +23,13 @@ test.describe("booking access", () => {
 		});
 		if (await browse.count()) {
 			await browse.first().click();
-			await expect(page).toHaveURL(/\/service/, { timeout: 15_000 });
+			await expect(page).toHaveURL((url) => url.pathname === "/", {
+				timeout: 15_000,
+			});
 			return;
 		}
 		await page.evaluate(() => localStorage.setItem("zemen_guest_browse", "1"));
-		await page.goto("/service");
-		await expect(page).toHaveURL(/\/service/);
+		await page.goto("/");
+		await expect(page).toHaveURL((url) => url.pathname === "/");
 	});
 });

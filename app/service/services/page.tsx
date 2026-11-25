@@ -43,7 +43,7 @@ function ServicesListInner() {
 
 	return (
 		<div className="px-4 pt-4 md:px-6 md:pt-8">
-			<ProfileBackLink href="/service" label={t("navHome")} />
+			<ProfileBackLink href="/" label={t("navHome")} />
 			<h1 className="admin-page-title">{title}</h1>
 			<p className="mt-1 text-sm text-muted-foreground">
 				{loading ? t("commonLoading") : countLabel}

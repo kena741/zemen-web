@@ -113,7 +113,7 @@ function LoginForm() {
 	function continueAsGuest() {
 		enableGuestBrowse();
 		setMode("service");
-		router.push("/service");
+		router.push("/");
 	}
 
 	return (
