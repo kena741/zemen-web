@@ -135,7 +135,7 @@ export function ServicesHubView({
 		<MarketingShell active="services">
 			<JsonLd
 				data={breadcrumbJsonLd([
-					{ name: "Home", path: "/" },
+					{ name: "Home", path: "/home" },
 					{ name: "Services", path: "/services" },
 				])}
 			/>
@@ -255,7 +255,7 @@ export function ServiceCategoryView({
 		<MarketingShell active="services">
 			<JsonLd
 				data={breadcrumbJsonLd([
-					{ name: "Home", path: "/" },
+					{ name: "Home", path: "/home" },
 					{ name: "Services", path: "/services" },
 					{ name: category.categoryName, path },
 				])}
@@ -568,7 +568,7 @@ export function ServiceSubCategoryView({
 		<MarketingShell active="services">
 			<JsonLd
 				data={breadcrumbJsonLd([
-					{ name: "Home", path: "/" },
+					{ name: "Home", path: "/home" },
 					{ name: "Services", path: "/services" },
 					{ name: category.categoryName, path: `/services/${category.slug}` },
 					{ name: subcategory.subCategoryName, path },
@@ -951,7 +951,7 @@ export function LocationAddisView({
 			<JsonLd data={faqJsonLd(ADDIS_FAQS) ?? {}} />
 			<JsonLd
 				data={breadcrumbJsonLd([
-					{ name: "Home", path: "/" },
+					{ name: "Home", path: "/home" },
 					{ name: "Locations", path: "/locations/addis-ababa" },
 					{ name: "Addis Ababa", path: "/locations/addis-ababa" },
 				])}

@@ -181,7 +181,7 @@ export default function ServiceDetailPage() {
 			<div className="px-4 pt-4 md:px-6 md:pt-8">
 				<button
 					type="button"
-					onClick={() => router.push("/service")}
+					onClick={() => router.push("/")}
 					className="mb-3 text-sm text-primary"
 				>
 					← {t("navHome")}

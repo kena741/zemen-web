@@ -28,7 +28,6 @@ import {
 	PLAY_STORE_URL,
 	PRIORITY_SERVICE_LINKS,
 	SHORT_CODE,
-	SPONSORS,
 	TRUST_STATS,
 	WHATSAPP_URL,
 } from "@/lib/marketing";
@@ -91,41 +90,6 @@ const WHY_IMAGES: { image: StaticImageData; alt: string }[] = [
 	{ image: why3, alt: "Zemen Service babysitting support" },
 	{ image: why4, alt: "Zemen Service home help in Addis Ababa" },
 ];
-
-function SponsorsCarousel({
-	sponsors,
-}: {
-	sponsors: readonly { src: string; alt: string }[];
-}) {
-	// Duplicate the row so translateX(-50%) loops seamlessly.
-	const loop = [...sponsors, ...sponsors];
-
-	return (
-		<div className="overflow-hidden" aria-label="Sponsors">
-			<div className="flex w-max gap-3 animate-[sponsors-marquee_28s_linear_infinite] hover:[animation-play-state:paused] sm:gap-3.5 motion-reduce:animate-none">
-				{loop.map((p, index) => (
-					<div
-						key={`${p.alt}-${index}`}
-						className="flex h-14 w-[132px] shrink-0 items-center justify-center rounded-xl border border-primary/10 bg-[#f7faf5] px-3 shadow-[0_1px_2px_rgba(23,67,9,0.04)] sm:h-[3.75rem] sm:w-[148px]"
-						aria-hidden={index >= sponsors.length}
-					>
-						<Image
-							src={p.src}
-							alt={index >= sponsors.length ? "" : p.alt}
-							width={120}
-							height={32}
-							draggable={false}
-							loading="lazy"
-							sizes="120px"
-							className="h-7 max-w-full object-contain opacity-80 sm:h-8"
-							style={{ width: "auto" }}
-						/>
-					</div>
-				))}
-			</div>
-		</div>
-	);
-}
 
 const HELP_WITH: {
 	title: string;
@@ -352,26 +316,6 @@ export function LandingPage({
 				</div>
 			</section>
 
-			{/* Sponsors — directly under hero */}
-			<section className="relative z-10 border-t border-primary/8 bg-[#f4f8f1] py-8 sm:py-9">
-				<div className="mx-auto max-w-6xl px-4 sm:px-6">
-					<p className="text-center text-xs font-semibold uppercase tracking-[0.14em] text-[#52634c]">
-						Sponsored by
-					</p>
-					<div className="relative mt-5">
-						<div
-							aria-hidden
-							className="pointer-events-none absolute inset-y-0 left-0 z-10 w-6 bg-gradient-to-r from-[#f4f8f1] to-transparent sm:w-8"
-						/>
-						<div
-							aria-hidden
-							className="pointer-events-none absolute inset-y-0 right-0 z-10 w-8 bg-gradient-to-l from-[#f4f8f1] to-transparent sm:w-12"
-						/>
-						<SponsorsCarousel sponsors={SPONSORS} />
-					</div>
-				</div>
-			</section>
-
 			{/* Services */}
 			<section
 				id="services"
@@ -446,8 +390,7 @@ export function LandingPage({
 							</p>
 						</div>
 						<Link
-							href="/service"
-							onClick={openService}
+							href="/services"
 							className="inline-flex items-center gap-1 text-sm font-semibold text-primary"
 						>
 							See all listings

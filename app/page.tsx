@@ -1,64 +1,44 @@
-import type { Metadata } from "next";
+"use client";
 
-import { LandingHeroImage } from "@/components/marketing/landing-hero-image";
-import { LandingPage } from "@/components/marketing/landing-page";
-import { faqJsonLd, JsonLd } from "@/components/marketing/seo-json-ld";
-import { HOME_FAQS } from "@/lib/marketing";
-import {
-	buildOpenGraph,
-	buildTwitter,
-	SEO_DESCRIPTION,
-	SEO_OG_DESCRIPTION,
-	SEO_TITLE_DEFAULT,
-	SEO_TWITTER_DESCRIPTION,
-} from "@/lib/seo";
-import {
-	fetchPublicCategories,
-	fetchPublicFeaturedServices,
-} from "@/services/catalog/publicCatalog";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 
-export const metadata: Metadata = {
-	title: {
-		absolute: SEO_TITLE_DEFAULT,
-	},
-	description: SEO_DESCRIPTION,
-	alternates: {
-		canonical: "/",
-	},
-	openGraph: buildOpenGraph({
-		title: SEO_TITLE_DEFAULT,
-		description: SEO_OG_DESCRIPTION,
-		path: "/",
-	}),
-	twitter: buildTwitter({
-		title: SEO_TITLE_DEFAULT,
-		description: SEO_TWITTER_DESCRIPTION,
-	}),
-};
+import { ServiceAppLayout } from "@/components/service/service-app-layout";
+import { ServiceHomePage } from "@/components/service/service-home-page";
+import { AppLoading } from "@/components/ui/app-loading";
+import { homePathForMode } from "@/lib/brand";
+import { enableGuestBrowse } from "@/lib/guest";
+import { selectAuthSessionPending } from "@/store/authSlice";
+import { useAppSelector } from "@/store/hooks";
+import { useAuth } from "@/store/useAuth";
 
-export const revalidate = 3600;
+/** Customer home (guest or signed-in). Marketing is at `/home`. */
+export default function RootCustomerHome() {
+	const router = useRouter();
+	const { user } = useAuth();
+	const sessionPending = useAppSelector(selectAuthSessionPending);
 
-export default async function Home() {
-	const [categories, services] = await Promise.all([
-		fetchPublicCategories(),
-		fetchPublicFeaturedServices(8),
-	]);
-	const faq = faqJsonLd([...HOME_FAQS]);
+	useEffect(() => {
+		if (sessionPending) return;
+		if (user?.mode === "provider") {
+			router.replace(homePathForMode("provider"));
+		}
+	}, [user, router, sessionPending]);
+
+	// Sync before ServiceAppLayout auth gate so `/` does not bounce to login.
+	if (!user && !sessionPending) enableGuestBrowse();
+
+	if (sessionPending || user?.mode === "provider") {
+		return (
+			<div className="flex min-h-svh items-center justify-center">
+				<AppLoading />
+			</div>
+		);
+	}
 
 	return (
-		<>
-			{faq ? <JsonLd data={faq} /> : null}
-			<LandingPage
-				heroImage={<LandingHeroImage />}
-				initialServices={services}
-				initialCategories={categories.map((c) => ({
-					id: c.id,
-					categoryName: c.categoryName,
-					image: c.image,
-					active: c.active,
-					slug: c.slug,
-				}))}
-			/>
-		</>
+		<ServiceAppLayout>
+			<ServiceHomePage />
+		</ServiceAppLayout>
 	);
 }

@@ -83,6 +83,7 @@ describe("booking display helpers", () => {
 
 describe("guest browse paths", () => {
 	it("allows catalog paths only", () => {
+		expect(isGuestAllowedPath("/")).toBe(true);
 		expect(isGuestAllowedPath("/service")).toBe(true);
 		expect(isGuestAllowedPath("/service/services/abc")).toBe(true);
 		expect(isGuestAllowedPath("/service/bookings")).toBe(false);

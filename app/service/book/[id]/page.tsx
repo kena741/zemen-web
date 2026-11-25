@@ -608,7 +608,7 @@ function BookServiceForm() {
 	if (!service) {
 		return (
 			<div className="px-4 pt-4">
-				<ProfileBackLink href="/service" label={t("navHome")} />
+				<ProfileBackLink href="/" label={t("navHome")} />
 				<p className="text-sm text-destructive">
 					{error || loadError || t("commonNotFound")}
 				</p>

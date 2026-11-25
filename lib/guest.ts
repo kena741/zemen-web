@@ -18,6 +18,7 @@ export function clearGuestBrowse(): void {
 /** Paths guests may browse without auth (mobile parity). */
 export function isGuestAllowedPath(pathname: string | null): boolean {
 	if (!pathname) return false;
+	if (pathname === "/") return true;
 	if (pathname === "/service") return true;
 	if (pathname === "/service/profile") return true;
 	if (pathname === "/service/categories") return true;
@@ -28,6 +29,6 @@ export function isGuestAllowedPath(pathname: string | null): boolean {
 }
 
 export function loginPathForGuest(nextPath?: string | null): string {
-	if (!nextPath || nextPath === "/service") return "/login";
+	if (!nextPath || nextPath === "/" || nextPath === "/service") return "/login";
 	return `/login?next=${encodeURIComponent(nextPath)}`;
 }

@@ -258,7 +258,7 @@ export function BlogPostPage({
 					<div className="relative mx-auto max-w-3xl px-4 pt-10 pb-12 sm:px-6 sm:pt-14 sm:pb-16">
 						<MarketingBreadcrumbs
 							items={[
-								{ label: "Home", href: "/" },
+								{ label: "Home", href: "/home" },
 								{ label: "Blog", href: "/blog" },
 								{ label: post.title },
 							]}
