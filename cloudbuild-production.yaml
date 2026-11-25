@@ -71,14 +71,23 @@ steps:
           val="$${line#*=}"
           export "$${key}=$${val}"
         done <<< "$$FRONTEND_ENV"
-        ENV_VARS="NODE_ENV=production,ENVIRONMENT=production"
-        [[ -n "$${CHAPA_SECRET_KEY:-}" ]] && ENV_VARS="$${ENV_VARS},CHAPA_SECRET_KEY=$${CHAPA_SECRET_KEY}"
-        [[ -n "$${PASSWORD_RESET_REDIRECT_URL:-}" ]] && ENV_VARS="$${ENV_VARS},PASSWORD_RESET_REDIRECT_URL=$${PASSWORD_RESET_REDIRECT_URL}"
-        [[ -n "$${API_BASE_URL:-}" ]] && ENV_VARS="$${ENV_VARS},API_BASE_URL=$${API_BASE_URL}"
-        [[ -n "$${SUPABASE_SERVICE_ROLE_KEY:-}" ]] && ENV_VARS="$${ENV_VARS},SUPABASE_SERVICE_ROLE_KEY=$${SUPABASE_SERVICE_ROLE_KEY}"
-        [[ -n "$${SUPABASE_URL:-}" ]] && ENV_VARS="$${ENV_VARS},SUPABASE_URL=$${SUPABASE_URL}"
-        [[ -n "$${SUPABASE_ANON_KEY:-}" ]] && ENV_VARS="$${ENV_VARS},SUPABASE_ANON_KEY=$${SUPABASE_ANON_KEY}"
-        [[ -n "$${EDGE_FUNCTIONS_BASE_URL:-}" ]] && ENV_VARS="$${ENV_VARS},EDGE_FUNCTIONS_BASE_URL=$${EDGE_FUNCTIONS_BASE_URL}"
+        # env-vars-file keeps TELEBIRR_PRIVATE_KEY (= padding) intact; CSV --set-env-vars breaks it
+        ENV_FILE=$$(mktemp)
+        {
+          echo "NODE_ENV: \"production\""
+          echo "ENVIRONMENT: \"production\""
+          for key in CHAPA_SECRET_KEY PASSWORD_RESET_REDIRECT_URL API_BASE_URL \
+            SUPABASE_SERVICE_ROLE_KEY SUPABASE_URL SUPABASE_ANON_KEY EDGE_FUNCTIONS_BASE_URL \
+            TELEBIRR_ENVIRONMENT TELEBIRR_FABRIC_APP_ID TELEBIRR_MERCHANT_APP_ID \
+            TELEBIRR_MERCHANT_CODE TELEBIRR_APP_SECRET TELEBIRR_PRIVATE_KEY \
+            TELEBIRR_NOTIFY_URL TELEBIRR_VERIFY_SSL TELEBIRR_BASE_URL TELEBIRR_WEB_BASE_URL; do
+            val="$${!key:-}"
+            [[ -z "$$val" ]] && continue
+            esc=$${val//\\/\\\\}
+            esc=$${esc//\"/\\\"}
+            echo "$${key}: \"$${esc}\""
+          done
+        } > "$$ENV_FILE"
 
         gcloud run deploy "${_SERVICE}" \
           --image "${_IMAGE_URI}:${SHORT_SHA}" \
@@ -88,7 +97,8 @@ steps:
           --port 3000 \
           --allow-unauthenticated \
           --quiet \
-          --set-env-vars "$${ENV_VARS}"
+          --env-vars-file "$$ENV_FILE"
+        rm -f "$$ENV_FILE"
     waitFor: ["build-and-push-image"]
 
 substitutions:
