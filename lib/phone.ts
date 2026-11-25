@@ -22,33 +22,35 @@ export function normalizeLocalEthiopianPhone(raw: string): string {
 
 export function validateLoginPhoneNumber(value: string): string | null {
 	const raw = value.trim();
-	if (!raw) return "Phone number is Required";
+	if (!raw) return "authErrorPhoneRequired";
 	if (!LOGIN_PHONE_PATTERN.test(raw)) {
-		return "Phone number can only contain digits";
+		return "authErrorPhoneDigitsOnly";
 	}
 
 	const digits = normalizeLocalEthiopianPhone(raw);
 	if (digits.length !== 9) {
-		return "Phone number must be 9 or 10 digits";
+		return "authErrorPhoneLength";
 	}
 	if (!/^[97]\d{8}$/.test(digits)) {
-		return "Phone number must start with 9 or 7";
+		return "authErrorPhonePrefix";
 	}
 	return null;
 }
 
 export function validateEmail(value: string): string | null {
 	const email = value.trim().toLowerCase();
-	if (!email) return "Email is Required";
-	if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return "Invalid Email";
+	if (!email) return "authErrorEmailRequired";
+	if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return "authErrorEmailInvalid";
 	return null;
 }
 
 export function validateEmailOrPhone(value: string): string | null {
 	const raw = value.trim();
-	if (!raw) return "Email or phone is Required";
+	if (!raw) return "authErrorEmailOrPhoneRequired";
 	if (looksLikePhoneIdentifier(raw)) return validateLoginPhoneNumber(raw);
 	const emailError = validateEmail(raw);
-	if (emailError === "Email is Required") return "Email or phone is Required";
+	if (emailError === "authErrorEmailRequired") {
+		return "authErrorEmailOrPhoneRequired";
+	}
 	return emailError;
 }

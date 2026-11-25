@@ -98,13 +98,13 @@ export async function buildAuthUser(
 		if (!provider) {
 			return {
 				user: null,
-				error: "No provider account found for these credentials.",
+				error: "authErrorNoProviderAccount",
 			};
 		}
 		if (!provider.active) {
 			return {
 				user: null,
-				error: "Your account is disabled. Please contact an administrator.",
+				error: "authErrorAccountDisabled",
 			};
 		}
 		if (provider.userType && provider.userType !== USER_TYPE_PROVIDER) {
@@ -130,13 +130,13 @@ export async function buildAuthUser(
 	if (!customer) {
 		return {
 			user: null,
-			error: "No customer account found for these credentials.",
+			error: "authErrorNoCustomerAccount",
 		};
 	}
 	if (customer.active === false) {
 		return {
 			user: null,
-			error: "Your account is disabled. Please contact an administrator.",
+			error: "authErrorAccountDisabled",
 		};
 	}
 	return {

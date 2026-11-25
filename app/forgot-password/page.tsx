@@ -3,27 +3,31 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { UserIcon } from "lucide-react";
 
+import {
+	AuthFieldLabel,
+	AuthTextField,
+} from "@/components/auth/auth-field";
+import { AuthRoleTabs } from "@/components/auth/auth-role-tabs";
 import { AuthShell } from "@/components/auth/auth-shell";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
 import type { AppMode } from "@/lib/brand";
 import { useLocale } from "@/lib/i18n";
 import {
 	looksLikePhoneIdentifier,
 	validateEmailOrPhone,
 } from "@/lib/phone";
-import { cn } from "@/lib/utils";
 import {
 	checkEmailForPasswordReset,
+	checkPhoneForPasswordReset,
 	requestPasswordResetEmail,
 	resetPasswordWithEmailOtp,
 } from "@/services/auth/passwordRecoveryApi";
 
 export default function ForgotPasswordPage() {
-	const { t } = useLocale();
+	const { t, te } = useLocale();
 	const router = useRouter();
 	const [mode, setMode] = useState<AppMode>("service");
 	const [identifier, setIdentifier] = useState("");
@@ -35,21 +39,24 @@ export default function ForgotPasswordPage() {
 	const [error, setError] = useState<string | null>(null);
 	const [busy, setBusy] = useState(false);
 
-	function modeLabel(option: AppMode) {
-		return option === "provider" ? t("provider") : t("customer");
-	}
-
 	async function handleSendCode(e: React.FormEvent) {
 		e.preventDefault();
 		setError(null);
 		const validation = validateEmailOrPhone(identifier);
 		if (validation) {
-			setError(validation);
+			setError(te(validation));
 			return;
 		}
 
 		const raw = identifier.trim();
 		if (looksLikePhoneIdentifier(raw)) {
+			setBusy(true);
+			const check = await checkPhoneForPasswordReset(raw);
+			setBusy(false);
+			if (check.error) {
+				setError(te(check.error));
+				return;
+			}
 			router.push(
 				`/verify-phone?mode=${mode}&reset=1&phone=${encodeURIComponent(raw)}`,
 			);
@@ -64,13 +71,13 @@ export default function ForgotPasswordPage() {
 		});
 		if (check.error) {
 			setBusy(false);
-			setError(check.error);
+			setError(te(check.error));
 			return;
 		}
 		const result = await requestPasswordResetEmail(normalizedEmail);
 		setBusy(false);
 		if (result.error) {
-			setError(result.error);
+			setError(te(result.error));
 			return;
 		}
 		setEmail(normalizedEmail);
@@ -92,7 +99,7 @@ export default function ForgotPasswordPage() {
 		});
 		setBusy(false);
 		if (result.error) {
-			setError(result.error);
+			setError(te(result.error));
 			return;
 		}
 		router.replace("/login");
@@ -103,35 +110,26 @@ export default function ForgotPasswordPage() {
 		setError(null);
 		const result = await requestPasswordResetEmail(email);
 		setBusy(false);
-		if (result.error) setError(result.error);
+		if (result.error) setError(te(result.error));
 	}
 
 	return (
 		<AuthShell
 			title={t("forgotPassword")}
+			subtitle={t("forgotPasswordSubtitle")}
 			footer={
-				<Link href="/login" className="font-medium text-primary hover:underline">
-					{t("signIn")}
-				</Link>
+				<>
+					{t("alreadyHaveAccount")}{" "}
+					<Link
+						href="/login"
+						className="font-semibold text-primary underline-offset-2 hover:underline"
+					>
+						{t("signIn")}
+					</Link>
+				</>
 			}
 		>
-			<div className="mt-6 grid grid-cols-2 gap-1 rounded-lg bg-muted p-1">
-				{(["provider", "service"] as const).map((option) => (
-					<button
-						key={option}
-						type="button"
-						onClick={() => setMode(option)}
-						className={cn(
-							"rounded-md px-3 py-2 text-[13px] font-medium",
-							mode === option
-								? "bg-white text-[#0f1a0c] shadow-sm dark:bg-white dark:text-[#0f1a0c]"
-								: "text-muted-foreground dark:text-white/70 dark:hover:text-white",
-						)}
-					>
-						{modeLabel(option)}
-					</button>
-				))}
-			</div>
+			<AuthRoleTabs value={mode} onChange={setMode} />
 
 			{error ? (
 				<Alert variant="destructive" className="mt-4">
@@ -142,47 +140,58 @@ export default function ForgotPasswordPage() {
 			{otpSent ? (
 				<form
 					onSubmit={(e) => void handleVerifyEmail(e)}
-					className="mt-6 flex flex-col gap-4"
+					className="mt-5 flex flex-col gap-3.5"
 				>
 					<p className="text-sm text-muted-foreground">{t("resetEmailSent")}</p>
-					<FieldGroup>
-						<Field>
-							<FieldLabel>{t("verificationCode")}</FieldLabel>
-							<Input
-								required
-								inputMode="numeric"
-								autoComplete="one-time-code"
-								value={code}
-								onChange={(e) => setCode(e.target.value)}
-							/>
-						</Field>
-						<Field>
-							<FieldLabel>{t("newPassword")}</FieldLabel>
-							<Input
-								type="password"
-								required
-								minLength={6}
-								value={newPassword}
-								onChange={(e) => setNewPassword(e.target.value)}
-							/>
-						</Field>
-						<Field>
-							<FieldLabel>{t("confirmPassword")}</FieldLabel>
-							<Input
-								type="password"
-								required
-								minLength={6}
-								value={confirm}
-								onChange={(e) => setConfirm(e.target.value)}
-							/>
-						</Field>
-					</FieldGroup>
-					<Button type="submit" disabled={busy} className="w-full">
+					<div>
+						<AuthFieldLabel htmlFor="code">{t("verificationCode")}</AuthFieldLabel>
+						<AuthTextField
+							id="code"
+							required
+							inputMode="numeric"
+							autoComplete="one-time-code"
+							value={code}
+							onChange={(e) => setCode(e.target.value)}
+						/>
+					</div>
+					<div>
+						<AuthFieldLabel htmlFor="newPassword">
+							{t("newPassword")}
+						</AuthFieldLabel>
+						<AuthTextField
+							id="newPassword"
+							type="password"
+							required
+							minLength={6}
+							autoComplete="new-password"
+							value={newPassword}
+							onChange={(e) => setNewPassword(e.target.value)}
+						/>
+					</div>
+					<div>
+						<AuthFieldLabel htmlFor="confirmPassword">
+							{t("confirmPassword")}
+						</AuthFieldLabel>
+						<AuthTextField
+							id="confirmPassword"
+							type="password"
+							required
+							minLength={6}
+							autoComplete="new-password"
+							value={confirm}
+							onChange={(e) => setConfirm(e.target.value)}
+						/>
+					</div>
+					<Button
+						type="submit"
+						disabled={busy}
+						className="mt-1 h-12 w-full rounded-xl text-[15px] font-semibold"
+					>
 						{t("resetPassword")}
 					</Button>
 					<button
 						type="button"
-						className="text-sm text-primary hover:underline"
+						className="text-sm font-medium text-primary hover:underline"
 						disabled={busy}
 						onClick={() => void resendEmailCode()}
 					>
@@ -192,28 +201,31 @@ export default function ForgotPasswordPage() {
 			) : (
 				<form
 					onSubmit={(e) => void handleSendCode(e)}
-					className="mt-6 flex flex-col gap-4"
+					className="mt-5 flex flex-col gap-3.5"
 				>
-					<FieldGroup>
-						<Field>
-							<FieldLabel htmlFor="emailOrPhone">
-								{t("emailOrPhone")}
-							</FieldLabel>
-							<Input
-								id="emailOrPhone"
-								name="username"
-								type="text"
-								inputMode="email"
-								autoComplete="username"
-								spellCheck={false}
-								required
-								placeholder={t("emailOrPhonePlaceholder")}
-								value={identifier}
-								onChange={(e) => setIdentifier(e.target.value)}
-							/>
-						</Field>
-					</FieldGroup>
-					<Button type="submit" disabled={busy} className="w-full">
+					<div>
+						<AuthFieldLabel htmlFor="emailOrPhone" className="sr-only">
+							{t("emailOrPhone")}
+						</AuthFieldLabel>
+						<AuthTextField
+							id="emailOrPhone"
+							name="username"
+							type="text"
+							inputMode="email"
+							autoComplete="username"
+							spellCheck={false}
+							required
+							placeholder={t("emailOrPhone")}
+							value={identifier}
+							onChange={(e) => setIdentifier(e.target.value)}
+							start={<UserIcon className="size-4" aria-hidden />}
+						/>
+					</div>
+					<Button
+						type="submit"
+						disabled={busy}
+						className="mt-1 h-12 w-full rounded-xl text-[15px] font-semibold"
+					>
 						{t("sendCode")}
 					</Button>
 				</form>

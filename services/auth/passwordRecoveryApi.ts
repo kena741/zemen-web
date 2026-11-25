@@ -15,12 +15,36 @@ function resetRedirectUrl(): string {
 	return `${base.replace(/\/$/, "")}/reset-password`;
 }
 
+/** POST /auth/password/reset/check-phone — required before OTP on backend. */
+export async function checkPhoneForPasswordReset(
+	phone: string,
+): Promise<{ error: string | null }> {
+	const local = normalizeLocalEthiopianPhone(phone);
+	if (local.length !== 9) return { error: "authErrorPhoneLength" };
+
+	if (!isBackendMode()) {
+		// ponytail: supabase/edge has no check-phone endpoint
+		return { error: null };
+	}
+
+	try {
+		await apiFetch("/auth/password/reset/check-phone", {
+			method: "POST",
+			body: { phone: local },
+		});
+		return { error: null };
+	} catch (e) {
+		const msg = e instanceof Error ? e.message : "authErrorNoPhoneAccount";
+		return { error: friendlyLoginError(msg) };
+	}
+}
+
 export async function checkEmailForPasswordReset(params: {
 	email: string;
 	mode: AppMode;
 }): Promise<{ error: string | null }> {
 	const email = params.email.trim().toLowerCase();
-	if (!email) return { error: "Email is required" };
+	if (!email) return { error: "authErrorEmailRequired" };
 
 	if (isBackendMode()) {
 		// ponytail: backend has no public email probe; allow reset flow to continue
@@ -36,7 +60,7 @@ export async function checkEmailForPasswordReset(params: {
 		.maybeSingle();
 
 	if (error) return { error: friendlyLoginError(error.message) };
-	if (!data) return { error: "No account found for this email." };
+	if (!data) return { error: "authErrorNoEmailAccount" };
 
 	const loginType = String(
 		(data as { login_type?: string | null }).login_type ?? "",
@@ -44,9 +68,7 @@ export async function checkEmailForPasswordReset(params: {
 		.trim()
 		.toLowerCase();
 	if (loginType === "google" || loginType === "apple") {
-		return {
-			error: "This account uses social login. Password reset is not available.",
-		};
+		return { error: "authErrorSocialResetUnavailable" };
 	}
 	return { error: null };
 }
@@ -56,13 +78,10 @@ export async function requestPasswordResetEmail(
 	email: string,
 ): Promise<{ error: string | null }> {
 	const normalized = email.trim().toLowerCase();
-	if (!normalized) return { error: "Email is required" };
+	if (!normalized) return { error: "authErrorEmailRequired" };
 
 	if (isBackendMode()) {
-		return {
-			error:
-				"Email password reset is not available on this deployment. Use phone reset.",
-		};
+		return { error: "authErrorEmailResetUnavailable" };
 	}
 
 	const redirectTo = resetRedirectUrl();
@@ -72,10 +91,7 @@ export async function requestPasswordResetEmail(
 	if (error) {
 		const msg = error.message.toLowerCase();
 		if (msg.includes("redirect") || msg.includes("redirect_to")) {
-			return {
-				error:
-					"Reset email could not be sent (redirect URL not allowed). Contact support.",
-			};
+			return { error: "authErrorResetRedirect" };
 		}
 		return { error: friendlyLoginError(error.message) };
 	}
@@ -90,9 +106,9 @@ export async function resetPasswordWithEmailOtp(params: {
 }): Promise<{ error: string | null }> {
 	const email = params.email.trim().toLowerCase();
 	const token = params.token.trim();
-	if (!email || !token) return { error: "Email and code are required" };
+	if (!email || !token) return { error: "authErrorEmailOrPhoneRequired" };
 	if (params.newPassword.length < 6) {
-		return { error: "Password must be at least 6 characters" };
+		return { error: "passwordMinLength" };
 	}
 
 	const supabase = getSupabase();
@@ -126,8 +142,8 @@ export async function resetPasswordByPhone(params: {
 				body: {
 					phone: normalizeLocalEthiopianPhone(params.phone),
 					code: params.code.trim(),
-					new_password: params.newPassword,
-					verification_id: params.verificationId || null,
+					newPassword: params.newPassword,
+					verificationId: params.verificationId || null,
 				},
 			});
 			return { error: null };
@@ -139,7 +155,7 @@ export async function resetPasswordByPhone(params: {
 
 	const edgeBase = getEdgeFunctionsBaseUrl();
 	if (!edgeBase) {
-		return { error: "Password reset is not configured on this deployment" };
+		return { error: "authErrorResetFailed" };
 	}
 
 	const path =
@@ -165,7 +181,7 @@ export async function resetPasswordByPhone(params: {
 		}
 		return { error: null };
 	} catch {
-		return { error: "No internet connection" };
+		return { error: "authErrorNetwork" };
 	}
 }
 
@@ -173,9 +189,7 @@ export async function updatePasswordFromRecovery(
 	newPassword: string,
 ): Promise<{ error: string | null }> {
 	if (isBackendMode()) {
-		return {
-			error: "Use phone password reset on this deployment.",
-		};
+		return { error: "authErrorUsePhoneReset" };
 	}
 	const { error } = await getSupabase().auth.updateUser({
 		password: newPassword,

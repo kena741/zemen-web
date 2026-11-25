@@ -15,7 +15,7 @@ import { getSupabase } from "@/lib/supabase/client";
 
 export default function ResetPasswordPage() {
 	const router = useRouter();
-	const { t } = useLocale();
+	const { t, te } = useLocale();
 	const [password, setPassword] = useState("");
 	const [confirm, setConfirm] = useState("");
 	const [ready, setReady] = useState(false);
@@ -70,7 +70,7 @@ export default function ResetPasswordPage() {
 		const result = await updatePasswordFromRecovery(password);
 		setBusy(false);
 		if (result.error) {
-			setError(result.error);
+			setError(te(result.error));
 			return;
 		}
 		await getSupabase().auth.signOut();

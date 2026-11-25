@@ -78,7 +78,7 @@ const nextConfig: NextConfig = {
 	// Vercel injects an adapter that skips next-server.js.nft.json; standalone
 	// still requires it on Next 16.3 → ENOENT. Vercel ignores standalone anyway.
 	output: process.env.VERCEL ? undefined : "standalone",
-	allowedDevOrigins: ["127.0.0.1", "localhost"],
+	allowedDevOrigins: ["127.0.0.1", "localhost", "10.157.147.143"],
 	async redirects() {
 		return [
 			{

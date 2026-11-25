@@ -1,3 +1,4 @@
+import { toAuthErrorKey } from "@/lib/auth/errors";
 import type { AppMode } from "@/lib/brand";
 import { getEdgeFunctionsBaseUrl } from "@/lib/env";
 import {
@@ -15,38 +16,11 @@ import {
 	type ProviderProfile,
 } from "./types";
 
-export function friendlyLoginError(rawError: string | null | undefined): string {
-	const raw = rawError?.trim() ?? "";
-	if (!raw) return "Something went wrong. Please try again.";
-
-	const lower = raw.toLowerCase();
-	if (
-		lower.includes("failed to fetch") ||
-		lower.includes("network") ||
-		lower.includes("offline")
-	) {
-		return "No internet connection. Please check your network and try again.";
-	}
-	if (
-		lower.includes("invalid login credentials") ||
-		lower.includes("invalid email or password") ||
-		lower.includes("invalid credentials")
-	) {
-		return "Email, phone, or password is incorrect.";
-	}
-	if (lower.includes("no account found for this phone")) {
-		return "No account found for this phone number.";
-	}
-	if (lower.includes("email or phone is required")) {
-		return "Email or phone is required.";
-	}
-	if (lower.includes("email not confirmed") || lower.includes("not confirmed")) {
-		return "Please verify your email before signing in.";
-	}
-	if (lower.includes("exception") || lower.includes("errno")) {
-		return "Something went wrong. Please try again.";
-	}
-	return raw;
+/** Returns an i18n MessageKey — translate with `t(key)` at the UI. */
+export function friendlyLoginError(
+	rawError: string | null | undefined,
+): string {
+	return toAuthErrorKey(rawError);
 }
 
 async function getProviderEmailByPhone(phone: string): Promise<string | null> {
@@ -268,19 +242,19 @@ export async function buildAuthUser(
 		if (!provider) {
 			return {
 				user: null,
-				error: "No provider account found for these credentials.",
+				error: "authErrorNoProviderAccount",
 			};
 		}
 		if (!provider.active) {
 			return {
 				user: null,
-				error: "Your account is disabled. Please contact an administrator.",
+				error: "authErrorAccountDisabled",
 			};
 		}
 		if (provider.userType !== USER_TYPE_PROVIDER) {
 			return {
 				user: null,
-				error: "This account is not a provider. Switch to Customer to continue.",
+				error: "authErrorNotProvider",
 			};
 		}
 		return {
@@ -300,13 +274,13 @@ export async function buildAuthUser(
 	if (!customer) {
 		return {
 			user: null,
-			error: "No customer account found for these credentials.",
+			error: "authErrorNoCustomerAccount",
 		};
 	}
 	if (customer.active === false) {
 		return {
 			user: null,
-			error: "Your account is disabled. Please contact an administrator.",
+			error: "authErrorAccountDisabled",
 		};
 	}
 	return {

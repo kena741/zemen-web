@@ -3,24 +3,34 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
-import { EyeIcon, EyeOffIcon, Loader2Icon } from "lucide-react";
+import {
+	EyeIcon,
+	EyeOffIcon,
+	Loader2Icon,
+	LockIcon,
+	UserIcon,
+} from "lucide-react";
 
-import { AuthShell } from "@/components/auth/auth-shell";
 import { TelegramLink } from "@/components/app/telegram-link";
 import { WhatsAppLink } from "@/components/app/whatsapp-link";
+import {
+	AuthFieldButton,
+	AuthFieldLabel,
+	AuthTextField,
+} from "@/components/auth/auth-field";
+import { AuthRoleTabs } from "@/components/auth/auth-role-tabs";
+import { AuthShell } from "@/components/auth/auth-shell";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
-import {
-	InputGroup,
-	InputGroupAddon,
-	InputGroupButton,
-	InputGroupInput,
-} from "@/components/ui/input-group";
 import { BRAND_NAME, homePathForMode, type AppMode } from "@/lib/brand";
 import { clearGuestBrowse, enableGuestBrowse } from "@/lib/guest";
 import { useLocale } from "@/lib/i18n";
-import { cn } from "@/lib/utils";
+import {
+	isAuthEmailConfirmError,
+	isAuthSwitchCustomerError,
+	isAuthSwitchProviderError,
+} from "@/lib/auth/errors";
+import { looksLikePhoneIdentifier } from "@/lib/phone";
 import { useAuth } from "@/store/useAuth";
 
 const REMEMBER_KEY = "zemen_remember_login";
@@ -28,7 +38,7 @@ const REMEMBER_KEY = "zemen_remember_login";
 function LoginForm() {
 	const router = useRouter();
 	const searchParams = useSearchParams();
-	const { t } = useLocale();
+	const { t, te } = useLocale();
 	const {
 		login,
 		loginPending,
@@ -43,7 +53,8 @@ function LoginForm() {
 	const [rememberMe, setRememberMe] = useState(false);
 	const [error, setError] = useState("");
 
-	const uiError = error || authError || "";
+	const rawError = error || authError || "";
+	const uiError = rawError ? te(rawError) : "";
 	const nextPath = searchParams.get("next");
 
 	useEffect(() => {
@@ -54,10 +65,16 @@ function LoginForm() {
 				emailOrPhone?: string;
 				password?: string;
 			};
-			if (parsed.emailOrPhone) setEmailOrPhone(parsed.emailOrPhone);
-			if (parsed.password) {
-				setPassword(parsed.password);
+			if (parsed.emailOrPhone) {
+				setEmailOrPhone(parsed.emailOrPhone);
 				setRememberMe(true);
+			}
+			// ponytail: drop legacy password storage; identifier only
+			if (parsed.password) {
+				window.localStorage.setItem(
+					REMEMBER_KEY,
+					JSON.stringify({ emailOrPhone: parsed.emailOrPhone ?? "" }),
+				);
 			}
 		} catch {
 			/* ignore */
@@ -89,7 +106,7 @@ function LoginForm() {
 			if (rememberMe) {
 				window.localStorage.setItem(
 					REMEMBER_KEY,
-					JSON.stringify({ emailOrPhone, password }),
+					JSON.stringify({ emailOrPhone }),
 				);
 			} else {
 				window.localStorage.removeItem(REMEMBER_KEY);
@@ -116,61 +133,37 @@ function LoginForm() {
 		router.push("/service");
 	}
 
+	const identifierLooksPhone = looksLikePhoneIdentifier(emailOrPhone);
+
 	return (
 		<AuthShell
 			title={t("signInToAccount")}
-			className="max-w-100"
+			subtitle={t("signInSubtitle")}
 			belowCard={
 				<footer className="flex flex-col items-center gap-3 text-[12px]">
 					<div className="flex flex-wrap items-center justify-center gap-2">
-						<WhatsAppLink className="border-white/70 bg-white/90 text-[#0f1a0c] shadow-sm hover:bg-white" />
-						<TelegramLink className="border-white/70 bg-white/90 text-[#0f1a0c] shadow-sm hover:bg-white" />
+						<WhatsAppLink className="border-border bg-white text-[#0f1a0c] shadow-sm hover:bg-muted" />
+						<TelegramLink className="border-border bg-white text-[#0f1a0c] shadow-sm hover:bg-muted" />
 					</div>
-					<p className="rounded-full bg-black/35 px-3 py-1 text-white/95">
+					<p className="text-muted-foreground">
 						© {new Date().getFullYear()} {BRAND_NAME}
 					</p>
 				</footer>
 			}
 		>
-				<div
-					className="mt-6 grid grid-cols-2 gap-1 rounded-lg bg-muted/80 p-1 dark:bg-white/10"
-					role="tablist"
-					aria-label={t("signInAsRole")}
-				>
-					{(["provider", "service"] as const).map((option) => {
-						const selected = mode === option;
-						return (
-							<button
-								key={option}
-								type="button"
-								role="tab"
-								aria-selected={selected}
-								onClick={() => selectMode(option)}
-								className={cn(
-									"rounded-md px-3 py-2 text-[13px] font-medium transition-colors",
-									selected
-										? "bg-white text-foreground shadow-sm dark:bg-white dark:text-[#0f1a0c]"
-										: "text-foreground/70 hover:text-foreground dark:text-[#c5d6bc] dark:hover:text-white",
-								)}
-							>
-								{modeLabel(option)}
-							</button>
-						);
-					})}
-				</div>
-				<p className="mt-2 min-h-8 text-center text-[12px] text-muted-foreground dark:text-[#c5d6bc]">
-					{mode === "provider"
-						? t("signInProviderHint")
-						: t("signInCustomerHint")}
-				</p>
+			<AuthRoleTabs
+				value={mode}
+				onChange={selectMode}
+				ariaLabel={t("signInAsRole")}
+			/>
 
-				{uiError ? (
-					<Alert variant="destructive" className="mt-6" aria-live="polite">
-						<AlertTitle>{t("signInFailed")}</AlertTitle>
-						<AlertDescription>
-							<div className="flex flex-col gap-2">
-								<div>{uiError}</div>
-								{uiError.toLowerCase().includes("switch to customer") ? (
+			{uiError ? (
+				<Alert variant="destructive" className="mt-4" aria-live="polite">
+					<AlertTitle>{t("signInFailed")}</AlertTitle>
+					<AlertDescription>
+						<div className="flex flex-col gap-2">
+							<div>{uiError}</div>
+								{isAuthSwitchCustomerError(rawError) ? (
 									<button
 										type="button"
 										className="text-left text-sm font-medium underline underline-offset-2"
@@ -179,137 +172,136 @@ function LoginForm() {
 										{t("switchToCustomer")}
 									</button>
 								) : null}
-								{uiError.toLowerCase().includes("confirm") ||
-								uiError.toLowerCase().includes("verify your email") ? (
+								{isAuthSwitchProviderError(rawError) ? (
+									<button
+										type="button"
+										className="text-left text-sm font-medium underline underline-offset-2"
+										onClick={() => selectMode("provider")}
+									>
+										{t("switchToProvider")}
+									</button>
+								) : null}
+								{isAuthEmailConfirmError(rawError) ? (
 									<p className="text-sm">{t("signInConfirmEmailHint")}</p>
 								) : null}
-							</div>
-						</AlertDescription>
-					</Alert>
-				) : null}
+						</div>
+					</AlertDescription>
+				</Alert>
+			) : null}
 
-				<form
-					onSubmit={(e) => void handleLogin(e)}
-					className="mt-7 flex flex-col gap-5"
-				>
-					<FieldGroup>
-						<Field>
-							<FieldLabel
-								htmlFor="emailOrPhone"
-								className="text-[13px] font-medium text-muted-foreground dark:text-[#c5d6bc]"
+			<form
+				onSubmit={(e) => void handleLogin(e)}
+				className="mt-5 flex flex-col gap-3.5"
+			>
+				<div>
+					<AuthFieldLabel htmlFor="emailOrPhone" className="sr-only">
+						{t("emailOrPhone")}
+					</AuthFieldLabel>
+					<AuthTextField
+						id="emailOrPhone"
+						name="username"
+						type="text"
+						inputMode={identifierLooksPhone ? "tel" : "email"}
+						autoComplete="username"
+						spellCheck={false}
+						required
+						placeholder={t("emailOrPhone")}
+						value={emailOrPhone}
+						onChange={(e) => setEmailOrPhone(e.target.value)}
+						start={<UserIcon className="size-4" aria-hidden />}
+					/>
+				</div>
+
+				<div>
+					<AuthFieldLabel htmlFor="password" className="sr-only">
+						{t("password")}
+					</AuthFieldLabel>
+					<AuthTextField
+						id="password"
+						name="password"
+						type={showPassword ? "text" : "password"}
+						autoComplete="current-password"
+						required
+						placeholder={t("password")}
+						value={password}
+						onChange={(e) => setPassword(e.target.value)}
+						start={<LockIcon className="size-4" aria-hidden />}
+						end={
+							<AuthFieldButton
+								type="button"
+								size="icon-sm"
+								aria-label={
+									showPassword ? t("hidePassword") : t("showPassword")
+								}
+								aria-pressed={showPassword}
+								onClick={() => setShowPassword((v) => !v)}
 							>
-								{t("emailOrPhone")}
-							</FieldLabel>
-							<InputGroup className="h-10 rounded-md border-[#d7e3d2] bg-transparent shadow-none has-[[data-slot=input-group-control]:focus-visible]:border-[#d7e3d2] has-[[data-slot=input-group-control]:focus-visible]:ring-0 dark:border-white/25 dark:bg-white/5 dark:has-[[data-slot=input-group-control]:focus-visible]:border-white/40">
-								<InputGroupInput
-									id="emailOrPhone"
-									name="username"
-									type="text"
-									inputMode="email"
-									autoComplete="username"
-									spellCheck={false}
-									required
-									placeholder={t("emailOrPhonePlaceholder")}
-									value={emailOrPhone}
-									onChange={(e) => setEmailOrPhone(e.target.value)}
-									className="h-10 bg-transparent shadow-none focus-visible:ring-0 dark:text-white dark:placeholder:text-white/45"
-								/>
-							</InputGroup>
-						</Field>
+								{showPassword ? (
+									<EyeOffIcon aria-hidden />
+								) : (
+									<EyeIcon aria-hidden />
+								)}
+							</AuthFieldButton>
+						}
+					/>
+				</div>
 
-						<Field>
-							<FieldLabel
-								htmlFor="password"
-								className="text-[13px] font-medium text-muted-foreground dark:text-[#c5d6bc]"
-							>
-								{t("password")}
-							</FieldLabel>
-							<InputGroup className="h-10 rounded-md border-[#d7e3d2] bg-transparent shadow-none has-[[data-slot=input-group-control]:focus-visible]:border-[#d7e3d2] has-[[data-slot=input-group-control]:focus-visible]:ring-0 dark:border-white/25 dark:bg-white/5 dark:has-[[data-slot=input-group-control]:focus-visible]:border-white/40">
-								<InputGroupInput
-									id="password"
-									name="password"
-									type={showPassword ? "text" : "password"}
-									autoComplete="current-password"
-									required
-									placeholder={t("passwordPlaceholder")}
-									value={password}
-									onChange={(e) => setPassword(e.target.value)}
-									className="h-10 bg-transparent shadow-none focus-visible:ring-0 dark:text-white dark:placeholder:text-white/45"
-								/>
-								<InputGroupAddon align="inline-end">
-									<InputGroupButton
-										type="button"
-										size="icon-xs"
-										aria-label={
-											showPassword ? t("hidePassword") : t("showPassword")
-										}
-										aria-pressed={showPassword}
-										onClick={() => setShowPassword((v) => !v)}
-									>
-										{showPassword ? (
-											<EyeOffIcon aria-hidden />
-										) : (
-											<EyeIcon aria-hidden />
-										)}
-									</InputGroupButton>
-								</InputGroupAddon>
-							</InputGroup>
-						</Field>
-					</FieldGroup>
-
-					<label className="flex items-center gap-2 text-[13px] text-muted-foreground dark:text-[#c5d6bc]">
+				<div className="flex items-center justify-between gap-3">
+					<label className="flex items-center gap-2.5 text-[13px] text-muted-foreground">
 						<input
 							type="checkbox"
 							checked={rememberMe}
 							onChange={(e) => setRememberMe(e.target.checked)}
-							className="size-4 rounded border-border"
+							className="size-5 rounded border-border"
 						/>
 						{t("rememberMe")}
 					</label>
-
-					<Button
-						type="submit"
-						className="h-10 w-full rounded-md text-[15px] font-medium"
-						disabled={loginPending}
+					<Link
+						href="/forgot-password"
+						className="text-[13px] font-medium text-primary hover:underline"
 					>
-						{loginPending ? (
-							<Loader2Icon
-								data-icon="inline-start"
-								className="animate-spin"
-								aria-hidden
-							/>
-						) : null}
-						{loginPending
-							? t("signingIn")
-							: t("signInAs", { mode: modeLabel(mode) })}
-					</Button>
-					<div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-sm">
+						{t("forgotPassword")}
+					</Link>
+				</div>
+
+				<Button
+					type="submit"
+					className="mt-1 h-12 w-full rounded-xl text-[15px] font-semibold"
+					disabled={loginPending}
+				>
+					{loginPending ? (
+						<Loader2Icon
+							data-icon="inline-start"
+							className="animate-spin"
+							aria-hidden
+						/>
+					) : null}
+					{loginPending
+						? t("signingIn")
+						: t("signInAs", { mode: modeLabel(mode) })}
+				</Button>
+
+				<div className="flex flex-col items-center gap-2 pt-1 text-sm">
+					<p className="text-muted-foreground">
+						{t("needAccount")}{" "}
 						<Link
 							href="/signup"
-							className="font-medium text-primary hover:underline"
+							className="font-semibold text-primary underline-offset-2 hover:underline"
 						>
 							{t("createAnAccount")}
 						</Link>
-						<Link
-							href="/forgot-password"
-							className="text-primary hover:underline"
+					</p>
+					{mode === "service" ? (
+						<button
+							type="button"
+							onClick={continueAsGuest}
+							className="font-medium text-primary hover:underline"
 						>
-							{t("forgotPassword")}
-						</Link>
-					</div>
-					{/* Reserve height so guest link does not shift layout */}
-					<div className="min-h-5 text-center">
-						{mode === "service" ? (
-							<button
-								type="button"
-								onClick={continueAsGuest}
-								className="text-sm font-medium text-primary hover:underline"
-							>
-								{t("loginAsGuest")}
-							</button>
-						) : null}
-					</div>
-				</form>
+							{t("loginAsGuest")}
+						</button>
+					) : null}
+				</div>
+			</form>
 		</AuthShell>
 	);
 }

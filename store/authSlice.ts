@@ -16,9 +16,9 @@ import {
 import type { AuthUser } from "@/services/auth/types";
 
 function readStoredMode(): AppMode {
-	if (typeof window === "undefined") return "provider";
+	if (typeof window === "undefined") return "service";
 	const raw = window.localStorage.getItem(APP_MODE_STORAGE_KEY);
-	return raw === "service" ? "service" : "provider";
+	return raw === "provider" ? "provider" : "service";
 }
 
 function persistMode(mode: AppMode) {
@@ -36,7 +36,7 @@ export interface AuthState {
 
 const initialState: AuthState = {
 	user: null,
-	mode: "provider",
+	mode: "service",
 	error: null,
 	sessionPending: true,
 	loginPending: false,
@@ -70,7 +70,7 @@ export const loginWithCredentials = createAsyncThunk<
 		mode: appMode,
 	});
 	if (!result.user) {
-		return rejectWithValue(result.error ?? "Login failed");
+		return rejectWithValue(result.error ?? "authErrorLoginFailed");
 	}
 	persistMode(appMode);
 	return result.user;
@@ -140,7 +140,7 @@ const authSlice = createSlice({
 				state.error =
 					typeof action.payload === "string"
 						? action.payload
-						: "Login failed";
+						: "authErrorLoginFailed";
 			})
 			.addCase(logoutUser.fulfilled, (state) => {
 				state.user = null;

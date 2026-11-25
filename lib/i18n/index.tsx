@@ -10,6 +10,8 @@ import {
 	type ReactNode,
 } from "react";
 
+import { toAuthErrorKey } from "@/lib/auth/errors";
+
 import { am } from "./messages/am";
 import { en, type MessageKey } from "./messages/en";
 
@@ -21,6 +23,7 @@ interface LocaleContextValue {
 	locale: Locale;
 	setLocale: (locale: Locale) => void;
 	t: (key: MessageKey, vars?: Record<string, string | number>) => string;
+	te: (rawError: string | null | undefined) => string;
 }
 
 const LocaleContext = createContext<LocaleContextValue | null>(null);
@@ -61,9 +64,14 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
 		[locale],
 	);
 
+	const te = useCallback(
+		(rawError: string | null | undefined) => t(toAuthErrorKey(rawError)),
+		[t],
+	);
+
 	const value = useMemo(
-		() => ({ locale, setLocale, t }),
-		[locale, setLocale, t],
+		() => ({ locale, setLocale, t, te }),
+		[locale, setLocale, t, te],
 	);
 
 	return (

@@ -3,12 +3,16 @@ export const en = {
 	signUp: "Sign up",
 	signOut: "Sign out",
 	signInAs: "Sign in as {mode}",
-	signInToAccount: "Sign in to your account",
+	signInToAccount: "Sign in",
 	signInAsRole: "Sign in as",
 	signInProviderHint: "Continue as a service provider.",
 	signInCustomerHint: "Continue as a customer.",
+	signupSubtitle: "Choose your role and enter your details to get started.",
+	signInSubtitle: "Choose your role and sign in to continue.",
+	forgotPasswordSubtitle: "Enter your phone or email to reset your password.",
 	signInFailed: "Sign in failed",
 	switchToCustomer: "Switch to Customer",
+	switchToProvider: "Switch to Provider",
 	signInConfirmEmailHint:
 		"Check your email inbox (and spam folder) for the confirmation link.",
 	signingIn: "Signing in…",
@@ -22,6 +26,40 @@ export const en = {
 	signupAcceptTerms: "Please accept the terms",
 	passwordMismatch: "Passwords do not match",
 	passwordMinLength: "Password must be at least 6 characters",
+	authErrorGeneric: "Something went wrong. Please try again.",
+	authErrorNetwork:
+		"No internet connection. Please check your network and try again.",
+	authErrorCredentials: "Email, phone, or password is incorrect.",
+	authErrorNoPhoneAccount: "No account found for this phone number.",
+	authErrorNoEmailAccount: "No account found for this email.",
+	authErrorEmailOrPhoneRequired: "Email or phone is required.",
+	authErrorEmailNotConfirmed: "Please verify your email before signing in.",
+	authErrorLoginFailed: "Sign in failed. Please try again.",
+	authErrorSignupFailed: "Could not create your account. Please try again.",
+	authErrorAccountDisabled:
+		"Your account is disabled. Please contact an administrator.",
+	authErrorNoProviderAccount:
+		"No provider account found for these credentials.",
+	authErrorNoCustomerAccount:
+		"No customer account found for these credentials.",
+	authErrorNotProvider:
+		"This account is not a provider. Switch to Customer to continue.",
+	authErrorNotCustomer:
+		"This account is not a customer. Switch to Provider to continue.",
+	authErrorEmailRequired: "Email is required.",
+	authErrorEmailInvalid: "Invalid email address.",
+	authErrorPhoneRequired: "Phone number is required.",
+	authErrorPhoneDigitsOnly: "Phone number can only contain digits.",
+	authErrorPhoneLength: "Phone number must be 9 or 10 digits.",
+	authErrorPhonePrefix: "Phone number must start with 9 or 7.",
+	authErrorEmailResetUnavailable:
+		"Email password reset is not available on this deployment. Use phone reset.",
+	authErrorResetRedirect:
+		"Reset email could not be sent. Contact support.",
+	authErrorSocialResetUnavailable:
+		"This account uses social login. Password reset is not available.",
+	authErrorUsePhoneReset: "Use phone password reset on this deployment.",
+	authErrorResetFailed: "Could not reset password. Please try again.",
 	signupTermsPrefix: "I agree to the",
 	signupTermsAnd: "and",
 	legalTermsOfService: "Terms of Service",

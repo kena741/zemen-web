@@ -25,7 +25,10 @@ import {
 	stampCustomerSignupSource,
 } from "@/services/auth/signupApi";
 import { phoneAlreadyRegistered } from "@/services/auth/authApi";
-import { resetPasswordByPhone } from "@/services/auth/passwordRecoveryApi";
+import {
+	checkPhoneForPasswordReset,
+	resetPasswordByPhone,
+} from "@/services/auth/passwordRecoveryApi";
 import { useAuth } from "@/store/useAuth";
 
 interface SignupDraft {
@@ -53,7 +56,7 @@ function readSignupDraft(phoneFromQuery: string): SignupDraft | null {
 function VerifyPhoneForm() {
 	const search = useSearchParams();
 	const router = useRouter();
-	const { t } = useLocale();
+	const { t, te } = useLocale();
 	const { login } = useAuth();
 	const mode = (search.get("mode") === "provider" ? "provider" : "service") as AppMode;
 	const isSignup = search.get("signup") === "1";
@@ -94,15 +97,24 @@ function VerifyPhoneForm() {
 	async function sendCode() {
 		setBusy(true);
 		setError(null);
-		const allowed = await guardSignupPhone();
-		if (!allowed) {
-			setBusy(false);
-			return;
+		if (isReset) {
+			const check = await checkPhoneForPasswordReset(phone);
+			if (check.error) {
+				setBusy(false);
+				setError(te(check.error));
+				return;
+			}
+		} else {
+			const allowed = await guardSignupPhone();
+			if (!allowed) {
+				setBusy(false);
+				return;
+			}
 		}
 		const result = await sendPhoneOtp(phone);
 		setBusy(false);
 		if (!result.success) {
-			setError(result.error ?? t("commonError"));
+			setError(te(result.error) || t("commonError"));
 			return;
 		}
 		setVerificationId(result.verificationId ?? null);
@@ -114,7 +126,14 @@ function VerifyPhoneForm() {
 		void (async () => {
 			setBusy(true);
 			setError(null);
-			if (isSignup) {
+			if (isReset) {
+				const check = await checkPhoneForPasswordReset(phone);
+				if (check.error) {
+					setBusy(false);
+					setError(te(check.error));
+					return;
+				}
+			} else if (isSignup) {
 				const check = await phoneAlreadyRegistered(phone, mode);
 				if (check.taken == null) {
 					setBusy(false);
@@ -131,24 +150,19 @@ function VerifyPhoneForm() {
 			setBusy(false);
 			if (!result.success) {
 				// Keep autoSendStarted true — never loop on failure; user can tap Send.
-				setError(result.error ?? t("commonError"));
+				setError(te(result.error) || t("commonError"));
 				return;
 			}
 			setVerificationId(result.verificationId ?? null);
 		})();
-	}, [isSignup, isReset, phone, mode, t]);
+	}, [isSignup, isReset, phone, mode, t, te]);
 
 	async function verify() {
 		if (!verificationId) return;
 		setBusy(true);
 		setError(null);
-		const verified = await verifyPhoneOtp(phone, code, verificationId);
-		if (!verified.success) {
-			setBusy(false);
-			setError(verified.error ?? t("invalidCode"));
-			return;
-		}
 
+		// Reset: check-phone → otp/send → reset/phone (no otp/verify)
 		if (isReset) {
 			if (newPassword.length < 6) {
 				setBusy(false);
@@ -160,6 +174,11 @@ function VerifyPhoneForm() {
 				setError(t("passwordMismatch"));
 				return;
 			}
+			if (!code.trim()) {
+				setBusy(false);
+				setError(t("invalidCode"));
+				return;
+			}
 			const result = await resetPasswordByPhone({
 				phone,
 				code,
@@ -169,10 +188,17 @@ function VerifyPhoneForm() {
 			});
 			setBusy(false);
 			if (result.error) {
-				setError(result.error);
+				setError(te(result.error));
 				return;
 			}
 			router.replace("/login");
+			return;
+		}
+
+		const verified = await verifyPhoneOtp(phone, code, verificationId);
+		if (!verified.success) {
+			setBusy(false);
+			setError(te(verified.error) || t("invalidCode"));
 			return;
 		}
 
@@ -198,7 +224,7 @@ function VerifyPhoneForm() {
 			});
 			if (!signup.userId) {
 				setBusy(false);
-				setError(signup.error);
+				setError(te(signup.error));
 				return;
 			}
 			const email = signupEmail || syntheticEmailFromPhone(phone);
