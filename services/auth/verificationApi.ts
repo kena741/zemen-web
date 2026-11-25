@@ -1,3 +1,5 @@
+import { apiFetch } from "@/lib/backend/client";
+import { isBackendMode } from "@/lib/env";
 import { getSupabase } from "@/lib/supabase/client";
 import { friendlyLoginError } from "./authApi";
 
@@ -96,6 +98,23 @@ export async function saveFcmToken(params: {
 	mode: "provider" | "service";
 	token: string;
 }): Promise<void> {
+	if (isBackendMode()) {
+		const path =
+			params.mode === "provider"
+				? "/providers/me/fcm-token"
+				: "/customers/me/fcm-token";
+		try {
+			await apiFetch(path, {
+				method: "PUT",
+				auth: true,
+				body: { fcmToken: params.token },
+			});
+		} catch {
+			// ponytail: push sync is best-effort; don't crash the shell
+		}
+		return;
+	}
+
 	const supabase = getSupabase();
 	const table = params.mode === "provider" ? "provider" : "customer";
 	await supabase

@@ -1,10 +1,14 @@
-import { getSupabase } from "@/lib/supabase/client";
+import { apiFetch } from "@/lib/backend/client";
 import { parseObjectValue } from "@/lib/chapa";
+import { isBackendMode } from "@/lib/env";
+import { getSupabase } from "@/lib/supabase/client";
 
 export interface ServiceTier {
 	max_services: number;
 	total_price: number;
 	label?: string;
+	/** Backend subscription plan id (payments/plans). */
+	planId?: number;
 }
 
 export function isUnlimitedTier(maxServices: number): boolean {
@@ -28,6 +32,21 @@ function parseTierMax(raw: unknown): number {
 function parseTierPrice(raw: unknown): number {
 	const n = Number(raw);
 	return Number.isFinite(n) ? n : 0;
+}
+
+/**
+ * ponytail: staging/local Telebirr smoke — plans charge 1 ETB.
+ * Set NEXT_PUBLIC_TEST_TIER_PRICE=0 to show real prices; remove this when done.
+ */
+function applyTestTierPrice(tiers: ServiceTier[]): ServiceTier[] {
+	const raw = process.env.NEXT_PUBLIC_TEST_TIER_PRICE?.trim();
+	if (raw === "0" || raw === "off" || raw === "false") return tiers;
+	// Catalog (titles/limits/ids) from /payments/plans; price override for smoke tests only.
+	const price = Number(
+		raw || (process.env.NODE_ENV === "development" ? "1" : ""),
+	);
+	if (!Number.isFinite(price) || price <= 0) return tiers;
+	return tiers.map((t) => ({ ...t, total_price: price }));
 }
 
 /** Tiers above the current plan. Unlimited (`max_services < 0`) is always last. */
@@ -56,6 +75,43 @@ export async function fetchServicePostingTiers(): Promise<{
 	currentMax: number;
 	error: string | null;
 }> {
+	if (isBackendMode()) {
+		try {
+			const rows = await apiFetch<Record<string, unknown>[]>(
+				"/payments/plans",
+			);
+			const tiers = sortServiceTiers(
+				(Array.isArray(rows) ? rows : [])
+					.filter((row) => row.active !== false)
+					.map((row) => {
+						const max = parseTierMax(
+							row.serviceLimit ?? row.service_limit ?? row.max_services,
+						);
+						return {
+							planId: Number(row.id) || undefined,
+							// Staging unlimited uses a huge limit, not -1.
+							max_services: max >= 9999 ? -1 : max,
+							total_price: parseTierPrice(row.price ?? row.total_price),
+							label:
+								row.title != null
+									? String(row.title)
+									: row.label != null
+										? String(row.label)
+										: undefined,
+						};
+					})
+					.filter((t) => t.total_price > 0),
+			);
+			return { tiers: applyTestTierPrice(tiers), currentMax: 0, error: null };
+		} catch (e) {
+			return {
+				tiers: [],
+				currentMax: 0,
+				error: e instanceof Error ? e.message : "Failed to load plans",
+			};
+		}
+	}
+
 	const { data, error } = await getSupabase()
 		.from("app_settings")
 		.select("data")
@@ -84,13 +140,25 @@ export async function fetchServicePostingTiers(): Promise<{
 			.filter((t) => t.total_price > 0),
 	);
 
-	return { tiers, currentMax: 0, error: null };
+	return { tiers: applyTestTierPrice(tiers), currentMax: 0, error: null };
 }
 
 export async function fetchProviderTierMax(
 	providerId: string,
 ): Promise<number> {
 	if (!providerId) return 0;
+
+	if (isBackendMode()) {
+		try {
+			const row = await apiFetch<Record<string, unknown>>("/providers/me", {
+				auth: true,
+			});
+			return parseTierMax(row.serviceTierMax ?? row.service_tier_max);
+		} catch {
+			return 0;
+		}
+	}
+
 	const { data } = await getSupabase()
 		.from("provider")
 		.select("service_tier_max")
@@ -142,6 +210,11 @@ const DEFAULT_FREE_CATEGORY_NAMES = ["cleaning", "chef", "cook"];
  * `free_service_categories` | `free_services` (ids and/or names).
  */
 export async function fetchFreeServiceCategories(): Promise<FreeServiceCategories> {
+	// ponytail: no backend free-categories config yet — keep mobile defaults
+	if (isBackendMode()) {
+		return { ids: [], names: [...DEFAULT_FREE_CATEGORY_NAMES] };
+	}
+
 	const { data, error } = await getSupabase()
 		.from("app_settings")
 		.select("data")
@@ -232,8 +305,12 @@ export function tierUpgradeAmount(
 	tiers: ServiceTier[],
 	fromTierMax: number,
 	toTierMax: number,
+	toPlanId?: number,
 ): number {
-	const toTier = tiers.find((t) => t.max_services === toTierMax);
+	const toTier =
+		(toPlanId != null
+			? tiers.find((t) => t.planId === toPlanId)
+			: undefined) ?? tiers.find((t) => t.max_services === toTierMax);
 	if (!toTier) return 0;
 	if (!fromTierMax) return toTier.total_price;
 	const fromTier = tiers.find((t) => t.max_services === fromTierMax);

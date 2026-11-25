@@ -5,14 +5,10 @@ import { useEffect, useState } from "react";
 import { ProfileBackLink } from "@/components/provider/profile-back-link";
 import { ServiceLoading } from "@/components/service/service-loading";
 import { useLocale } from "@/lib/i18n";
-import { getSupabase } from "@/lib/supabase/client";
-
-interface TaxRow {
-	id: string;
-	title: string | null;
-	tax: string | number | null;
-	type: string | null;
-}
+import {
+	fetchActiveTaxes,
+	type TaxRow,
+} from "@/services/config/taxesApi";
 
 export default function ProviderTaxesPage() {
 	const { t } = useLocale();
@@ -20,14 +16,10 @@ export default function ProviderTaxesPage() {
 	const [loading, setLoading] = useState(true);
 
 	useEffect(() => {
-		void getSupabase()
-			.from("country_tax")
-			.select("id, title, tax, type")
-			.eq("active", true)
-			.then(({ data }) => {
-				setRows((data as TaxRow[]) ?? []);
-				setLoading(false);
-			});
+		void fetchActiveTaxes().then((res) => {
+			setRows(res.rows);
+			setLoading(false);
+		});
 	}, []);
 
 	return (

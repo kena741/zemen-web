@@ -1,4 +1,3 @@
-import { apiFetch } from "@/lib/backend/client";
 import { isBackendMode } from "@/lib/env";
 import { getSupabase } from "@/lib/supabase/client";
 import { parseObjectValue } from "@/lib/chapa";
@@ -24,48 +23,39 @@ export interface PaymentMethodsConfig {
 }
 
 export async function fetchPaymentMethodsConfig(): Promise<PaymentMethodsConfig> {
-	const defaults: PaymentMethodsConfig = {
-		chapaEnabled: true,
+	// Product: Telebirr-only web checkout (Chapa disabled).
+	const telebirrOnly: PaymentMethodsConfig = {
+		chapaEnabled: false,
 		telebirrEnabled: true,
 		flutterWaveEnabled: false,
 		telebirrName: "Telebirr",
 		flutterWaveName: "Flutterwave",
 	};
 
-	let root: Record<string, unknown> = {};
-	if (isBackendMode()) {
-		try {
-			const settings = await apiFetch<Record<string, unknown>>(
-				"/payments/settings",
-			);
-			root = parseObjectValue(settings);
-		} catch {
-			return defaults;
-		}
-	} else {
+	if (isBackendMode()) return telebirrOnly;
+
+	try {
 		const { data } = await getSupabase()
 			.from("app_settings")
 			.select("data")
 			.eq("id", "payment")
 			.maybeSingle();
-		root = parseObjectValue(data?.data);
+		const root = parseObjectValue(data?.data);
+		const telebirr = (root.telebirr ?? {}) as TelebirrConfig;
+		const flutterWave = (root.flutterWave ??
+			root.flutterwave ??
+			{}) as FlutterWaveConfig;
+
+		return {
+			chapaEnabled: false,
+			telebirrEnabled: telebirr.enable !== false,
+			flutterWaveEnabled:
+				(flutterWave.isActive === true || flutterWave.enable === true) &&
+				Boolean(String(flutterWave.publicKey ?? "").trim()),
+			telebirrName: telebirr.name?.trim() || "Telebirr",
+			flutterWaveName: flutterWave.name?.trim() || "Flutterwave",
+		};
+	} catch {
+		return telebirrOnly;
 	}
-
-	const chapa = (root.chapa ?? {}) as Record<string, unknown>;
-	const telebirr = (root.telebirr ?? {}) as TelebirrConfig;
-	const flutterWave = (root.flutterWave ?? root.flutterwave ?? {}) as FlutterWaveConfig;
-
-	const chapaExplicitlyDisabled =
-		chapa.enable === false || chapa.isActive === false;
-	const telebirrExplicitlyDisabled = telebirr.enable === false;
-
-	return {
-		chapaEnabled: !chapaExplicitlyDisabled,
-		telebirrEnabled: !telebirrExplicitlyDisabled,
-		flutterWaveEnabled:
-			(flutterWave.isActive === true || flutterWave.enable === true) &&
-			Boolean(String(flutterWave.publicKey ?? "").trim()),
-		telebirrName: telebirr.name?.trim() || "Telebirr",
-		flutterWaveName: flutterWave.name?.trim() || "Flutterwave",
-	};
 }

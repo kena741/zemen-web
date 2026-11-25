@@ -12,6 +12,7 @@ import {
 	type PaymentPending,
 	type PaymentPurpose,
 } from "@/lib/payment-pending";
+import { getAccessToken } from "@/lib/auth/tokenStore";
 import {
 	getTelebirrPayMode,
 	launchTelebirrPayment,
@@ -29,6 +30,7 @@ export interface TelebirrCheckoutProps {
 	providerId?: string;
 	bookingId?: string;
 	serviceId?: string;
+	planId?: number;
 	fromTierMax?: number;
 	toTierMax?: number;
 	returnPath?: string;
@@ -53,6 +55,7 @@ export function TelebirrCheckout({
 	providerId,
 	bookingId,
 	serviceId,
+	planId,
 	fromTierMax,
 	toTierMax,
 	returnPath,
@@ -99,9 +102,13 @@ export function TelebirrCheckout({
 
 		try {
 			const mode = getTelebirrPayMode();
+			const token = getAccessToken();
 			const res = await fetch("/api/pay/telebirr", {
 				method: "POST",
-				headers: { "Content-Type": "application/json" },
+				headers: {
+					"Content-Type": "application/json",
+					...(token ? { Authorization: `Bearer ${token}` } : {}),
+				},
 				body: JSON.stringify({
 					amount: payAmount,
 					email,
@@ -113,6 +120,9 @@ export function TelebirrCheckout({
 					provider_id: providerId,
 					booking_id: bookingId,
 					service_id: serviceId,
+					plan_id: planId,
+					to_tier_max: toTierMax,
+					from_tier_max: fromTierMax,
 					mode,
 				}),
 			});

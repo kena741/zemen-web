@@ -2,16 +2,51 @@ import { isBackendMode } from "@/lib/env";
 import * as backend from "./backend";
 import * as supabase from "./supabase";
 
-const impl = isBackendMode() ? backend : supabase;
+function impl() {
+	return isBackendMode() ? backend : supabase;
+}
 
 export const friendlyLoginError = supabase.friendlyLoginError;
-export const phoneAlreadyRegistered = impl.phoneAlreadyRegistered;
-export const fetchProviderProfile = impl.fetchProviderProfile;
-export const fetchCustomerProfile = impl.fetchCustomerProfile;
-export const buildAuthUser = impl.buildAuthUser;
-export const loginWithEmailOrPhone = impl.loginWithEmailOrPhone;
-export const restoreSession = impl.restoreSession;
-export const signOut = impl.signOut;
+
+export function phoneAlreadyRegistered(
+	...args: Parameters<typeof backend.phoneAlreadyRegistered>
+) {
+	return impl().phoneAlreadyRegistered(...args);
+}
+
+export function fetchProviderProfile(
+	...args: Parameters<typeof backend.fetchProviderProfile>
+) {
+	return impl().fetchProviderProfile(...args);
+}
+
+export function fetchCustomerProfile(
+	...args: Parameters<typeof backend.fetchCustomerProfile>
+) {
+	return impl().fetchCustomerProfile(...args);
+}
+
+export function buildAuthUser(
+	...args: Parameters<typeof backend.buildAuthUser>
+) {
+	return impl().buildAuthUser(...args);
+}
+
+export function loginWithEmailOrPhone(
+	...args: Parameters<typeof backend.loginWithEmailOrPhone>
+) {
+	return impl().loginWithEmailOrPhone(...args);
+}
+
+export function restoreSession(
+	...args: Parameters<typeof backend.restoreSession>
+) {
+	return impl().restoreSession(...args);
+}
+
+export function signOut(...args: Parameters<typeof backend.signOut>) {
+	return impl().signOut(...args);
+}
 
 export type {
 	AuthUser,

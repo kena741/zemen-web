@@ -76,7 +76,8 @@ export function clearSession(): void {
 
 async function postRestore(bearer: string): Promise<AuthSessionPayload> {
 	assertDataModeConfig();
-	const base = getApiBaseUrl();
+	const base =
+		typeof window !== "undefined" ? window.location.origin : getApiBaseUrl();
 	const res = await fetch(`${base}/api/v1/auth/session/restore`, {
 		method: "POST",
 		headers: {

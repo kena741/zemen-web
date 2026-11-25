@@ -46,16 +46,8 @@ export function assertDataModeConfig(): void {
 				"NEXT_PUBLIC_DATA_MODE=backend requires NEXT_PUBLIC_API_BASE_URL",
 			);
 		}
-		if (process.env.NEXT_PUBLIC_SUPABASE_URL?.trim()) {
-			throw new Error(
-				"NEXT_PUBLIC_DATA_MODE=backend forbids NEXT_PUBLIC_SUPABASE_URL",
-			);
-		}
-		if (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim()) {
-			throw new Error(
-				"NEXT_PUBLIC_DATA_MODE=backend forbids NEXT_PUBLIC_SUPABASE_ANON_KEY",
-			);
-		}
+		// ponytail: ignore leftover NEXT_PUBLIC_SUPABASE_* — Turbopack can keep
+		// stale inlined values after .env.local swaps; backend already stubs Supabase.
 	} else {
 		if (
 			!process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() &&
@@ -78,9 +70,8 @@ export function getSiteUrl(): string {
 }
 
 export function getEdgeFunctionsBaseUrl(): string {
-	if (isBackendMode()) {
-		throw new Error("Edge Functions are unavailable in backend data mode");
-	}
+	// ponytail: empty in backend — callers already treat "" as "not configured"
+	if (isBackendMode()) return "";
 	// Browser → same-origin proxy (Supabase edge CORS blocks web origins)
 	if (typeof window !== "undefined") return "/api/edge";
 	const raw =

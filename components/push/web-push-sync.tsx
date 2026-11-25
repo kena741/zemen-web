@@ -41,7 +41,9 @@ export function WebPushSync() {
 			});
 		}
 
-		void sync();
+		void sync().catch(() => {
+			/* ponytail: FCM sync must never crash the app shell */
+		});
 	}, [user]);
 
 	return null;

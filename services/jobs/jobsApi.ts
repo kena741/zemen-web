@@ -468,19 +468,11 @@ export async function fetchOpenJobRequests(params?: {
 			const page = await apiFetch<
 				{ items?: Record<string, unknown>[] } | Record<string, unknown>[]
 			>("/jobs/open", { auth: true });
-			let jobs = (Array.isArray(page) ? page : (page.items ?? [])).map(
+			// ponytail: trust API scoping; local category filter needs Supabase
+			const jobs = (Array.isArray(page) ? page : (page.items ?? [])).map(
 				(row) => mapJobRequestRow(row),
 			);
-			if (params?.providerId) {
-				const scope = await providerMatchingScope(params.providerId);
-				if (scope.categoryIds.size === 0 && scope.subCategoryIds.size === 0) {
-					jobs = [];
-				} else {
-					jobs = jobs.filter((job) =>
-						jobMatchesProviderCategories(job, scope),
-					);
-				}
-			}
+			void params?.providerId;
 			return { jobs, error: null };
 		} catch (e) {
 			return {

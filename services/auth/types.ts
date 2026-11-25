@@ -55,7 +55,12 @@ function joinName(
 export function mapProviderRow(row: Record<string, unknown>): ProviderProfile {
 	return {
 		id: String(row.id ?? ""),
-		userId: row.user_id != null ? String(row.user_id) : null,
+		userId:
+			row.userId != null
+				? String(row.userId)
+				: row.user_id != null
+					? String(row.user_id)
+					: null,
 		email: row.email != null ? String(row.email) : null,
 		fullName: joinName(row.firstName, row.lastName, row.userName),
 		firstName: row.firstName != null ? String(row.firstName) : null,

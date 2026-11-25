@@ -17,10 +17,12 @@ export type ApiFetchOptions = {
 };
 
 function buildUrl(path: string, query?: ApiFetchOptions["query"]): string {
-	const base = getApiBaseUrl();
 	const normalized = path.startsWith("/api/v1")
 		? path
 		: `/api/v1${path.startsWith("/") ? path : `/${path}`}`;
+	// Browser → same-origin /api/v1/[...path] proxy (Cloud Run CORS blocks local Origins)
+	const base =
+		typeof window !== "undefined" ? window.location.origin : getApiBaseUrl();
 	const url = new URL(`${base}${normalized}`);
 	if (query) {
 		for (const [k, v] of Object.entries(query)) {

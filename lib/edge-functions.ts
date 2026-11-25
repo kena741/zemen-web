@@ -1,9 +1,12 @@
-import { getEdgeFunctionsBaseUrl } from "@/lib/env";
+import { getEdgeFunctionsBaseUrl, isBackendMode } from "@/lib/env";
 
 export async function invokeEdgeFunction<T = Record<string, unknown>>(
 	name: string,
 	body: Record<string, unknown>,
 ): Promise<{ data: T | null; error: string | null }> {
+	if (isBackendMode()) {
+		return { data: null, error: "Edge functions are not configured" };
+	}
 	const base = getEdgeFunctionsBaseUrl();
 	const anonKey =
 		process.env.SUPABASE_ANON_KEY?.trim() ||

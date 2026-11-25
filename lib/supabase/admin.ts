@@ -1,12 +1,8 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { assertDataModeConfig, isBackendMode } from "@/lib/env";
+import { createSupabaseBackendStub } from "@/lib/supabase/backend-stub";
 
 function assertSupabaseAdminAllowed(): void {
-	if (isBackendMode()) {
-		throw new Error(
-			"Supabase admin client is unavailable when NEXT_PUBLIC_DATA_MODE=backend",
-		);
-	}
 	assertDataModeConfig();
 }
 
@@ -40,6 +36,8 @@ function serviceRoleKey(): string {
 
 /** Privileged server client — never import into client components. */
 export function getSupabaseAdmin(): SupabaseClient {
+	// ponytail: stub leftover callers until supabase paths are deleted
+	if (isBackendMode()) return createSupabaseBackendStub();
 	assertSupabaseAdminAllowed();
 	return createClient(supabaseUrl(), serviceRoleKey(), {
 		auth: { persistSession: false, autoRefreshToken: false },
@@ -48,6 +46,7 @@ export function getSupabaseAdmin(): SupabaseClient {
 
 /** User-scoped client from a bearer access token. */
 export function getSupabaseForToken(accessToken: string): SupabaseClient {
+	if (isBackendMode()) return createSupabaseBackendStub();
 	assertSupabaseAdminAllowed();
 	return createClient(supabaseUrl(), anonKey(), {
 		global: {

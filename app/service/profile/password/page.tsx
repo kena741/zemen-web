@@ -8,7 +8,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { getSupabase } from "@/lib/supabase/client";
+import { changeAccountPassword } from "@/services/auth/changePasswordApi";
 import { useAuth } from "@/store/useAuth";
 
 export default function CustomerChangePasswordPage() {
@@ -46,32 +46,21 @@ export default function CustomerChangePasswordPage() {
 		}
 
 		setBusy(true);
-		const supabase = getSupabase();
-
-		const verify = await supabase.auth.signInWithPassword({
+		const result = await changeAccountPassword({
 			email,
-			password: currentPassword,
+			oldPassword: currentPassword,
+			newPassword,
+			profile: user?.customer?.id
+				? { table: "customer", id: user.customer.id }
+				: undefined,
 		});
-		if (verify.error) {
-			setBusy(false);
-			setError("Current password is incorrect.");
-			return;
-		}
-
-		const { error: updateError } = await supabase.auth.updateUser({
-			password: newPassword,
-		});
-
-		if (!updateError && user?.customer?.id) {
-			await supabase
-				.from("customer")
-				.update({ password: newPassword })
-				.eq("id", user.customer.id);
-		}
-
 		setBusy(false);
-		if (updateError) {
-			setError(updateError.message);
+		if (result.error) {
+			setError(
+				result.error === "authErrorCredentials"
+					? "Current password is incorrect."
+					: result.error,
+			);
 			return;
 		}
 

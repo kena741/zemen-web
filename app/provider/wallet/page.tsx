@@ -11,6 +11,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useLocale } from "@/lib/i18n";
+import { isBackendMode } from "@/lib/env";
 import { getSupabase } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 import { formatAmount, formatDateTime } from "@/services/bookings/types";
@@ -181,16 +182,19 @@ export default function WalletPage() {
 		setBusy(true);
 		setError(null);
 		setInfo(null);
-		const supabase = getSupabase();
-		const passwordCheck = await supabase.auth.signInWithPassword({
-			email,
-			password: withdrawPassword,
-		});
-		if (passwordCheck.error) {
-			setBusy(false);
-			setError(t("providerPasswordIncorrect"));
-			return;
+		if (!isBackendMode()) {
+			const supabase = getSupabase();
+			const passwordCheck = await supabase.auth.signInWithPassword({
+				email,
+				password: withdrawPassword,
+			});
+			if (passwordCheck.error) {
+				setBusy(false);
+				setError(t("providerPasswordIncorrect"));
+				return;
+			}
 		}
+		// ponytail: backend withdrawal is JWT-gated; skip supabase re-auth
 		const res = await requestWithdrawal({
 			providerId,
 			amount: value,

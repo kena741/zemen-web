@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { getSiteUrl } from "@/lib/env";
+import { getSiteUrl, isBackendMode } from "@/lib/env";
 import {
 	createTelebirrCheckout,
 	generateMerchOrderId,
@@ -67,7 +67,8 @@ export async function POST(request: Request) {
 			);
 		}
 
-		const admin = tryGetAdmin();
+		// Backend mode: load from TELEBIRR_* env (no Supabase payment settings).
+		const admin = isBackendMode() ? null : tryGetAdmin();
 		const config = await loadTelebirrConfig(admin ?? undefined);
 		if (!config) {
 			console.error("[telebirr] not configured");
@@ -114,7 +115,11 @@ export async function POST(request: Request) {
 			mode,
 		});
 
-		if (purpose === "activation" && body.provider_id?.trim()) {
+		if (
+			!isBackendMode() &&
+			purpose === "activation" &&
+			body.provider_id?.trim()
+		) {
 			if (!admin) {
 				console.error("[telebirr] activation missing service role");
 				return NextResponse.json(

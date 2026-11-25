@@ -1,5 +1,6 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { assertDataModeConfig, isBackendMode } from "@/lib/env";
+import { createSupabaseBackendStub } from "@/lib/supabase/backend-stub";
 
 function supabaseUrl(): string {
 	const url =
@@ -21,11 +22,7 @@ function anonKey(): string {
 
 /** Server-side anon client for public SEO/catalog reads (no session). */
 export function getPublicSupabase(): SupabaseClient {
-	if (isBackendMode()) {
-		throw new Error(
-			"getPublicSupabase() is unavailable when NEXT_PUBLIC_DATA_MODE=backend",
-		);
-	}
+	if (isBackendMode()) return createSupabaseBackendStub();
 	assertDataModeConfig();
 	return createClient(supabaseUrl(), anonKey(), {
 		auth: { persistSession: false, autoRefreshToken: false },

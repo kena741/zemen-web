@@ -21,6 +21,9 @@ interface PayBody {
 	provider_id?: string;
 	booking_id?: string;
 	service_id?: string;
+	plan_id?: number;
+	to_tier_max?: number;
+	from_tier_max?: number;
 }
 
 function parseAmount(value: number | string | undefined): number | null {
@@ -43,6 +46,15 @@ export async function POST(request: Request) {
 			);
 		}
 
+		const purpose = (body.purpose ?? "wallet").trim();
+		const appBaseUrl = getSiteUrl().replace(/\/$/, "");
+		const returnPath = (body.return_path ?? "/pay/done").trim() || "/pay/done";
+		const returnUrl = new URL(
+			returnPath.startsWith("http")
+				? returnPath
+				: `${appBaseUrl}${returnPath.startsWith("/") ? "" : "/"}${returnPath}`,
+		);
+
 		if (isBackendMode() && body.booking_id?.trim()) {
 			const proxied = await proxyToBackend(
 				`/admin/bookings/${body.booking_id.trim()}/payment`,
@@ -63,6 +75,65 @@ export async function POST(request: Request) {
 			if (proxied) return proxied;
 		}
 
+		// Staging tier purchase is Chapa via backend (Telebirr not in paymentMethods).
+		if (
+			isBackendMode() &&
+			(purpose === "tier" || purpose === "service-tier")
+		) {
+			returnUrl.searchParams.set("purpose", purpose);
+			returnUrl.searchParams.set("amount", amount.toFixed(2));
+			const proxied = await proxyToBackend(
+				"/payments/service-tier/initiate",
+				request,
+				{
+					method: "POST",
+					body: {
+						planId: body.plan_id ?? null,
+						tierMax: body.to_tier_max ?? null,
+						returnUrl: returnUrl.toString(),
+						callbackUrl: `${appBaseUrl}/api/pay/verify`,
+					},
+				},
+			);
+			if (!proxied) {
+				return NextResponse.json(
+					{ error: "Backend payment proxy unavailable" },
+					{ status: 500 },
+				);
+			}
+			const raw = await proxied.json().catch(() => null);
+			const data =
+				raw && typeof raw === "object"
+					? (raw as Record<string, unknown>)
+					: {};
+			if (!proxied.ok) {
+				return NextResponse.json(
+					{
+						error:
+							String(data.message ?? data.detail ?? data.error ?? "").trim() ||
+							"Failed to start plan payment",
+					},
+					{ status: proxied.status },
+				);
+			}
+			const checkoutUrl = String(
+				data.checkoutUrl ?? data.checkout_url ?? "",
+			).trim();
+			const txRef = String(data.txRef ?? data.tx_ref ?? "").trim();
+			if (!checkoutUrl) {
+				return NextResponse.json(
+					{ error: "No checkout URL from payment service" },
+					{ status: 502 },
+				);
+			}
+			return NextResponse.json({
+				status: "success",
+				checkout_url: checkoutUrl,
+				tx_ref: txRef,
+				amount: amount.toFixed(2),
+			});
+		}
+
 		let chapaSecretKey = (process.env.CHAPA_SECRET_KEY || "").trim();
 		if (!isBackendMode()) {
 			const admin = getSupabaseAdmin();
@@ -72,14 +143,11 @@ export async function POST(request: Request) {
 			return NextResponse.json({ error: "Chapa is not configured" }, { status: 500 });
 		}
 
-		const appBaseUrl = getSiteUrl();
 		const txRef = `web-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`.slice(0, 50);
-		const returnPath = (body.return_path ?? "/pay/done").trim() || "/pay/done";
 		const email = (body.email ?? "").trim() || "payments@zemen.app";
 		const firstName = (body.first_name ?? "").trim() || "Customer";
 		const lastName = (body.last_name ?? "").trim() || "";
 		const phoneNumber = normalizeChapaPhone(body.phone_number);
-		const purpose = (body.purpose ?? "wallet").trim();
 
 		const chapaPayload: Record<string, string> = {
 			amount: amount.toFixed(2),
@@ -88,7 +156,7 @@ export async function POST(request: Request) {
 			first_name: firstName,
 			last_name: lastName,
 			tx_ref: txRef,
-			return_url: `${appBaseUrl}${returnPath}?tx_ref=${encodeURIComponent(txRef)}&purpose=${encodeURIComponent(purpose)}&amount=${amount.toFixed(2)}`,
+			return_url: `${returnUrl.origin}${returnUrl.pathname}${returnUrl.search ? `${returnUrl.search}&` : "?"}tx_ref=${encodeURIComponent(txRef)}&purpose=${encodeURIComponent(purpose)}&amount=${amount.toFixed(2)}`,
 			"customization[title]": "Zemen Service",
 			"customization[description]": `${purpose} ETB ${amount.toFixed(2)}`,
 		};

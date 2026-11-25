@@ -44,9 +44,12 @@ function LoginForm() {
 		loginPending,
 		error: authError,
 		user,
-		mode,
+		mode: storedMode,
 		setMode,
 	} = useAuth();
+	// SSR + first client paint always "service" — avoids hydration clash with
+	// Redux mode restored from a previous page / localStorage.
+	const [mode, setLocalMode] = useState<AppMode>("service");
 	const [emailOrPhone, setEmailOrPhone] = useState("");
 	const [password, setPassword] = useState("");
 	const [showPassword, setShowPassword] = useState(false);
@@ -56,6 +59,10 @@ function LoginForm() {
 	const rawError = error || authError || "";
 	const uiError = rawError ? te(rawError) : "";
 	const nextPath = searchParams.get("next");
+
+	useEffect(() => {
+		setLocalMode(storedMode);
+	}, [storedMode]);
 
 	useEffect(() => {
 		try {
@@ -123,6 +130,7 @@ function LoginForm() {
 	}
 
 	function selectMode(next: AppMode) {
+		setLocalMode(next);
 		setMode(next);
 		setError("");
 	}

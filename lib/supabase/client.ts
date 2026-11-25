@@ -1,13 +1,18 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { assertDataModeConfig, isBackendMode } from "@/lib/env";
+import { createSupabaseBackendStub } from "@/lib/supabase/backend-stub";
 
 let client: SupabaseClient | null = null;
+let backendStub: SupabaseClient | null = null;
 
+/**
+ * Browser/user Supabase client.
+ * Backend data mode never opens a Supabase connection (stub only).
+ */
 export function getSupabase(): SupabaseClient {
 	if (isBackendMode()) {
-		throw new Error(
-			"getSupabase() is unavailable when NEXT_PUBLIC_DATA_MODE=backend",
-		);
+		backendStub ??= createSupabaseBackendStub();
+		return backendStub;
 	}
 	assertDataModeConfig();
 

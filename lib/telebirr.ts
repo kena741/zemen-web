@@ -367,37 +367,73 @@ async function applyFabricToken(
 	return token.startsWith("Bearer ") ? token : `Bearer ${token}`;
 }
 
+function isTransientTelebirrFailure(
+	status: number,
+	json: Record<string, unknown>,
+): boolean {
+	if (status === 502 || status === 503 || status === 504) return true;
+	const code = String(json.errorCode ?? json.code ?? "");
+	// Sandbox infra: "southbound business service is unavailable"
+	return code === "49401024991";
+}
+
+function sleep(ms: number): Promise<void> {
+	return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 async function sendSignedRequest(
 	config: ResolvedTelebirrConfig,
 	path: string,
 	reqObject: SignableRequest,
 	fabricToken: string,
 ): Promise<Record<string, unknown>> {
-	const { status, json } = await postJson(
-		`${config.baseUrl}${path}`,
-		{
-			"Content-Type": "application/json",
-			"X-APP-Key": config.fabricAppId,
-			Authorization: fabricToken,
-		},
-		reqObject,
-		config.verifySsl,
-	);
+	// ponytail: test portal flakes on 49401024991 — 2 retries, no new deps
+	const maxAttempts = 3;
+	let lastError: Error | null = null;
 
-	if (status < 200 || status >= 300) {
-		throw new Error(
+	for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+		const { status, json } = await postJson(
+			`${config.baseUrl}${path}`,
+			{
+				"Content-Type": "application/json",
+				"X-APP-Key": config.fabricAppId,
+				Authorization: fabricToken,
+			},
+			reqObject,
+			config.verifySsl,
+		);
+
+		if (status >= 200 && status < 300) {
+			const code = json.code != null ? String(json.code) : "";
+			if (code && code !== "00000" && code !== "0") {
+				throw new Error(
+					`Telebirr API error ${code}: ${String(json.msg ?? json.message ?? JSON.stringify(json))}`,
+				);
+			}
+			return json;
+		}
+
+		lastError = new Error(
 			`Telebirr request failed (${status}): ${JSON.stringify(json)}`,
 		);
+		if (
+			attempt < maxAttempts &&
+			isTransientTelebirrFailure(status, json)
+		) {
+			const delayMs = 500 * 2 ** (attempt - 1);
+			console.warn("[telebirr] transient gateway error, retrying", {
+				path,
+				attempt,
+				delayMs,
+				errorCode: json.errorCode ?? json.code,
+			});
+			await sleep(delayMs);
+			continue;
+		}
+		throw lastError;
 	}
 
-	const code = json.code != null ? String(json.code) : "";
-	if (code && code !== "00000" && code !== "0") {
-		throw new Error(
-			`Telebirr API error ${code}: ${String(json.msg ?? json.message ?? JSON.stringify(json))}`,
-		);
-	}
-
-	return json;
+	throw lastError ?? new Error("Telebirr request failed");
 }
 
 export type TelebirrCheckoutMode = "h5" | "miniapp";

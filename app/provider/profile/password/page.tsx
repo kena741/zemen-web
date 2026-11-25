@@ -9,11 +9,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useLocale } from "@/lib/i18n";
-import { getSupabase } from "@/lib/supabase/client";
+import { changeAccountPassword } from "@/services/auth/changePasswordApi";
 import { useAuth } from "@/store/useAuth";
 
 export default function ChangePasswordPage() {
-	const { t } = useLocale();
+	const { t, te } = useLocale();
 	const router = useRouter();
 	const { user } = useAuth();
 	const [currentPassword, setCurrentPassword] = useState("");
@@ -48,32 +48,21 @@ export default function ChangePasswordPage() {
 		}
 
 		setBusy(true);
-		const supabase = getSupabase();
-
-		const verify = await supabase.auth.signInWithPassword({
+		const result = await changeAccountPassword({
 			email,
-			password: currentPassword,
+			oldPassword: currentPassword,
+			newPassword,
+			profile: user?.provider?.id
+				? { table: "provider", id: user.provider.id }
+				: undefined,
 		});
-		if (verify.error) {
-			setBusy(false);
-			setError(t("providerPasswordIncorrect"));
-			return;
-		}
-
-		const { error: updateError } = await supabase.auth.updateUser({
-			password: newPassword,
-		});
-
-		if (!updateError && user?.provider?.id) {
-			await supabase
-				.from("provider")
-				.update({ password: newPassword })
-				.eq("id", user.provider.id);
-		}
-
 		setBusy(false);
-		if (updateError) {
-			setError(updateError.message);
+		if (result.error) {
+			setError(
+				result.error === "authErrorCredentials"
+					? t("providerPasswordIncorrect")
+					: te(result.error),
+			);
 			return;
 		}
 

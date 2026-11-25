@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useLocale } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
+import { getAccessToken } from "@/lib/auth/tokenStore";
 import {
 	clearPaymentPending,
 	savePaymentPending,
@@ -25,6 +26,7 @@ export interface ChapaCheckoutProps {
 	providerId?: string;
 	bookingId?: string;
 	serviceId?: string;
+	planId?: number;
 	fromTierMax?: number;
 	toTierMax?: number;
 	returnPath?: string;
@@ -49,6 +51,7 @@ export function ChapaCheckout({
 	providerId,
 	bookingId,
 	serviceId,
+	planId,
 	fromTierMax,
 	toTierMax,
 	returnPath,
@@ -94,9 +97,13 @@ export function ChapaCheckout({
 			`/pay/done?purpose=${encodeURIComponent(purpose)}&amount=${encodeURIComponent(payAmount)}`;
 
 		try {
+			const token = getAccessToken();
 			const res = await fetch("/api/pay/chapa", {
 				method: "POST",
-				headers: { "Content-Type": "application/json" },
+				headers: {
+					"Content-Type": "application/json",
+					...(token ? { Authorization: `Bearer ${token}` } : {}),
+				},
 				body: JSON.stringify({
 					amount: payAmount,
 					email,
@@ -108,6 +115,9 @@ export function ChapaCheckout({
 					provider_id: providerId,
 					booking_id: bookingId,
 					service_id: serviceId,
+					plan_id: planId,
+					to_tier_max: toTierMax,
+					from_tier_max: fromTierMax,
 				}),
 			});
 			const data = (await res.json()) as {

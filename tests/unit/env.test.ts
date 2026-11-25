@@ -43,12 +43,13 @@ describe("assertDataModeConfig", () => {
 		expect(() => assertDataModeConfig()).toThrow(/API_BASE_URL/);
 	});
 
-	it("forbids supabase public env in backend mode", async () => {
+	it("allows leftover supabase public env in backend mode (Turbopack stale inline)", async () => {
 		process.env.NEXT_PUBLIC_DATA_MODE = "backend";
 		process.env.NEXT_PUBLIC_API_BASE_URL = "https://api.example.com";
 		process.env.NEXT_PUBLIC_SUPABASE_URL = "https://x.supabase.co";
-		const { assertDataModeConfig } = await import("@/lib/env");
-		expect(() => assertDataModeConfig()).toThrow(/forbids NEXT_PUBLIC_SUPABASE_URL/);
+		const { assertDataModeConfig, isBackendMode } = await import("@/lib/env");
+		expect(() => assertDataModeConfig()).not.toThrow();
+		expect(isBackendMode()).toBe(true);
 	});
 
 	it("accepts backend mode with API URL only", async () => {

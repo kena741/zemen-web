@@ -1,5 +1,7 @@
-import { getSupabase } from "@/lib/supabase/client";
+import { apiFetch } from "@/lib/backend/client";
 import { parseObjectValue } from "@/lib/chapa";
+import { isBackendMode } from "@/lib/env";
+import { getSupabase } from "@/lib/supabase/client";
 import { formatAmount } from "@/services/bookings/types";
 import type { ServiceTier } from "@/services/provider/tiersApi";
 
@@ -46,6 +48,17 @@ function parseCommission(raw: unknown): AdminCommission | null {
 }
 
 export async function fetchAdminCommission(): Promise<AdminCommission | null> {
+	if (isBackendMode()) {
+		try {
+			const row = await apiFetch<Record<string, unknown>>(
+				"/config/settings/admin_commission",
+			);
+			return parseCommission(row.data ?? row);
+		} catch {
+			return null;
+		}
+	}
+
 	const supabase = getSupabase();
 
 	const { data: appRow } = await supabase
@@ -89,6 +102,7 @@ export function planTitleForTier(
 	},
 ): string {
 	if (!tier) return labels.starter;
+	if (tier.label?.trim()) return tier.label.trim();
 	if (tier.max_services < 0) return labels.unlimited;
 	if (tier.max_services === 1) return labels.starter;
 	if (tier.max_services === 4) return labels.growth;

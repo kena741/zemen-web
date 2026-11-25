@@ -591,6 +591,29 @@ export async function fetchProviderCompletedPayments(
 
 	const hidden = new Set(["pending", "rejected", "cancelled", "canceled"]);
 
+	if (isBackendMode()) {
+		const { bookings: all, error } = await fetchProviderBookings(providerId);
+		if (error) return { bookings: [], todayTotal: 0, error };
+		const bookings = all.filter(
+			(b) => !hidden.has((b.status ?? "").trim().toLowerCase()),
+		);
+		void authUserId;
+		const start = new Date();
+		start.setHours(0, 0, 0, 0);
+		let todayTotal = 0;
+		for (const b of bookings) {
+			const date = bookingEarningDate(b);
+			if (!date || date < start) continue;
+			if (String(b.status ?? "").toLowerCase() !== "completed") continue;
+			todayTotal += bookingEarningAmount(b);
+		}
+		return {
+			bookings,
+			todayTotal: Math.round(todayTotal * 100) / 100,
+			error: null,
+		};
+	}
+
 	const { data, error } = await getSupabase()
 		.from("booked_service")
 		.select("*")
@@ -637,6 +660,31 @@ export async function fetchProviderCompletedPayments(
 	};
 }
 
+function aggregateYearlyRevenue(
+	bookings: Booking[],
+	year: number,
+): {
+	points: RevenueChartPoint[];
+	yearTotal: number;
+	currentMonthRevenue: number;
+} {
+	const monthlyTotals = Array.from({ length: 12 }, () => 0);
+	for (const booking of bookings) {
+		if (String(booking.status ?? "").toLowerCase() !== "completed") continue;
+		const date = bookingEarningDate(booking);
+		if (!date || date.getFullYear() !== year) continue;
+		monthlyTotals[date.getMonth()] += bookingEarningAmount(booking);
+	}
+	const points = MONTH_LABELS.map((month, i) => ({
+		month,
+		monthIndex: i,
+		revenue: Math.round(monthlyTotals[i]! * 100) / 100,
+	}));
+	const yearTotal = points.reduce((sum, p) => sum + p.revenue, 0);
+	const currentMonthRevenue = points[new Date().getMonth()]?.revenue ?? 0;
+	return { points, yearTotal, currentMonthRevenue };
+}
+
 /** Completed bookings aggregated by calendar month for the current year (Flutter home chart). */
 export async function fetchYearlyRevenueChart(
 	providerId: string,
@@ -662,6 +710,19 @@ export async function fetchYearlyRevenueChart(
 		};
 	}
 
+	if (isBackendMode()) {
+		const { bookings, error } = await fetchProviderBookings(providerId);
+		if (error) {
+			return {
+				points: emptyPoints,
+				yearTotal: 0,
+				currentMonthRevenue: 0,
+				error,
+			};
+		}
+		return { ...aggregateYearlyRevenue(bookings, year), error: null };
+	}
+
 	const { data, error } = await getSupabase()
 		.from("booked_service")
 		.select("status, subTotal, totalAmount, endTime, createdAt, bookingDate")
@@ -678,23 +739,9 @@ export async function fetchYearlyRevenueChart(
 		};
 	}
 
-	const monthlyTotals = Array.from({ length: 12 }, () => 0);
-	for (const row of data ?? []) {
-		const booking = mapBookingRow(row as Record<string, unknown>);
-		if (booking.status !== "completed") continue;
-		const date = bookingEarningDate(booking);
-		if (!date || date.getFullYear() !== year) continue;
-		monthlyTotals[date.getMonth()] += bookingEarningAmount(booking);
-	}
-
-	const points = MONTH_LABELS.map((month, i) => ({
-		month,
-		monthIndex: i,
-		revenue: Math.round(monthlyTotals[i]! * 100) / 100,
-	}));
-	const yearTotal = points.reduce((sum, p) => sum + p.revenue, 0);
-	const currentMonthRevenue = points[new Date().getMonth()]?.revenue ?? 0;
-
-	return { points, yearTotal, currentMonthRevenue, error: null };
+	const bookings = (data ?? []).map((row) =>
+		mapBookingRow(row as Record<string, unknown>),
+	);
+	return { ...aggregateYearlyRevenue(bookings, year), error: null };
 }
 
