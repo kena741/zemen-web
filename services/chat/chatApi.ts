@@ -2,6 +2,7 @@ import { apiFetch } from "@/lib/backend/client";
 import { isBackendMode } from "@/lib/env";
 import { getSupabase } from "@/lib/supabase/client";
 import { sanitizeImageUrl } from "@/lib/media";
+import type { AuthUser } from "@/services/auth/types";
 import {
 	mapChatRow,
 	mapInboxRow,
@@ -11,9 +12,64 @@ import {
 	type InboxThread,
 } from "./types";
 
+/** BE chat rows use customer/provider ids, not auth user ids. */
+export function chatActorId(user: AuthUser | null | undefined): string {
+	if (!user) return "";
+	if (user.mode === "provider") return user.provider?.id || user.id;
+	return user.customer?.id || user.id;
+}
+
+async function resolvePeerFromInbox(
+	peerId: string,
+): Promise<{ name: string; image: string | null } | null> {
+	try {
+		const page = await apiFetch<
+			{ items?: Record<string, unknown>[] } | Record<string, unknown>[]
+		>("/chats/inbox", { auth: true });
+		const rows = Array.isArray(page) ? page : (page.items ?? []);
+		for (const row of rows) {
+			const senderId = String(row.senderId ?? row.sender_id ?? "");
+			const receiverId = String(row.receiverId ?? row.receiver_id ?? "");
+			const peer =
+				row.peerId != null
+					? String(row.peerId)
+					: senderId === peerId
+						? senderId
+						: receiverId === peerId
+							? receiverId
+							: "";
+			if (peer !== peerId && senderId !== peerId && receiverId !== peerId) {
+				continue;
+			}
+			const name =
+				row.peerName != null
+					? String(row.peerName)
+					: row.peer_name != null
+						? String(row.peer_name)
+						: null;
+			const image =
+				row.peerImage != null
+					? String(row.peerImage)
+					: row.peer_image != null
+						? String(row.peer_image)
+						: null;
+			if (name) return { name, image };
+		}
+	} catch {
+		// fall through
+	}
+	return null;
+}
+
 async function resolvePeer(
 	peerId: string,
 ): Promise<{ name: string; image: string | null }> {
+	if (isBackendMode()) {
+		const fromInbox = await resolvePeerFromInbox(peerId);
+		if (fromInbox) return fromInbox;
+		return { name: "User", image: null };
+	}
+
 	const supabase = getSupabase();
 
 	const tryTables: Array<{
@@ -147,7 +203,7 @@ export async function fetchChatMessages(params: {
 		try {
 			const page = await apiFetch<
 				{ items?: Record<string, unknown>[] } | Record<string, unknown>[]
-			>(`/chats/${peerId}/messages`, { auth: true });
+			>(`/chats/${peerId}/messages`, { auth: true, query: { limit: 100 } });
 			const rows = Array.isArray(page) ? page : (page.items ?? []);
 			return {
 				messages: rows.map((row) => mapChatRow(row)),
@@ -199,11 +255,11 @@ export async function sendChatMessage(params: {
 
 	if (isBackendMode()) {
 		try {
-			await apiFetch("/chats/send", {
+			// peer in path — matches OpenAPI chats_send_message
+			await apiFetch(`/chats/${params.receiverId}/messages`, {
 				method: "POST",
 				auth: true,
 				body: {
-					receiver_id: params.receiverId,
 					message: text,
 					type: "text",
 				},

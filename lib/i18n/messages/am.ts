@@ -658,6 +658,7 @@ export const am: Record<MessageKey, string> = {
 	notificationFallback: "ማሳወቂያ",
 
 	inboxEmpty: "ውይይት የለም።",
+	inboxEmptyHint: "አቅራቢ ሲያናግሩ ውይይቱ እዚህ ይታያል።",
 	inboxCount: "{count} ውይይቶች",
 	inboxCountOne: "1 ውይይት",
 	inboxMedia: "ሚዲያ",
@@ -874,6 +875,7 @@ export const am: Record<MessageKey, string> = {
 	providerInboxCount: "{count} ውይይቶች",
 	providerInboxCountOne: "1 ውይይት",
 	providerNoConversations: "ውይይት የለም።",
+	providerInboxEmptyHint: "ደንበኛ መልዕክት ሲጀምር እዚህ ይታያል።",
 	providerChatDefault: "ውይይት",
 	providerNoMessages: "መልዕክት የለም። ሰላም ይበሉ።",
 	providerMessagePlaceholder: "መልዕክት ይፃፉ…",

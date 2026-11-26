@@ -683,6 +683,7 @@ export const en = {
 	notificationFallback: "Notification",
 
 	inboxEmpty: "No conversations yet.",
+	inboxEmptyHint: "When you message a provider, the thread shows up here.",
 	inboxCount: "{count} conversations",
 	inboxCountOne: "1 conversation",
 	inboxMedia: "Media",
@@ -904,6 +905,7 @@ export const en = {
 	providerInboxCount: "{count} conversations",
 	providerInboxCountOne: "1 conversation",
 	providerNoConversations: "No conversations yet.",
+	providerInboxEmptyHint: "Customer messages land here once a chat starts.",
 	providerChatDefault: "Chat",
 	providerNoMessages: "No messages yet. Say hello.",
 	providerMessagePlaceholder: "Type a message…",

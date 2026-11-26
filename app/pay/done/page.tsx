@@ -37,9 +37,12 @@ function resolveTxRef(search: URLSearchParams): string {
 	const fromPending = cleanTxRef(pending?.txRef ?? "");
 	if (fromPending) return fromPending;
 
+	// Telebirr return often appends "?trans_end_time=…" onto tx_ref; merch_order_id stays clean.
+	const merch = cleanTxRef(search.get("merch_order_id") ?? "");
+	if (merch) return merch;
+
 	return cleanTxRef(
 		search.get("tx_ref") ??
-			search.get("merch_order_id") ??
 			search.get("trx_ref") ??
 			search.get("ref") ??
 			"",

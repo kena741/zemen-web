@@ -43,39 +43,50 @@ function asString(value: unknown): string | null {
 	return s.length ? s : null;
 }
 
+function pick(
+	row: Record<string, unknown>,
+	...keys: string[]
+): string | null {
+	for (const key of keys) {
+		const v = asString(row[key]);
+		if (v) return v;
+	}
+	return null;
+}
+
 export function mapInboxRow(
 	row: Record<string, unknown>,
 	currentUserId: string,
 ): Omit<InboxThread, "peerName" | "peerImage"> {
-	const senderId = asString(row.senderId);
-	const receiverId = asString(row.receiverId);
+	const senderId = pick(row, "senderId", "sender_id");
+	const receiverId = pick(row, "receiverId", "receiver_id");
 	const peerId =
 		senderId === currentUserId
 			? (receiverId ?? "")
 			: (senderId ?? "");
 	return {
 		id: String(row.id ?? `${senderId}_${receiverId}`),
-		lastMessage: asString(row.lastMessage),
-		mediaUrl: asString(row.mediaUrl),
+		lastMessage: pick(row, "lastMessage", "last_message"),
+		mediaUrl: pick(row, "mediaUrl", "media_url"),
 		senderId,
 		receiverId,
 		seen: Boolean(row.seen),
-		type: asString(row.type),
-		timestamp: asString(row.timestamp),
+		type: pick(row, "type"),
+		timestamp: pick(row, "timestamp"),
 		peerId,
 	};
 }
 
 export function mapChatRow(row: Record<string, unknown>): ChatMessage {
 	return {
-		chatID: String(row.chatID ?? ""),
-		type: asString(row.type),
-		senderId: asString(row.senderId),
-		receiverId: asString(row.receiverId),
-		message: asString(row.message),
-		mediaUrl: asString(row.mediaUrl),
+		chatID: pick(row, "chatID", "chat_id", "id") ?? "",
+		type: pick(row, "type"),
+		senderId: pick(row, "senderId", "sender_id"),
+		receiverId: pick(row, "receiverId", "receiver_id"),
+		message: pick(row, "message"),
+		mediaUrl: pick(row, "mediaUrl", "media_url"),
 		seen: Boolean(row.seen),
-		timestamp: asString(row.timestamp),
+		timestamp: pick(row, "timestamp"),
 	};
 }
 

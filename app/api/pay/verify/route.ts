@@ -191,7 +191,8 @@ export async function POST(request: Request) {
 			return normalizeBackendResponse(res, txRef, purpose);
 		}
 
-		// Telebirr booking: confirm with Telebirr, then finalize booking (not Chapa / not provider payout).
+		// Telebirr booking: confirm with Telebirr, then mark paid on BE.
+		// ponytail: getSupabaseAdmin() is a stub in backend mode — never finalize via Supabase.
 		if (gateway === "telebirr" && purpose === "booking") {
 			const bookingId = body.bookingId?.trim() || "";
 			if (!txRef) {
@@ -213,6 +214,8 @@ export async function POST(request: Request) {
 					{ status: 500 },
 				);
 			}
+			let paidAmount =
+				amount != null ? amount.toFixed(2) : String(body.amount ?? "0");
 			try {
 				const order = await queryTelebirrOrderStatus({
 					config,
@@ -230,32 +233,106 @@ export async function POST(request: Request) {
 						{ status: order.failed ? 402 : 202 },
 					);
 				}
+				if (order.amount && Number(order.amount) > 0) {
+					paidAmount = Number(order.amount).toFixed(2);
+				}
 			} catch (error: unknown) {
 				const message =
 					error instanceof Error ? error.message : "Telebirr verify failed";
 				return NextResponse.json({ error: message }, { status: 502 });
 			}
 
+			const base = getApiBaseUrl();
+			const auth = request.headers.get("authorization") || "";
+			if (!base) {
+				return NextResponse.json(
+					{ error: "API_BASE_URL not configured" },
+					{ status: 500 },
+				);
+			}
+
 			try {
-				const admin = getSupabaseAdmin();
-				const amountStr =
-					amount != null ? amount.toFixed(2) : String(body.amount ?? "0");
-				const result = await finalizeBookingTelebirrPayment({
-					admin,
-					txRef,
-					bookingId,
-					fallbackAmount: amountStr,
-					remainingBalance: body.remainingBalance === true,
-					extraPayment: body.extraPayment === true,
+				const getRes = await fetch(`${base}/api/v1/bookings/${bookingId}`, {
+					headers: {
+						Accept: "application/json",
+						...(auth ? { Authorization: auth } : {}),
+					},
 				});
-				if (!result.ok) {
+				if (getRes.status === 404) {
+					return NextResponse.json(
+						{ error: "Booking not found", tx_ref: txRef, bookingId },
+						{ status: 404 },
+					);
+				}
+				if (!getRes.ok) {
+					const text = await getRes.text();
 					return NextResponse.json(
 						{
-							status: result.pending ? "pending" : "error",
-							error: result.error ?? "Booking payment finalize failed",
+							error: text || "Failed to load booking for payment finalize",
 							tx_ref: txRef,
+							bookingId,
 						},
-						{ status: result.pending ? 202 : 502 },
+						{ status: getRes.status >= 500 ? 502 : getRes.status },
+					);
+				}
+				const booking = (await getRes.json()) as Record<string, unknown>;
+				if (booking.paymentCompleted === true || booking.payment_completed === true) {
+					return NextResponse.json({
+						status: "success",
+						tx_ref: txRef,
+						purpose,
+						bookingId,
+					});
+				}
+				const providerId = String(
+					booking.providerId ?? booking.provider_id ?? "",
+				).trim();
+				if (!providerId) {
+					return NextResponse.json(
+						{ error: "Booking is missing providerId", tx_ref: txRef, bookingId },
+						{ status: 502 },
+					);
+				}
+
+				const markBody: Record<string, unknown> = {
+					id: bookingId,
+					providerId,
+					paymentCompleted: true,
+					paymentStatus: "payment_completed",
+					paymentType: "telebirr",
+					totalAmount: Number(paidAmount),
+				};
+				if (body.extraPayment === true) {
+					markBody.status = "pending_approval";
+				}
+
+				const markRes = await fetch(`${base}/api/v1/bookings`, {
+					method: "POST",
+					headers: {
+						Accept: "application/json",
+						"Content-Type": "application/json",
+						...(auth ? { Authorization: auth } : {}),
+					},
+					body: JSON.stringify(markBody),
+				});
+				if (!markRes.ok) {
+					const text = await markRes.text();
+					console.error("[pay/verify] telebirr booking mark paid failed", {
+						bookingId,
+						txRef,
+						status: markRes.status,
+						text: text.slice(0, 500),
+					});
+					return NextResponse.json(
+						{
+							status: "error",
+							error:
+								text ||
+								"Telebirr paid, but booking was not marked paid on the server",
+							tx_ref: txRef,
+							bookingId,
+						},
+						{ status: 502 },
 					);
 				}
 				return NextResponse.json({
@@ -265,7 +342,6 @@ export async function POST(request: Request) {
 					bookingId,
 				});
 			} catch (error: unknown) {
-				// ponytail: backend-mode deploys may lack Supabase; Telebirr is already paid
 				const message =
 					error instanceof Error ? error.message : "Booking finalize unavailable";
 				console.error("[pay/verify] telebirr booking finalize", message);
