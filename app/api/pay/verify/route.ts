@@ -191,6 +191,96 @@ export async function POST(request: Request) {
 			return normalizeBackendResponse(res, txRef, purpose);
 		}
 
+		// Telebirr booking: confirm with Telebirr, then finalize booking (not Chapa / not provider payout).
+		if (gateway === "telebirr" && purpose === "booking") {
+			const bookingId = body.bookingId?.trim() || "";
+			if (!txRef) {
+				return NextResponse.json(
+					{ error: "tx_ref is required" },
+					{ status: 400 },
+				);
+			}
+			if (!bookingId) {
+				return NextResponse.json(
+					{ error: "bookingId is required" },
+					{ status: 400 },
+				);
+			}
+			const config = await loadTelebirrConfig();
+			if (!config) {
+				return NextResponse.json(
+					{ error: "Telebirr is not configured" },
+					{ status: 500 },
+				);
+			}
+			try {
+				const order = await queryTelebirrOrderStatus({
+					config,
+					merchOrderId: txRef,
+				});
+				if (!order.paid) {
+					return NextResponse.json(
+						{
+							status: order.failed ? "failed" : "pending",
+							error: order.failed
+								? `Telebirr status is ${order.tradeStatus || "failed"}`
+								: "Payment not confirmed yet",
+							tx_ref: txRef,
+						},
+						{ status: order.failed ? 402 : 202 },
+					);
+				}
+			} catch (error: unknown) {
+				const message =
+					error instanceof Error ? error.message : "Telebirr verify failed";
+				return NextResponse.json({ error: message }, { status: 502 });
+			}
+
+			try {
+				const admin = getSupabaseAdmin();
+				const amountStr =
+					amount != null ? amount.toFixed(2) : String(body.amount ?? "0");
+				const result = await finalizeBookingTelebirrPayment({
+					admin,
+					txRef,
+					bookingId,
+					fallbackAmount: amountStr,
+					remainingBalance: body.remainingBalance === true,
+					extraPayment: body.extraPayment === true,
+				});
+				if (!result.ok) {
+					return NextResponse.json(
+						{
+							status: result.pending ? "pending" : "error",
+							error: result.error ?? "Booking payment finalize failed",
+							tx_ref: txRef,
+						},
+						{ status: result.pending ? 202 : 502 },
+					);
+				}
+				return NextResponse.json({
+					status: "success",
+					tx_ref: txRef,
+					purpose,
+					bookingId,
+				});
+			} catch (error: unknown) {
+				// ponytail: backend-mode deploys may lack Supabase; Telebirr is already paid
+				const message =
+					error instanceof Error ? error.message : "Booking finalize unavailable";
+				console.error("[pay/verify] telebirr booking finalize", message);
+				return NextResponse.json(
+					{
+						status: "error",
+						error: `Telebirr paid, but booking was not marked paid: ${message}`,
+						tx_ref: txRef,
+						bookingId,
+					},
+					{ status: 503 },
+				);
+			}
+		}
+
 		let path = "/payments/chapa/verify";
 		let proxyBody: Record<string, unknown> = {
 			txRef: rawTxRef,
@@ -221,8 +311,13 @@ export async function POST(request: Request) {
 				amount,
 			};
 		} else if (purpose === "booking" && body.bookingId?.trim()) {
-			path = `/payments/bookings/${body.bookingId.trim()}/complete`;
-			proxyBody = { txRef: rawTxRef, amount };
+			// Chapa booking verify (Telebirr handled above)
+			path = "/payments/chapa/verify";
+			proxyBody = {
+				txRef: rawTxRef,
+				purpose: "booking",
+				bookingId: body.bookingId.trim(),
+			};
 		}
 		const proxied = await proxyToBackend(path, request, {
 			method: "POST",

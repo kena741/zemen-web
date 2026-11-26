@@ -16,7 +16,7 @@ import {
 	type ProviderProfile,
 } from "./types";
 
-/** Returns an i18n MessageKey — translate with `t(key)` at the UI. */
+/** Returns an i18n key or the backend detail — show with `te(...)` at the UI. */
 export function friendlyLoginError(
 	rawError: string | null | undefined,
 ): string {

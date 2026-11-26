@@ -36,13 +36,18 @@ const AUTH_KEYS = new Set<string>([
 	"signupPhoneAlreadyRegistered",
 ]);
 
-/** Map API / validation strings to i18n keys (or pass through known keys). */
-export function toAuthErrorKey(
-	rawError: string | null | undefined,
-): MessageKey {
+export function isAuthMessageKey(value: string): value is MessageKey {
+	return AUTH_KEYS.has(value);
+}
+
+/**
+ * Map known API / validation strings to i18n keys.
+ * Unknown backend details are returned as-is (do not hide as "Something went wrong").
+ */
+export function toAuthErrorKey(rawError: string | null | undefined): string {
 	const raw = rawError?.trim() ?? "";
 	if (!raw) return "authErrorGeneric";
-	if (AUTH_KEYS.has(raw)) return raw as MessageKey;
+	if (AUTH_KEYS.has(raw)) return raw;
 
 	const lower = raw.toLowerCase();
 	if (
@@ -159,10 +164,8 @@ export function toAuthErrorKey(
 	if (lower.includes("reset failed")) {
 		return "authErrorResetFailed";
 	}
-	if (lower.includes("exception") || lower.includes("errno")) {
-		return "authErrorGeneric";
-	}
-	return "authErrorGeneric";
+	// ponytail: show BE detail verbatim when we have no mapped copy
+	return raw;
 }
 
 export function isAuthEmailConfirmError(keyOrMessage: string): boolean {

@@ -1,4 +1,4 @@
-/** Map FastAPI `{ detail }` (string | array | object) to a user-facing message. */
+/** Map FastAPI `{ detail }` / `{ message, detail }` to a user-facing message. */
 export function formatApiDetail(detail: unknown): string {
 	if (detail == null) return "Request failed";
 	if (typeof detail === "string") return detail;
@@ -14,8 +14,13 @@ export function formatApiDetail(detail: unknown): string {
 			.filter(Boolean)
 			.join("; ");
 	}
-	if (typeof detail === "object" && detail !== null && "message" in detail) {
-		return String((detail as { message: unknown }).message);
+	if (typeof detail === "object" && detail !== null) {
+		const row = detail as { detail?: unknown; message?: unknown };
+		// Prefer nested detail over generic "Internal Server Error" message
+		if (row.detail != null && row.detail !== detail) {
+			return formatApiDetail(row.detail);
+		}
+		if (row.message != null) return String(row.message);
 	}
 	try {
 		return JSON.stringify(detail);

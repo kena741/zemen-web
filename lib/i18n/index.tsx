@@ -10,7 +10,7 @@ import {
 	type ReactNode,
 } from "react";
 
-import { toAuthErrorKey } from "@/lib/auth/errors";
+import { isAuthMessageKey, toAuthErrorKey } from "@/lib/auth/errors";
 
 import { am } from "./messages/am";
 import { en, type MessageKey } from "./messages/en";
@@ -65,7 +65,10 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
 	);
 
 	const te = useCallback(
-		(rawError: string | null | undefined) => t(toAuthErrorKey(rawError)),
+		(rawError: string | null | undefined) => {
+			const resolved = toAuthErrorKey(rawError);
+			return isAuthMessageKey(resolved) ? t(resolved) : resolved;
+		},
 		[t],
 	);
 

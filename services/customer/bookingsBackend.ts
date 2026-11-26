@@ -64,6 +64,8 @@ export async function createCustomerBooking(
 				payment_type: input.paymentType ?? null,
 				price: input.price,
 				payment_completed: input.paymentCompleted ?? false,
+				// ponytail: BE schema default is "pending"; DB enum is pending_payment
+				payment_status: "pending_payment",
 			},
 		});
 		return {

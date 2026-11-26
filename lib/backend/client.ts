@@ -88,10 +88,13 @@ export async function apiFetch<T = unknown>(
 	}
 
 	if (!res.ok) {
+		const row =
+			parsed && typeof parsed === "object" && parsed !== null
+				? (parsed as { detail?: unknown; message?: unknown })
+				: null;
+		// Prefer FastAPI `detail` (real cause) over wrapper `message`
 		const detail =
-			parsed && typeof parsed === "object" && parsed !== null && "detail" in parsed
-				? (parsed as { detail: unknown }).detail
-				: parsed;
+			row && "detail" in row && row.detail != null ? row.detail : parsed;
 		throw new ApiError(res.status, detail, formatApiDetail(detail));
 	}
 
