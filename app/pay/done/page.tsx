@@ -1,18 +1,28 @@
 "use client";
 
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
+import {
+	CheckCircle2Icon,
+	CircleAlertIcon,
+	Loader2Icon,
+	Clock3Icon,
+} from "lucide-react";
 
 import { AuthShell } from "@/components/auth/auth-shell";
 import { getAccessToken } from "@/lib/auth/tokenStore";
 import { useLocale } from "@/lib/i18n";
+import type { MessageKey } from "@/lib/i18n/messages/en";
 import { getSupabase } from "@/lib/supabase/client";
 import {
 	clearPaymentPending,
 	readPaymentPending,
 } from "@/lib/payment-pending";
 import { sanitizeMerchOrderId } from "@/lib/telebirr";
+import { cn } from "@/lib/utils";
+
+type PayStatus = "verifying" | "success" | "pending" | "error";
 
 function continueHref(purpose: string, bookingId?: string | null): string {
 	if (purpose === "activation" || purpose === "tier") return "/provider";
@@ -24,10 +34,18 @@ function continueHref(purpose: string, bookingId?: string | null): string {
 	return "/service/wallet";
 }
 
+function continueLabelKey(purpose: string): MessageKey {
+	if (purpose === "booking") return "paymentContinueBooking";
+	if (purpose === "activation" || purpose === "tier") {
+		return "paymentContinueProvider";
+	}
+	if (purpose === "featured") return "paymentContinueServices";
+	return "paymentContinueWallet";
+}
+
 function cleanTxRef(raw: string): string {
 	const base = raw.trim().split("?")[0]?.split("&")[0]?.split("#")[0] ?? "";
 	if (!base) return "";
-	// Chapa tier refs keep hyphens (tier-…); Telebirr merch ids are alnum-only.
 	if (base.startsWith("tier-") || base.startsWith("web-")) return base.slice(0, 80);
 	return sanitizeMerchOrderId(base);
 }
@@ -37,7 +55,6 @@ function resolveTxRef(search: URLSearchParams): string {
 	const fromPending = cleanTxRef(pending?.txRef ?? "");
 	if (fromPending) return fromPending;
 
-	// Telebirr return often appends "?trans_end_time=…" onto tx_ref; merch_order_id stays clean.
 	const merch = cleanTxRef(search.get("merch_order_id") ?? "");
 	if (merch) return merch;
 
@@ -49,124 +66,207 @@ function resolveTxRef(search: URLSearchParams): string {
 	);
 }
 
+function prefersReducedMotion(): boolean {
+	if (typeof window === "undefined") return false;
+	return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
+
 function PayDoneContent() {
+	const router = useRouter();
 	const search = useSearchParams();
 	const { t } = useLocale();
 	const purpose = search.get("purpose") ?? "wallet";
 	const txRef = resolveTxRef(search);
 	const amount = search.get("amount") ?? "";
-	const bookingIdFromUrl = (search.get("bookingId") ?? search.get("booking_id") ?? "").trim();
+	const bookingIdFromUrl = (
+		search.get("bookingId") ??
+		search.get("booking_id") ??
+		""
+	).trim();
 	const pendingBootstrap = readPaymentPending();
 	const bookingId =
 		bookingIdFromUrl ||
 		(pendingBootstrap?.bookingId ?? "").trim() ||
 		null;
+	const href = continueHref(purpose, bookingId);
+	const ctaLabel = t(continueLabelKey(purpose));
 
-	const [status, setStatus] = useState<"verifying" | "success" | "pending" | "error">(
+	const [status, setStatus] = useState<PayStatus>(
 		txRef ? "verifying" : "pending",
 	);
 	const [message, setMessage] = useState<string | null>(null);
+	const [retryToken, setRetryToken] = useState(0);
+	const redirected = useRef(false);
 
-	useEffect(() => {
+	const verify = useCallback(async () => {
 		if (!txRef) return;
 
-		let cancelled = false;
+		setStatus("verifying");
+		setMessage(null);
 
-		async function verify() {
-			const pending = readPaymentPending();
-			let token = getAccessToken();
-			if (!token) {
-				const session = await getSupabase().auth.getSession();
-				token = session.data.session?.access_token ?? null;
-			}
-			if (!token) {
-				if (!cancelled) {
-					setStatus("error");
-					setMessage(t("paymentSignInVerify"));
-				}
+		const pending = readPaymentPending();
+		let token = getAccessToken();
+		if (!token) {
+			const session = await getSupabase().auth.getSession();
+			token = session.data.session?.access_token ?? null;
+		}
+		if (!token) {
+			setStatus("error");
+			setMessage(t("paymentSignInVerify"));
+			return;
+		}
+
+		const body = {
+			tx_ref: txRef,
+			purpose: pending?.purpose ?? purpose,
+			amount: pending?.amount ?? amount,
+			gateway: pending?.gateway ?? "telebirr",
+			accountType: pending?.accountType ?? "customer",
+			userId: pending?.userId,
+			providerId: pending?.providerId,
+			bookingId: pending?.bookingId?.trim() || bookingIdFromUrl || undefined,
+			serviceId: pending?.serviceId,
+			fromTierMax: pending?.fromTierMax,
+			toTierMax: pending?.toTierMax,
+			nextCycle: pending?.nextCycle,
+			remainingBalance: pending?.remainingBalance,
+			extraPayment: pending?.extraPayment,
+			billingInterval: pending?.billingInterval,
+			billingIntervalCount: pending?.billingIntervalCount,
+		};
+
+		try {
+			const res = await fetch("/api/pay/verify", {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+					Authorization: `Bearer ${token}`,
+				},
+				body: JSON.stringify(body),
+			});
+			const data = (await res.json()) as { status?: string; error?: string };
+
+			if (res.ok && data.status === "success") {
+				clearPaymentPending();
+				setStatus("success");
+				setMessage(t("paymentSuccess"));
 				return;
 			}
 
-			const body = {
-				tx_ref: txRef,
-				purpose: pending?.purpose ?? purpose,
-				amount: pending?.amount ?? amount,
-				gateway: pending?.gateway ?? "telebirr",
-				accountType: pending?.accountType ?? "customer",
-				userId: pending?.userId,
-				providerId: pending?.providerId,
-				bookingId: pending?.bookingId?.trim() || bookingIdFromUrl || undefined,
-				serviceId: pending?.serviceId,
-				fromTierMax: pending?.fromTierMax,
-				toTierMax: pending?.toTierMax,
-				nextCycle: pending?.nextCycle,
-				remainingBalance: pending?.remainingBalance,
-				extraPayment: pending?.extraPayment,
-				billingInterval: pending?.billingInterval,
-				billingIntervalCount: pending?.billingIntervalCount,
-			};
-
-			try {
-				const res = await fetch("/api/pay/verify", {
-					method: "POST",
-					headers: {
-						"Content-Type": "application/json",
-						Authorization: `Bearer ${token}`,
-					},
-					body: JSON.stringify(body),
-				});
-				const data = (await res.json()) as { status?: string; error?: string };
-				if (cancelled) return;
-
-				if (res.ok && data.status === "success") {
-					clearPaymentPending();
-					setStatus("success");
-					setMessage(t("paymentSuccess"));
-					return;
-				}
-
-				setStatus(res.status === 202 ? "pending" : "error");
-				setMessage(data.error ?? t("paymentPending"));
-			} catch {
-				if (!cancelled) {
-					setStatus("error");
-					setMessage(t("paymentVerifyFailed"));
-				}
-			}
+			setStatus(res.status === 202 ? "pending" : "error");
+			setMessage(data.error ?? t("paymentPending"));
+		} catch {
+			setStatus("error");
+			setMessage(t("paymentVerifyFailed"));
 		}
-
-		void verify();
-		return () => {
-			cancelled = true;
-		};
 	}, [txRef, purpose, amount, t, bookingIdFromUrl]);
 
+	useEffect(() => {
+		void verify();
+	}, [verify, retryToken]);
+
+	useEffect(() => {
+		if (status !== "success" || redirected.current) return;
+		const delay = prefersReducedMotion() ? 0 : 1200;
+		const timer = window.setTimeout(() => {
+			redirected.current = true;
+			router.replace(href);
+		}, delay);
+		return () => window.clearTimeout(timer);
+	}, [status, href, router]);
+
+	const titleKey: MessageKey =
+		status === "success"
+			? "paymentSuccessTitle"
+			: status === "pending"
+				? "paymentPendingTitle"
+				: status === "error"
+					? "paymentErrorTitle"
+					: "paymentVerifyingTitle";
+
+	const shellSubtitle =
+		status === "success"
+			? t("paymentRedirecting")
+			: amount
+				? t("paymentAmountPaid", { amount })
+				: undefined;
+
 	return (
-		<AuthShell title={t("paymentTitle")}>
-			<div className="mt-6 space-y-3 text-center text-sm text-muted-foreground">
-				{status === "verifying" ? (
-					<p>{t("paymentVerifying")}</p>
-				) : status === "success" ? (
-					<p className="text-primary">{message}</p>
-				) : status === "pending" ? (
-					<p>{message}</p>
-				) : status === "error" ? (
-					<p className="text-destructive">{message}</p>
-				) : (
-					<p>
-						{t("paymentSubmitted", {
-							purpose,
-							amount: amount ? ` of ETB ${amount}` : "",
-						})}
-					</p>
-				)}
-				{txRef ? <p className="font-mono text-xs">{txRef}</p> : null}
-				<Link
-					href={continueHref(purpose, bookingId)}
-					className="inline-flex h-10 w-full items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground"
+		<AuthShell title={t(titleKey)} subtitle={shellSubtitle}>
+			<div className="flex flex-col items-center text-center">
+				<div
+					className={cn(
+						"mb-4 flex size-14 items-center justify-center rounded-2xl",
+						status === "success" && "bg-[#174309]/10 text-[#174309]",
+						status === "verifying" && "bg-muted text-muted-foreground",
+						status === "pending" && "bg-amber-500/10 text-amber-700",
+						status === "error" && "bg-destructive/10 text-destructive",
+					)}
+					aria-hidden
 				>
-					{t("commonContinue")}
-				</Link>
+					{status === "success" ? (
+						<CheckCircle2Icon className="size-7" />
+					) : status === "verifying" ? (
+						<Loader2Icon className="size-7 animate-spin" />
+					) : status === "pending" ? (
+						<Clock3Icon className="size-7" />
+					) : (
+						<CircleAlertIcon className="size-7" />
+					)}
+				</div>
+
+				<p className="max-w-[22rem] text-[14px] leading-snug text-muted-foreground">
+					{status === "verifying"
+						? t("paymentVerifying")
+						: (message ?? t("paymentSubmitted", { purpose, amount: "" }))}
+				</p>
+
+				{amount && status !== "verifying" ? (
+					<p className="mt-3 text-[20px] font-semibold tracking-tight text-[#0f1a0c]">
+						{t("paymentAmountPaid", { amount })}
+					</p>
+				) : null}
+
+				<div className="mt-6 flex w-full flex-col gap-2">
+					{status === "success" ? (
+						<Link
+							href={href}
+							className="inline-flex h-12 w-full items-center justify-center rounded-xl bg-[#174309] px-4 text-[14px] font-semibold text-[#f4faf0] transition-colors duration-150 hover:bg-[#1f5a0b] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#174309]/35 focus-visible:ring-offset-2"
+						>
+							{ctaLabel}
+						</Link>
+					) : null}
+
+					{status === "error" || status === "pending" ? (
+						<>
+							<button
+								type="button"
+								onClick={() => setRetryToken((n) => n + 1)}
+								className="inline-flex h-12 w-full items-center justify-center rounded-xl bg-[#174309] px-4 text-[14px] font-semibold text-[#f4faf0] transition-colors duration-150 hover:bg-[#1f5a0b] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#174309]/35 focus-visible:ring-offset-2"
+							>
+								{t("paymentRetry")}
+							</button>
+							<Link
+								href={href}
+								className="inline-flex h-12 w-full items-center justify-center rounded-xl border border-border bg-transparent px-4 text-[14px] font-semibold text-foreground transition-colors duration-150 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#174309]/25 focus-visible:ring-offset-2"
+							>
+								{ctaLabel}
+							</Link>
+						</>
+					) : null}
+
+				</div>
+
+				{txRef ? (
+					<details className="mt-6 w-full text-left">
+						<summary className="cursor-pointer list-none text-center text-[12px] font-medium text-muted-foreground underline-offset-2 hover:underline [&::-webkit-details-marker]:hidden">
+							{t("paymentOrderRef")}
+						</summary>
+						<p className="mt-2 break-all rounded-xl bg-muted/80 px-3 py-2 text-center font-mono text-[11px] text-muted-foreground">
+							{txRef}
+						</p>
+					</details>
+				) : null}
 			</div>
 		</AuthShell>
 	);
