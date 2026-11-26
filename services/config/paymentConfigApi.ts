@@ -22,36 +22,37 @@ export interface PaymentMethodsConfig {
 }
 
 export async function fetchPaymentMethodsConfig(): Promise<PaymentMethodsConfig> {
-	const defaults: PaymentMethodsConfig = {
-		chapaEnabled: true,
+	// Product: Telebirr-only web checkout (Chapa disabled).
+	const telebirrOnly: PaymentMethodsConfig = {
+		chapaEnabled: false,
 		telebirrEnabled: true,
 		flutterWaveEnabled: false,
 		telebirrName: "Telebirr",
 		flutterWaveName: "Flutterwave",
 	};
 
-	const { data } = await getSupabase()
-		.from("app_settings")
-		.select("data")
-		.eq("id", "payment")
-		.maybeSingle();
+	try {
+		const { data } = await getSupabase()
+			.from("app_settings")
+			.select("data")
+			.eq("id", "payment")
+			.maybeSingle();
+		const root = parseObjectValue(data?.data);
+		const telebirr = (root.telebirr ?? {}) as TelebirrConfig;
+		const flutterWave = (root.flutterWave ??
+			root.flutterwave ??
+			{}) as FlutterWaveConfig;
 
-	const root = parseObjectValue(data?.data);
-	const chapa = (root.chapa ?? {}) as Record<string, unknown>;
-	const telebirr = (root.telebirr ?? {}) as TelebirrConfig;
-	const flutterWave = (root.flutterWave ?? root.flutterwave ?? {}) as FlutterWaveConfig;
-
-	const chapaExplicitlyDisabled =
-		chapa.enable === false || chapa.isActive === false;
-	const telebirrExplicitlyDisabled = telebirr.enable === false;
-
-	return {
-		chapaEnabled: !chapaExplicitlyDisabled,
-		telebirrEnabled: !telebirrExplicitlyDisabled,
-		flutterWaveEnabled:
-			(flutterWave.isActive === true || flutterWave.enable === true) &&
-			Boolean(String(flutterWave.publicKey ?? "").trim()),
-		telebirrName: telebirr.name?.trim() || "Telebirr",
-		flutterWaveName: flutterWave.name?.trim() || "Flutterwave",
-	};
+		return {
+			chapaEnabled: false,
+			telebirrEnabled: telebirr.enable !== false,
+			flutterWaveEnabled:
+				(flutterWave.isActive === true || flutterWave.enable === true) &&
+				Boolean(String(flutterWave.publicKey ?? "").trim()),
+			telebirrName: telebirr.name?.trim() || "Telebirr",
+			flutterWaveName: flutterWave.name?.trim() || "Flutterwave",
+		};
+	} catch {
+		return telebirrOnly;
+	}
 }

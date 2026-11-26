@@ -1,16 +1,15 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { CheckCircle2Icon, CircleIcon } from "lucide-react";
+import { CheckCircle2Icon, CircleIcon, ShieldCheckIcon } from "lucide-react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 
-import { ChapaCheckout } from "@/components/payments/chapa-checkout";
 import { TelebirrCheckout } from "@/components/payments/telebirr-checkout";
 import { ProfileBackLink } from "@/components/provider/profile-back-link";
 import { ServiceLoading } from "@/components/service/service-loading";
 import { Button } from "@/components/ui/button";
 import { useLocale } from "@/lib/i18n";
-import type { PaymentGateway } from "@/lib/payment-pending";
 import { cn } from "@/lib/utils";
 import { formatAmount } from "@/services/bookings/types";
 import {
@@ -27,6 +26,12 @@ import {
 } from "@/services/provider/tiersApi";
 import { useAuth } from "@/store/useAuth";
 
+function tierKey(tier: ServiceTier): string {
+	return tier.planId != null
+		? `plan-${tier.planId}`
+		: `tier-${tier.max_services}-${tier.total_price}`;
+}
+
 export default function ProviderTierPage() {
 	const { t } = useLocale();
 	const router = useRouter();
@@ -35,10 +40,8 @@ export default function ProviderTierPage() {
 	const [tiers, setTiers] = useState<ServiceTier[]>([]);
 	const [currentMax, setCurrentMax] = useState(0);
 	const [loading, setLoading] = useState(true);
-	const [selectedMax, setSelectedMax] = useState<number | null>(null);
+	const [selectedKey, setSelectedKey] = useState<string | null>(null);
 	const [error, setError] = useState<string | null>(null);
-	const [payMethod, setPayMethod] = useState<PaymentGateway>("telebirr");
-
 	useEffect(() => {
 		void (async () => {
 			setLoading(true);
@@ -48,7 +51,7 @@ export default function ProviderTierPage() {
 			const max = providerId ? await fetchProviderTierMax(providerId) : 0;
 			setCurrentMax(max);
 			const next = purchasableServiceTiers(tierRes.tiers, max);
-			setSelectedMax(next[0]?.max_services ?? null);
+			setSelectedKey(next[0] ? tierKey(next[0]) : null);
 			setLoading(false);
 		})();
 	}, [providerId]);
@@ -71,12 +74,17 @@ export default function ProviderTierPage() {
 	);
 
 	const selected =
-		upgrades.find((tier) => tier.max_services === selectedMax) ??
+		upgrades.find((tier) => tierKey(tier) === selectedKey) ??
 		upgrades[0] ??
 		null;
 
 	const payAmount = selected
-		? tierUpgradeAmount(tiers, currentMax, selected.max_services)
+		? tierUpgradeAmount(
+				tiers,
+				currentMax,
+				selected.max_services,
+				selected.planId,
+			)
 		: 0;
 
 	const isUpgrade = currentMax !== 0;
@@ -139,7 +147,9 @@ export default function ProviderTierPage() {
 
 					{upgrades.length === 0 ? (
 						<div className="rounded-xl bg-white p-4 text-sm">
-							{t("providerHighestPlanNoUpgrade")}
+							{tiers.length === 0
+								? t("providerPlanNotConfigured")
+								: t("providerHighestPlanNoUpgrade")}
 						</div>
 					) : (
 						<ul className="space-y-3">
@@ -148,14 +158,17 @@ export default function ProviderTierPage() {
 									tiers,
 									currentMax,
 									tier.max_services,
+									tier.planId,
 								);
-								const isSelected =
-									selected?.max_services === tier.max_services;
+								const key = tierKey(tier);
+								const isSelected = selected
+									? tierKey(selected) === key
+									: false;
 								return (
-									<li key={`tier-${tier.max_services}`}>
+									<li key={key}>
 										<button
 											type="button"
-											onClick={() => setSelectedMax(tier.max_services)}
+											onClick={() => setSelectedKey(key)}
 											className={cn(
 												"flex w-full items-start gap-3 rounded-xl bg-white p-3.5 text-left ring-1 transition-colors",
 												isSelected
@@ -200,68 +213,6 @@ export default function ProviderTierPage() {
 						</ul>
 					)}
 
-					{upgrades.length > 0 ? (
-						<div>
-							<p className="text-sm font-semibold">
-								{t("providerChoosePaymentMethod")}
-							</p>
-							<div className="mt-3 grid gap-2 sm:grid-cols-2">
-								<button
-									type="button"
-									onClick={() => setPayMethod("telebirr")}
-									className={cn(
-										"flex w-full items-center gap-3 rounded-[10px] bg-white p-3 text-left ring-1",
-										payMethod === "telebirr"
-											? "ring-[1.6px] ring-primary"
-											: "ring-black/20",
-									)}
-								>
-									<span className="flex size-8 items-center justify-center rounded-md bg-primary/10 text-xs font-bold text-primary">
-										T
-									</span>
-									<span className="min-w-0 flex-1">
-										<p className="text-sm font-semibold">
-											{t("paymentTelebirr")}
-										</p>
-										<p className="text-xs text-muted-foreground">
-											{t("providerTelebirrPayHint")}
-										</p>
-									</span>
-									{payMethod === "telebirr" ? (
-										<CheckCircle2Icon className="size-5 text-primary" />
-									) : (
-										<CircleIcon className="size-5 text-muted-foreground" />
-									)}
-								</button>
-								<button
-									type="button"
-									onClick={() => setPayMethod("chapa")}
-									className={cn(
-										"flex w-full items-center gap-3 rounded-[10px] bg-white p-3 text-left ring-1",
-										payMethod === "chapa"
-											? "ring-[1.6px] ring-primary"
-											: "ring-black/20",
-									)}
-								>
-									<span className="flex size-8 items-center justify-center rounded-md bg-primary/10 text-xs font-bold text-primary">
-										C
-									</span>
-									<span className="min-w-0 flex-1">
-										<p className="text-sm font-semibold">{t("paymentChapa")}</p>
-										<p className="text-xs text-muted-foreground">
-											{t("providerChapaPayHint")}
-										</p>
-									</span>
-									{payMethod === "chapa" ? (
-										<CheckCircle2Icon className="size-5 text-primary" />
-									) : (
-										<CircleIcon className="size-5 text-muted-foreground" />
-									)}
-								</button>
-							</div>
-						</div>
-					) : null}
-
 					<div className="space-y-3 border-t border-border pt-4">
 						{upgrades.length > 0 ? (
 							<>
@@ -273,45 +224,46 @@ export default function ProviderTierPage() {
 										{formatAmount(payAmount)}
 									</span>
 								</div>
-								{payMethod === "chapa" ? (
-									<ChapaCheckout
-										variant="cta"
-										email={user?.email}
-										firstName={user?.provider?.firstName ?? user?.name}
-										lastName={user?.provider?.lastName ?? ""}
-										phone={user?.provider?.phoneNumber}
-										purpose="tier"
-										accountType="provider"
-										userId={user?.id ?? ""}
-										providerId={providerId}
-										amount={String(payAmount)}
-										fromTierMax={currentMax}
-										toTierMax={selected?.max_services}
-										returnPath="/pay/done?purpose=tier"
-										showAmountInput={false}
-										buttonLabel={t("providerProceedToPay")}
-										disabled={!selected || payAmount <= 0}
+								<div className="flex items-center gap-3 rounded-[10px] bg-muted/60 px-3 py-3 ring-1 ring-border">
+									<Image
+										src="/marketing/partners/telebirr.png"
+										alt=""
+										width={40}
+										height={40}
+										className="size-10 shrink-0 object-contain"
 									/>
-								) : (
-									<TelebirrCheckout
-										variant="cta"
-										email={user?.email}
-										firstName={user?.provider?.firstName ?? user?.name}
-										lastName={user?.provider?.lastName ?? ""}
-										phone={user?.provider?.phoneNumber}
-										purpose="tier"
-										accountType="provider"
-										userId={user?.id ?? ""}
-										providerId={providerId}
-										amount={String(payAmount)}
-										fromTierMax={currentMax}
-										toTierMax={selected?.max_services}
-										returnPath="/pay/done?purpose=tier"
-										showAmountInput={false}
-										buttonLabel={t("providerProceedToPay")}
-										disabled={!selected || payAmount <= 0}
-									/>
-								)}
+									<div className="min-w-0 flex-1">
+										<p className="text-[15px] font-semibold leading-tight">
+											{t("paymentTelebirr")}
+										</p>
+										<p className="mt-0.5 flex items-center gap-1 text-[12px] text-muted-foreground">
+											<ShieldCheckIcon
+												className="size-3.5 shrink-0 text-primary"
+												aria-hidden
+											/>
+											{t("providerTelebirrPayHint")}
+										</p>
+									</div>
+								</div>
+								<TelebirrCheckout
+									variant="cta"
+									email={user?.email}
+									firstName={user?.provider?.firstName ?? user?.name}
+									lastName={user?.provider?.lastName ?? ""}
+									phone={user?.provider?.phoneNumber}
+									purpose="tier"
+									accountType="provider"
+									userId={user?.id ?? ""}
+									providerId={providerId}
+									planId={selected?.planId}
+									amount={String(payAmount)}
+									fromTierMax={currentMax}
+									toTierMax={selected?.max_services}
+									returnPath="/pay/done?purpose=tier"
+									showAmountInput={false}
+									buttonLabel={t("providerProceedToPay")}
+									disabled={!selected || payAmount <= 0}
+								/>
 							</>
 						) : (
 							<Button
