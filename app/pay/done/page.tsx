@@ -13,26 +13,39 @@ import {
 } from "@/lib/payment-pending";
 import { sanitizeMerchOrderId } from "@/lib/telebirr";
 
-function continueHref(purpose: string): string {
+function continueHref(purpose: string, bookingId?: string | null): string {
 	if (purpose === "activation" || purpose === "tier") return "/provider";
 	if (purpose === "featured") return "/provider/services";
-	if (purpose === "booking") return "/service/bookings";
+	if (purpose === "booking") {
+		const id = bookingId?.trim();
+		return id ? `/service/bookings/${id}` : "/service/bookings";
+	}
 	return "/service/wallet";
+}
+
+function cleanTxRef(raw: string): string {
+	const base = raw.trim().split("?")[0]?.split("&")[0]?.split("#")[0] ?? "";
+	if (!base) return "";
+	// Chapa tier refs keep hyphens (tier-…); Telebirr merch ids are alnum-only.
+	if (base.startsWith("tier-") || base.startsWith("web-")) return base.slice(0, 80);
+	return sanitizeMerchOrderId(base);
 }
 
 function resolveTxRef(search: URLSearchParams): string {
 	const pending = readPaymentPending();
-	const fromPending = sanitizeMerchOrderId(pending?.txRef ?? "");
+	const fromPending = cleanTxRef(pending?.txRef ?? "");
 	if (fromPending) return fromPending;
 
-	const fromUrl = sanitizeMerchOrderId(
+	// Telebirr return often appends "?trans_end_time=…" onto tx_ref; merch_order_id stays clean.
+	const merch = cleanTxRef(search.get("merch_order_id") ?? "");
+	if (merch) return merch;
+
+	return cleanTxRef(
 		search.get("tx_ref") ??
-			search.get("merch_order_id") ??
 			search.get("trx_ref") ??
 			search.get("ref") ??
 			"",
 	);
-	return fromUrl;
 }
 
 function PayDoneContent() {
@@ -41,6 +54,16 @@ function PayDoneContent() {
 	const purpose = search.get("purpose") ?? "wallet";
 	const txRef = resolveTxRef(search);
 	const amount = search.get("amount") ?? "";
+	const bookingIdFromUrl = (
+		search.get("bookingId") ??
+		search.get("booking_id") ??
+		""
+	).trim();
+	const pendingBootstrap = readPaymentPending();
+	const bookingId =
+		bookingIdFromUrl ||
+		(pendingBootstrap?.bookingId ?? "").trim() ||
+		null;
 
 	const [status, setStatus] = useState<"verifying" | "success" | "pending" | "error">(
 		txRef ? "verifying" : "pending",
@@ -72,7 +95,7 @@ function PayDoneContent() {
 				accountType: pending?.accountType ?? "customer",
 				userId: pending?.userId,
 				providerId: pending?.providerId,
-				bookingId: pending?.bookingId,
+				bookingId: pending?.bookingId?.trim() || bookingIdFromUrl || undefined,
 				serviceId: pending?.serviceId,
 				fromTierMax: pending?.fromTierMax,
 				toTierMax: pending?.toTierMax,
@@ -116,7 +139,7 @@ function PayDoneContent() {
 		return () => {
 			cancelled = true;
 		};
-	}, [txRef, purpose, amount, t]);
+	}, [txRef, purpose, amount, t, bookingIdFromUrl]);
 
 	return (
 		<AuthShell title={t("paymentTitle")}>
@@ -139,7 +162,7 @@ function PayDoneContent() {
 				)}
 				{txRef ? <p className="font-mono text-xs">{txRef}</p> : null}
 				<Link
-					href={continueHref(purpose)}
+					href={continueHref(purpose, bookingId)}
 					className="inline-flex h-10 w-full items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground"
 				>
 					{t("commonContinue")}

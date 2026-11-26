@@ -569,7 +569,7 @@ function BookServiceForm() {
 				last_name: lastName,
 				phone_number: customer.phone,
 				purpose: "booking",
-				return_path: `/pay/done?purpose=booking&amount=${dueNow}`,
+				return_path: `/pay/done?purpose=booking&amount=${dueNow}&bookingId=${encodeURIComponent(res.bookingId)}`,
 				booking_id: res.bookingId,
 				mode: getTelebirrPayMode(),
 			}),
@@ -597,7 +597,7 @@ function BookServiceForm() {
 			});
 		}
 		const launched = await launchTelebirrPayment(payData, {
-			donePath: `/pay/done?purpose=booking&amount=${dueNow}&tx_ref=${encodeURIComponent(payData.tx_ref ?? "")}`,
+			donePath: `/pay/done?purpose=booking&amount=${dueNow}&bookingId=${encodeURIComponent(res.bookingId)}&tx_ref=${encodeURIComponent(payData.tx_ref ?? "")}`,
 		});
 		if (!launched.ok && !launched.canceled) {
 			setError(launched.error || t("bookServiceTelebirrFailed"));

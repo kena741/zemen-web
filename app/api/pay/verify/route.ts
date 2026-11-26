@@ -144,7 +144,9 @@ export async function POST(request: Request) {
 					}
 					const { data: booking, error: bookingError } = await admin
 						.from("booked_service")
-						.select("customer_id, customerId")
+						.select(
+							"customer_id, customerId, customer_user_id, customerUserId",
+						)
 						.eq("id", bookingId)
 						.maybeSingle();
 					if (bookingError) {
@@ -163,7 +165,24 @@ export async function POST(request: Request) {
 					const bookingCustomerId = String(
 						bookingRow.customer_id ?? bookingRow.customerId ?? "",
 					).trim();
-					if (bookingCustomerId !== auth.userId) {
+					const bookingCustomerUserId = String(
+						bookingRow.customer_user_id ?? bookingRow.customerUserId ?? "",
+					).trim();
+					let ownsBooking =
+						bookingCustomerId === auth.userId ||
+						bookingCustomerUserId === auth.userId;
+					if (!ownsBooking && bookingCustomerId) {
+						const { data: customer } = await admin
+							.from("customer")
+							.select("id, user_id")
+							.eq("id", bookingCustomerId)
+							.maybeSingle();
+						const custUserId = String(
+							(customer as { user_id?: string } | null)?.user_id ?? "",
+						).trim();
+						ownsBooking = custUserId === auth.userId;
+					}
+					if (!ownsBooking) {
 						return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 					}
 					result =
