@@ -146,6 +146,7 @@ export function startTelebirrMiniAppPay(
 		const finish = (result: TelebirrMiniAppPayResult) => {
 			if (settled) return;
 			settled = true;
+			w.clearTimeout(timeoutId);
 			try {
 				delete mutableWindow[callbackName];
 			} catch {
@@ -153,6 +154,15 @@ export function startTelebirrMiniAppPay(
 			}
 			resolve(result);
 		};
+
+		// SuperApp sometimes never invokes the callback when rawRequest is rejected.
+		const timeoutId = w.setTimeout(() => {
+			finish({
+				ok: false,
+				message:
+					"Telebirr startPay timed out (no SuperApp callback). Try again or pay in browser.",
+			});
+		}, 12_000);
 
 		mutableWindow[callbackName] = (result?: unknown) => {
 			finish(parseStartPayResult(result));
