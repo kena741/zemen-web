@@ -34,6 +34,10 @@ import { formatAmount } from "@/services/bookings/types";
 import { createCustomerBooking, payBookingWithWallet } from "@/services/customer/bookingsApi";
 import { savePaymentPending } from "@/lib/payment-pending";
 import {
+	getTelebirrPayMode,
+	launchTelebirrPayment,
+} from "@/lib/telebirr-client-pay";
+import {
 	filterBookingDescriptionInput,
 	isPastTimeOnDate,
 	validateBookingDescription,
@@ -57,10 +61,6 @@ import {
 	fetchCustomerAddresses,
 	type CustomerAddress,
 } from "@/services/customer/addressesApi";
-import {
-	fetchPaymentMethodsConfig,
-	type PaymentMethodsConfig,
-} from "@/services/config/paymentConfigApi";
 import { useAppDispatch } from "@/store/hooks";
 import { invalidateBookings } from "@/store/customerCacheSlice";
 import { useAuth } from "@/store/useAuth";
@@ -198,13 +198,12 @@ function BookServiceForm() {
 	const [couponCode, setCouponCode] = useState("");
 	const [appliedCoupon, setAppliedCoupon] = useState<Coupon | null>(null);
 	const [couponError, setCouponError] = useState<string | null>(null);
-	const [paymentMethod, setPaymentMethod] = useState<"wallet" | "chapa">(
+	const [paymentMethod, setPaymentMethod] = useState<"wallet" | "telebirr">(
 		"wallet",
 	);
 	const [payDialogOpen, setPayDialogOpen] = useState(false);
 	const [customConfirmOpen, setCustomConfirmOpen] = useState(false);
 	const [savedAddresses, setSavedAddresses] = useState<CustomerAddress[]>([]);
-	const [payConfig, setPayConfig] = useState<PaymentMethodsConfig | null>(null);
 	const [step, setStep] = useState<1 | 2>(1);
 	const walletBalance = Number(user?.customer?.walletAmount ?? 0) || 0;
 
@@ -255,10 +254,6 @@ function BookServiceForm() {
 
 	useEffect(() => {
 		void fetchPublicCoupons().then((res) => setCoupons(res.coupons));
-	}, []);
-
-	useEffect(() => {
-		void fetchPaymentMethodsConfig().then(setPayConfig);
 	}, []);
 
 	useEffect(() => {
@@ -326,15 +321,13 @@ function BookServiceForm() {
 	const discount = couponAmount;
 
 	const walletAffordable = walletBalance >= dueNow;
-	const chapaEnabled = !payConfig || payConfig.chapaEnabled;
 	const isFixedService =
 		(service?.type ?? "").trim().toLowerCase() === "fixed";
 	const paymentOptions = useMemo(() => {
-		const options: Array<"wallet" | "chapa"> = [];
-		if (walletAffordable) options.push("wallet");
-		if (chapaEnabled) options.push("chapa");
+		const options: Array<"wallet" | "telebirr"> = ["telebirr"];
+		if (walletAffordable) options.unshift("wallet");
 		return options;
-	}, [walletAffordable, chapaEnabled]);
+	}, [walletAffordable]);
 
 	useEffect(() => {
 		if (paymentOptions.includes(paymentMethod)) return;
@@ -344,7 +337,7 @@ function BookServiceForm() {
 
 	const paymentLabels = {
 		wallet: t("paymentWallet"),
-		chapa: t("paymentChapa"),
+		telebirr: t("paymentTelebirr"),
 	} as const;
 
 	function descriptionErrorMessage(
@@ -562,11 +555,11 @@ function BookServiceForm() {
 			userId: user.id,
 			accountType: "customer",
 			amount: String(dueNow),
-			gateway: "chapa",
+			gateway: "telebirr",
 			bookingId: res.bookingId,
 		});
 		setBusy(false);
-		const payRes = await fetch("/api/pay/chapa", {
+		const payRes = await fetch("/api/pay/telebirr", {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
 			body: JSON.stringify({
@@ -578,15 +571,18 @@ function BookServiceForm() {
 				purpose: "booking",
 				return_path: `/pay/done?purpose=booking&amount=${dueNow}`,
 				booking_id: res.bookingId,
+				mode: getTelebirrPayMode(),
 			}),
 		});
 		const payData = (await payRes.json()) as {
 			checkout_url?: string;
+			raw_request?: string;
 			tx_ref?: string;
+			mode?: "h5" | "miniapp";
 			error?: string;
 		};
-		if (!payRes.ok || !payData.checkout_url) {
-			setError(payData.error || t("bookServiceChapaFailed"));
+		if (!payRes.ok || (!payData.checkout_url && !payData.raw_request)) {
+			setError(payData.error || t("bookServiceTelebirrFailed"));
 			return;
 		}
 		if (payData.tx_ref) {
@@ -595,12 +591,17 @@ function BookServiceForm() {
 				userId: user.id,
 				accountType: "customer",
 				amount: String(dueNow),
-				gateway: "chapa",
+				gateway: "telebirr",
 				bookingId: res.bookingId,
 				txRef: payData.tx_ref,
 			});
 		}
-		window.location.href = payData.checkout_url;
+		const launched = await launchTelebirrPayment(payData, {
+			donePath: `/pay/done?purpose=booking&amount=${dueNow}&tx_ref=${encodeURIComponent(payData.tx_ref ?? "")}`,
+		});
+		if (!launched.ok && !launched.canceled) {
+			setError(launched.error || t("bookServiceTelebirrFailed"));
+		}
 	}
 
 	if (loading || !user) return <ServiceLoading />;
@@ -1274,36 +1275,36 @@ function BookServiceForm() {
 									</span>
 								</button>
 							) : null}
-							{paymentOptions.includes("chapa") ? (
+							{paymentOptions.includes("telebirr") ? (
 								<button
 									type="button"
-									onClick={() => setPaymentMethod("chapa")}
+									onClick={() => setPaymentMethod("telebirr")}
 									className={cn(
 										"flex w-full items-center gap-3 rounded-[10px] bg-[#f5f5f5] px-3 py-3 text-left",
-										paymentMethod === "chapa"
+										paymentMethod === "telebirr"
 											? "ring-1 ring-primary"
 											: "ring-1 ring-transparent",
 									)}
 								>
 									<Image
-										src="/payments/chapa.png"
+										src="/marketing/partners/telebirr.png"
 										alt=""
 										width={46}
 										height={46}
 										className="size-11 object-contain"
 									/>
 									<span className="min-w-0 flex-1 text-[15px] font-medium text-[#1a1a1a]">
-										{paymentLabels.chapa}
+										{paymentLabels.telebirr}
 									</span>
 									<span
 										className={cn(
 											"flex size-5 items-center justify-center rounded-full border-2",
-											paymentMethod === "chapa"
+											paymentMethod === "telebirr"
 												? "border-primary"
 												: "border-[#c8c8c8]",
 										)}
 									>
-										{paymentMethod === "chapa" ? (
+										{paymentMethod === "telebirr" ? (
 											<span className="size-2.5 rounded-full bg-primary" />
 										) : null}
 									</span>
