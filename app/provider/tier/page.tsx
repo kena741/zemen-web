@@ -27,9 +27,7 @@ import {
 import { useAuth } from "@/store/useAuth";
 
 function tierKey(tier: ServiceTier): string {
-	return tier.planId != null
-		? `plan-${tier.planId}`
-		: `tier-${tier.max_services}-${tier.total_price}`;
+	return `tier-${tier.max_services}-${tier.total_price}`;
 }
 
 export default function ProviderTierPage() {
@@ -79,12 +77,7 @@ export default function ProviderTierPage() {
 		null;
 
 	const payAmount = selected
-		? tierUpgradeAmount(
-				tiers,
-				currentMax,
-				selected.max_services,
-				selected.planId,
-			)
+		? tierUpgradeAmount(tiers, currentMax, selected.max_services)
 		: 0;
 
 	const isUpgrade = currentMax !== 0;
@@ -158,7 +151,6 @@ export default function ProviderTierPage() {
 									tiers,
 									currentMax,
 									tier.max_services,
-									tier.planId,
 								);
 								const key = tierKey(tier);
 								const isSelected = selected
@@ -255,7 +247,6 @@ export default function ProviderTierPage() {
 									accountType="provider"
 									userId={user?.id ?? ""}
 									providerId={providerId}
-									planId={selected?.planId}
 									amount={String(payAmount)}
 									fromTierMax={currentMax}
 									toTierMax={selected?.max_services}
