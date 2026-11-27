@@ -118,12 +118,6 @@ export function ServiceAppLayout({
 								</Link>
 							);
 						})}
-						<Link
-							href="/home"
-							className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-						>
-							{t("navWebsite")}
-						</Link>
 					</nav>
 				</div>
 			</header>

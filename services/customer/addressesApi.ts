@@ -1,3 +1,5 @@
+import { apiFetch } from "@/lib/backend/client";
+import { isBackendMode } from "@/lib/env";
 import { getSupabase } from "@/lib/supabase/client";
 
 export interface CustomerAddress {
@@ -28,12 +30,24 @@ function normalizeAddress(row: Record<string, unknown>): CustomerAddress {
 }
 
 function pickAddressList(row: Record<string, unknown>): unknown {
-	// Mobile persists as customer_addresses (and sometimes address)
 	return (
 		row.customer_addresses ??
+		row.customerAddresses ??
 		row.address ??
 		row.add_addresses ??
 		row.addAddresses
+	);
+}
+
+function addressesFromCustomerRow(row: Record<string, unknown>): CustomerAddress[] {
+	const raw = pickAddressList(row);
+	if (!Array.isArray(raw)) return [];
+	return raw.map((item) =>
+		normalizeAddress(
+			item && typeof item === "object"
+				? (item as Record<string, unknown>)
+				: {},
+		),
 	);
 }
 
@@ -41,6 +55,20 @@ export async function fetchCustomerAddresses(
 	customerId: string,
 	authUserId?: string,
 ): Promise<{ addresses: CustomerAddress[]; error: string | null }> {
+	if (isBackendMode()) {
+		try {
+			const row = await apiFetch<Record<string, unknown>>("/customers/me", {
+				auth: true,
+			});
+			return { addresses: addressesFromCustomerRow(row), error: null };
+		} catch (e) {
+			return {
+				addresses: [],
+				error: e instanceof Error ? e.message : "Failed to load addresses",
+			};
+		}
+	}
+
 	const filter = authUserId
 		? `id.eq.${customerId},user_id.eq.${authUserId}`
 		: `id.eq.${customerId}`;
@@ -52,17 +80,8 @@ export async function fetchCustomerAddresses(
 		.maybeSingle();
 
 	if (error) return { addresses: [], error: error.message };
-	const row = (data ?? {}) as Record<string, unknown>;
-	const raw = pickAddressList(row);
-	if (!Array.isArray(raw)) return { addresses: [], error: null };
 	return {
-		addresses: raw.map((item) =>
-			normalizeAddress(
-				item && typeof item === "object"
-					? (item as Record<string, unknown>)
-					: {},
-			),
-		),
+		addresses: addressesFromCustomerRow((data ?? {}) as Record<string, unknown>),
 		error: null,
 	};
 }
@@ -77,7 +96,26 @@ export async function saveCustomerAddresses(params: {
 		params.addresses[0]?.id ??
 		null;
 
-	// Match mobile CustomerModel.toJson keys
+	if (isBackendMode()) {
+		try {
+			await apiFetch("/customers/me", {
+				method: "PATCH",
+				auth: true,
+				body: {
+					customerAddresses: params.addresses,
+					address: params.addresses,
+					defaultAddress: defaultId,
+				},
+			});
+			return { ok: true, error: null };
+		} catch (e) {
+			return {
+				ok: false,
+				error: e instanceof Error ? e.message : "Failed to save addresses",
+			};
+		}
+	}
+
 	const payload = {
 		customer_addresses: params.addresses,
 		address: params.addresses,

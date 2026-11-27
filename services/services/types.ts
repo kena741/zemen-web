@@ -122,6 +122,31 @@ function parseLocation(raw: unknown): {
 	};
 }
 
+function nestedProvider(
+	row: Record<string, unknown>,
+): Record<string, unknown> | null {
+	const raw = row.providerModel ?? row.provider;
+	if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+	return raw as Record<string, unknown>;
+}
+
+function resolveProviderName(row: Record<string, unknown>): string | null {
+	const nested = nestedProvider(row);
+	const fromParts = [nested?.firstName, nested?.lastName]
+		.filter(Boolean)
+		.join(" ")
+		.trim();
+	return asString(
+		row.providerName ??
+			row.provider_name ??
+			nested?.fullName ??
+			nested?.full_name ??
+			(fromParts || null) ??
+			nested?.userName ??
+			nested?.firstName,
+	);
+}
+
 export function mapServiceRow(row: Record<string, unknown>): ProviderService {
 	const images = Array.isArray(row.serviceImage)
 		? [...new Set(row.serviceImage.map(String).filter(Boolean))]
@@ -135,6 +160,7 @@ export function mapServiceRow(row: Record<string, unknown>): ProviderService {
 		row.subCategoryModel && typeof row.subCategoryModel === "object"
 			? (row.subCategoryModel as Record<string, unknown>)
 			: null;
+	const provider = nestedProvider(row);
 
 	return {
 		id: String(row.id ?? ""),
@@ -179,12 +205,12 @@ export function mapServiceRow(row: Record<string, unknown>): ProviderService {
 		),
 		createdAt: asString(row.createdAt),
 		slug: asString(row.slug),
-		providerName: asString(
-			(row.providerModel as Record<string, unknown> | undefined)?.userName ??
-				(row.providerModel as Record<string, unknown> | undefined)?.firstName,
-		),
+		providerName: resolveProviderName(row),
 		providerImage: asString(
-			(row.providerModel as Record<string, unknown> | undefined)?.profileImage,
+			row.providerImage ??
+				row.provider_image ??
+				provider?.profileImage ??
+				provider?.profile_image,
 		),
 		pricingType: parsePricingType(row),
 		billingInterval: asString(row.billing_interval ?? row.billingInterval),

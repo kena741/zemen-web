@@ -1,4 +1,6 @@
+import { apiFetch } from "@/lib/backend/client";
 import { BOOKING_STATUS } from "@/lib/booking-status";
+import { isBackendMode } from "@/lib/env";
 import { getSupabase } from "@/lib/supabase/client";
 import {
 	canCreateServiceListing,
@@ -36,6 +38,27 @@ export async function fetchProviderServices(
 		return { services: [], error: "Missing provider id" };
 	}
 
+	if (isBackendMode()) {
+		try {
+			const rows = await apiFetch<
+				Record<string, unknown>[] | { items?: Record<string, unknown>[] }
+			>("/providers/me/services", {
+				auth: true,
+				query: { includeArchived: true },
+			});
+			const list = Array.isArray(rows) ? rows : (rows.items ?? []);
+			return {
+				services: list.map((row) => mapServiceRow(row)),
+				error: null,
+			};
+		} catch (e) {
+			return {
+				services: [],
+				error: e instanceof Error ? e.message : "Failed to load services",
+			};
+		}
+	}
+
 	let { data, error } = await getSupabase()
 		.from("service")
 		.select("*")
@@ -69,6 +92,21 @@ export async function fetchServiceById(
 ): Promise<{ service: ProviderService | null; error: string | null }> {
 	if (!id) return { service: null, error: "Missing service id" };
 
+	if (isBackendMode()) {
+		try {
+			const row = await apiFetch<Record<string, unknown>>(
+				`/providers/me/services/${id}`,
+				{ auth: true },
+			);
+			return { service: mapServiceRow(row), error: null };
+		} catch (e) {
+			return {
+				service: null,
+				error: e instanceof Error ? e.message : "Service not found",
+			};
+		}
+	}
+
 	const { data, error } = await getSupabase()
 		.from("service")
 		.select("*")
@@ -90,6 +128,25 @@ export async function setServiceActive(params: {
 	serviceId: string;
 	active: boolean;
 }): Promise<{ ok: boolean; error: string | null }> {
+	if (isBackendMode()) {
+		try {
+			await apiFetch(`/providers/me/services/${params.serviceId}`, {
+				method: "PATCH",
+				auth: true,
+				body: {
+					status: params.active,
+					active: params.active,
+				},
+			});
+			return { ok: true, error: null };
+		} catch (e) {
+			return {
+				ok: false,
+				error: e instanceof Error ? e.message : "Update failed",
+			};
+		}
+	}
+
 	const payload = params.active
 		? { status: true, isArchived: false }
 		: { status: false, isArchived: false };
@@ -129,6 +186,13 @@ export async function fetchCategories(): Promise<{
 	categories: ServiceCategory[];
 	error: string | null;
 }> {
+	if (isBackendMode()) {
+		const { fetchCategories: fetchCatalogCategories } = await import(
+			"@/services/catalog/backend"
+		);
+		return fetchCatalogCategories();
+	}
+
 	const { data, error } = await getSupabase()
 		.from("category")
 		.select("*")
@@ -158,6 +222,13 @@ export async function fetchSubCategories(
 	categoryId: string,
 ): Promise<{ subCategories: ServiceSubCategory[]; error: string | null }> {
 	if (!categoryId) return { subCategories: [], error: null };
+
+	if (isBackendMode()) {
+		const { fetchSubCategories: fetchCatalogSubs } = await import(
+			"@/services/catalog/backend"
+		);
+		return fetchCatalogSubs(categoryId);
+	}
 
 	const { data, error } = await getSupabase()
 		.from("sub_category")
@@ -316,31 +387,16 @@ export async function upsertService(params: {
 			freeCats,
 		);
 		if (!categoryIsFree) {
-			const { data: existing, error: countErr } = await getSupabase()
-				.from("service")
-				.select("id, isArchived, categoryId, categoryModel")
-				.eq("provider_id", params.input.providerId);
-			if (countErr) {
-				console.error("upsertService count", countErr);
-				return { serviceId: null, error: countErr.message };
+			const listed = await fetchProviderServices(params.input.providerId);
+			if (listed.error) {
+				return { serviceId: null, error: listed.error };
 			}
 			const planUsage = countPlanUsageServices(
-				(existing ?? []).map((row) => {
-					const r = row as Record<string, unknown>;
-					const model =
-						r.categoryModel && typeof r.categoryModel === "object"
-							? (r.categoryModel as Record<string, unknown>)
-							: null;
-					return {
-						archived: Boolean(r.isArchived),
-						categoryId:
-							r.categoryId != null ? String(r.categoryId) : null,
-						categoryName:
-							model?.categoryName != null
-								? String(model.categoryName)
-								: null,
-					};
-				}),
+				listed.services.map((s) => ({
+					archived: s.archived,
+					categoryId: s.categoryId,
+					categoryName: s.categoryName,
+				})),
 				freeCats,
 			);
 			if (
@@ -370,6 +426,64 @@ export async function upsertService(params: {
 	const id = params.input.id?.trim() || crypto.randomUUID();
 	const lat = params.input.latitude ?? 0;
 	const lng = params.input.longitude ?? 0;
+
+	if (isBackendMode()) {
+		const body: Record<string, unknown> = {
+			serviceName: params.input.serviceName.trim(),
+			categoryId: params.input.categoryId,
+			categoryName: params.input.categoryName,
+			subCategoryId: params.input.subCategoryId,
+			subCategoryName: params.input.subCategoryName,
+			type: "Fixed",
+			serviceLocationMode: "onsite",
+			price: Number(params.input.price),
+			address: params.input.address.trim(),
+			discount: params.input.discount.trim() || "0",
+			description: params.input.description.trim(),
+			duration: "00:00",
+			prePayment: params.input.prePayment ?? true,
+			prePaymentPercent:
+				params.input.prePaymentPercent != null
+					? Number(params.input.prePaymentPercent)
+					: 100,
+			allowsCustomOffer: Boolean(params.input.allowsCustomOffer),
+			serviceImage: serviceImages,
+			location: { latitude: lat, longitude: lng },
+			position: {
+				geohash: "",
+				geopoint: { latitude: lat, longitude: lng },
+			},
+			billingInterval: params.input.billingInterval ?? "MONTH",
+			billingIntervalCount: params.input.billingIntervalCount ?? 1,
+		};
+		try {
+			if (params.isEdit) {
+				body.status = params.input.status;
+				const row = await apiFetch<Record<string, unknown>>(
+					`/providers/me/services/${id}`,
+					{ method: "PATCH", auth: true, body },
+				);
+				return {
+					serviceId: row.id != null ? String(row.id) : id,
+					error: null,
+				};
+			}
+			const row = await apiFetch<Record<string, unknown>>(
+				"/providers/me/services",
+				{ method: "POST", auth: true, body },
+			);
+			return {
+				serviceId: row.id != null ? String(row.id) : id,
+				error: null,
+			};
+		} catch (e) {
+			return {
+				serviceId: null,
+				error: e instanceof Error ? e.message : "Failed to save service",
+			};
+		}
+	}
+
 	const slug =
 		params.input.slug ||
 		generateServiceSlug(
@@ -442,6 +556,10 @@ export async function upsertService(params: {
 export async function deleteService(
 	serviceId: string,
 ): Promise<{ ok: boolean; error: string | null }> {
+	if (isBackendMode()) {
+		return setServiceActive({ serviceId, active: false });
+	}
+
 	const { data, error } = await getSupabase()
 		.from("service")
 		.update({ status: false, isArchived: true })
@@ -479,6 +597,30 @@ export async function serviceHasActiveBookings(
 	serviceId: string,
 ): Promise<{ hasActive: boolean; error: string | null }> {
 	if (!serviceId) return { hasActive: false, error: "Missing service id" };
+
+	if (isBackendMode()) {
+		try {
+			const page = await apiFetch<
+				{ items?: Record<string, unknown>[] } | Record<string, unknown>[]
+			>("/bookings/provider", {
+				auth: true,
+				query: { limit: 100 },
+			});
+			const rows = Array.isArray(page) ? page : (page.items ?? []);
+			const active = new Set<string>(ACTIVE_BOOKING_STATUSES);
+			const hasActive = rows.some((row) => {
+				const sid = String(row.serviceId ?? row.service_id ?? "");
+				const status = String(row.status ?? "").toLowerCase();
+				return sid === serviceId && active.has(status);
+			});
+			return { hasActive, error: null };
+		} catch (e) {
+			return {
+				hasActive: false,
+				error: e instanceof Error ? e.message : "Failed to check bookings",
+			};
+		}
+	}
 
 	const supabase = getSupabase();
 	let { count, error } = await supabase
@@ -526,6 +668,21 @@ export async function hardDeleteService(
 		};
 	}
 
+	if (isBackendMode()) {
+		try {
+			await apiFetch(`/providers/me/services/${serviceId}`, {
+				method: "DELETE",
+				auth: true,
+			});
+			return { ok: true, error: null };
+		} catch (e) {
+			return {
+				ok: false,
+				error: e instanceof Error ? e.message : "Delete failed",
+			};
+		}
+	}
+
 	const { data, error } = await getSupabase()
 		.from("service")
 		.delete()
@@ -547,10 +704,37 @@ export async function hardDeleteService(
 	return { ok: true, error: null };
 }
 
+function parseFeaturedFee(map: Record<string, unknown>): number {
+	const primary = String(
+		map.provider_service_featured_request_fee_amount ?? "",
+	).trim();
+	const fallback = String(map.featured_price ?? "").trim();
+	const parsed = Number(primary || fallback);
+	return !Number.isNaN(parsed) && parsed > 0 ? parsed : 0;
+}
+
 export async function getFeaturedRequestFee(): Promise<{
 	fee: number;
 	error: string | null;
 }> {
+	if (isBackendMode()) {
+		try {
+			const row = await apiFetch<Record<string, unknown>>(
+				"/config/settings/constant",
+			);
+			const raw =
+				row.data && typeof row.data === "object"
+					? (row.data as Record<string, unknown>)
+					: row;
+			return { fee: parseFeaturedFee(raw), error: null };
+		} catch (e) {
+			return {
+				fee: 0,
+				error: e instanceof Error ? e.message : "Failed to load fee",
+			};
+		}
+	}
+
 	const { data, error } = await getSupabase()
 		.from("app_settings")
 		.select("data")
@@ -564,15 +748,8 @@ export async function getFeaturedRequestFee(): Promise<{
 
 	const rawData = data?.data;
 	if (!rawData || typeof rawData !== "object") return { fee: 0, error: null };
-	const map = rawData as Record<string, unknown>;
-	const primary = String(
-		map.provider_service_featured_request_fee_amount ?? "",
-	).trim();
-	const fallback = String(map.featured_price ?? "").trim();
-	const raw = primary || fallback;
-	const parsed = Number(raw);
 	return {
-		fee: !Number.isNaN(parsed) && parsed > 0 ? parsed : 0,
+		fee: parseFeaturedFee(rawData as Record<string, unknown>),
 		error: null,
 	};
 }
@@ -592,6 +769,16 @@ export async function requestServiceFeatured(
 			fee: feeRes.fee,
 			requiresPayment: true,
 			error: null,
+		};
+	}
+
+	if (isBackendMode()) {
+		// ponytail: BE has request_featured in service layer but no public route yet;
+		// paid featured flow covers staging. Free request needs BE endpoint.
+		return {
+			ok: false,
+			fee: 0,
+			error: "Featured request requires a configured fee on this environment.",
 		};
 	}
 

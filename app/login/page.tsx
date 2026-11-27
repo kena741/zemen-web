@@ -76,13 +76,7 @@ function LoginForm() {
 				setEmailOrPhone(parsed.emailOrPhone);
 				setRememberMe(true);
 			}
-			// ponytail: drop legacy password storage; identifier only
-			if (parsed.password) {
-				window.localStorage.setItem(
-					REMEMBER_KEY,
-					JSON.stringify({ emailOrPhone: parsed.emailOrPhone ?? "" }),
-				);
-			}
+			if (parsed.password) setPassword(parsed.password);
 		} catch {
 			/* ignore */
 		}
@@ -113,7 +107,7 @@ function LoginForm() {
 			if (rememberMe) {
 				window.localStorage.setItem(
 					REMEMBER_KEY,
-					JSON.stringify({ emailOrPhone }),
+					JSON.stringify({ emailOrPhone, password }),
 				);
 			} else {
 				window.localStorage.removeItem(REMEMBER_KEY);

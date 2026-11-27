@@ -49,23 +49,28 @@ export async function createCustomerBooking(
 			method: "POST",
 			auth: true,
 			body: {
-				provider_id: input.providerId,
-				service_id: input.serviceId,
-				first_name: input.firstName,
-				last_name: input.lastName,
-				phone_number: input.phoneNumber,
-				booking_date: input.bookingDate,
-				start_time: input.startTime,
+				providerId: input.providerId,
+				serviceId: input.serviceId,
+				firstName: input.firstName,
+				lastName: input.lastName,
+				phoneNumber: input.phoneNumber,
+				bookingDate: input.bookingDate,
+				startTime: input.startTime,
 				quantity: input.quantity ?? 1,
 				description: input.description ?? "",
-				booking_address: input.address
+				bookingAddress: input.address
 					? { address: input.address, location: input.location ?? null }
 					: null,
-				payment_type: input.paymentType ?? null,
+				paymentType: input.paymentType ?? null,
 				price: input.price,
-				payment_completed: input.paymentCompleted ?? false,
-				// ponytail: BE schema default is "pending"; DB enum is pending_payment
-				payment_status: "pending_payment",
+				subTotal: input.subTotal ?? null,
+				totalAmount: input.totalAmount ?? null,
+				discount:
+					input.discount != null ? String(input.discount) : null,
+				postJob: input.postJob ?? false,
+				serviceDetails: input.serviceDetails ?? null,
+				paymentCompleted: false,
+				paymentStatus: "pending_payment",
 			},
 		});
 		return {
@@ -76,6 +81,42 @@ export async function createCustomerBooking(
 		return {
 			bookingId: null,
 			error: e instanceof Error ? e.message : "Failed to create booking",
+		};
+	}
+}
+
+export async function payBookingWithWallet(params: {
+	bookingId: string;
+	amount: number;
+	extraPayment?: boolean;
+	remainingBalance?: boolean;
+	fullObligation?: number;
+}): Promise<{ ok: boolean; newBalance: number | null; error: string | null }> {
+	try {
+		const row = await apiFetch<Record<string, unknown>>(
+			`/bookings/${params.bookingId}/pay-wallet`,
+			{
+				method: "POST",
+				auth: true,
+				body: {
+					extraPayment: params.extraPayment ?? false,
+					remainingBalance: params.remainingBalance ?? false,
+					fullObligation: params.fullObligation ?? null,
+				},
+			},
+		);
+		const balance =
+			typeof row.newBalance === "number"
+				? row.newBalance
+				: typeof row.new_balance === "number"
+					? row.new_balance
+					: null;
+		return { ok: true, newBalance: balance, error: null };
+	} catch (e) {
+		return {
+			ok: false,
+			newBalance: null,
+			error: e instanceof Error ? e.message : "Wallet payment failed",
 		};
 	}
 }

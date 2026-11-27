@@ -1,3 +1,5 @@
+import { apiFetch } from "@/lib/backend/client";
+import { isBackendMode } from "@/lib/env";
 import { getSupabase } from "@/lib/supabase/client";
 
 export type Coupon = {
@@ -24,10 +26,10 @@ export function mapCouponRow(row: Record<string, unknown>): Coupon {
 		title: row.title != null ? String(row.title) : null,
 		code: row.code != null ? String(row.code) : null,
 		amount: Number(row.amount ?? 0) || 0,
-		minAmount: Number(row.minAmount ?? 0) || 0,
-		isFix: row.isFix === true,
+		minAmount: Number(row.minAmount ?? row.min_amount ?? 0) || 0,
+		isFix: row.isFix === true || row.is_fix === true,
 		active: row.active === true,
-		isPrivate: row.isPrivate === true,
+		isPrivate: row.isPrivate === true || row.is_private === true,
 		expireAt: parseExpire(
 			row.expiredAt ?? row.expireAt ?? row.expire_at,
 		),
@@ -53,6 +55,23 @@ export async function fetchPublicCoupons(): Promise<{
 	coupons: Coupon[];
 	error: string | null;
 }> {
+	if (isBackendMode()) {
+		try {
+			const rows = await apiFetch<Record<string, unknown>[]>(
+				"/catalog/coupons",
+			);
+			const coupons = (rows ?? [])
+				.map((r) => mapCouponRow(r))
+				.filter(isCouponAvailable);
+			return { coupons, error: null };
+		} catch (e) {
+			return {
+				coupons: [],
+				error: e instanceof Error ? e.message : "Failed to load coupons",
+			};
+		}
+	}
+
 	const { data, error } = await getSupabase().from("coupon").select("*");
 	if (error) {
 		console.error("fetchPublicCoupons", error);
@@ -69,6 +88,21 @@ export async function fetchCouponByCode(
 ): Promise<{ coupon: Coupon | null; error: string | null }> {
 	const trimmed = code.trim();
 	if (!trimmed) return { coupon: null, error: "Enter a coupon code." };
+
+	if (isBackendMode()) {
+		try {
+			const row = await apiFetch<Record<string, unknown>>(
+				`/catalog/coupons/by-code/${encodeURIComponent(trimmed)}`,
+			);
+			const coupon = mapCouponRow(row);
+			if (!isCouponAvailable(coupon)) {
+				return { coupon: null, error: "Coupon not found or expired." };
+			}
+			return { coupon, error: null };
+		} catch {
+			return { coupon: null, error: "Coupon not found or expired." };
+		}
+	}
 
 	const { data, error } = await getSupabase()
 		.from("coupon")

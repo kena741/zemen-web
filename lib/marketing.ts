@@ -1,5 +1,5 @@
 export const SHORT_CODE = "8323";
-export const TELEGRAM_URL = "https://t.me/zemenservicediscussion";
+export const TELEGRAM_URL = "https://t.me/zemenserv";
 /** E.164 without + for wa.me links */
 export const WHATSAPP_PHONE = "251951175959";
 export const WHATSAPP_DISPLAY = "+251 951 175 959";

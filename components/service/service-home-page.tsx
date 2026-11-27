@@ -12,7 +12,6 @@ import {
 } from "react";
 import {
 	BellIcon,
-	GlobeIcon,
 	HeartIcon,
 	MapPinIcon,
 	MessagesSquareIcon,
@@ -172,40 +171,31 @@ export function ServiceHomePage() {
 								</>
 							) : null}
 						</div>
-						<div className="flex shrink-0 items-center gap-1">
-							<Link
-								href="/home"
-								className="rounded-full p-2 hover:bg-white/10"
-								aria-label={t("navWebsite")}
-							>
-								<GlobeIcon className="size-5" />
-							</Link>
-							{!isGuestBrowse ? (
-								<>
-									<Link
-										href="/service/favorites"
-										className="rounded-full p-2 hover:bg-white/10"
-										aria-label={t("favoritesTitle")}
-									>
-										<HeartIcon className="size-5" />
-									</Link>
-									<Link
-										href="/service/inbox"
-										className="rounded-full p-2 hover:bg-white/10"
-										aria-label={t("inboxTitle")}
-									>
-										<MessagesSquareIcon className="size-5" />
-									</Link>
-									<Link
-										href="/service/notifications"
-										className="rounded-full p-2 hover:bg-white/10"
-										aria-label={t("notificationsTitle")}
-									>
-										<BellIcon className="size-5" />
-									</Link>
-								</>
-							) : null}
-						</div>
+						{!isGuestBrowse ? (
+							<div className="flex shrink-0 items-center gap-1">
+								<Link
+									href="/service/favorites"
+									className="rounded-full p-2 hover:bg-white/10"
+									aria-label={t("favoritesTitle")}
+								>
+									<HeartIcon className="size-5" />
+								</Link>
+								<Link
+									href="/service/inbox"
+									className="rounded-full p-2 hover:bg-white/10"
+									aria-label={t("inboxTitle")}
+								>
+									<MessagesSquareIcon className="size-5" />
+								</Link>
+								<Link
+									href="/service/notifications"
+									className="rounded-full p-2 hover:bg-white/10"
+									aria-label={t("notificationsTitle")}
+								>
+									<BellIcon className="size-5" />
+								</Link>
+							</div>
+						) : null}
 					</div>
 
 					<div className="relative mt-3">
@@ -260,14 +250,7 @@ export function ServiceHomePage() {
 								size="md"
 							/>
 						</div>
-					) : (
-						<Link
-							href="/home"
-							className="rounded-lg border border-border bg-white px-3 py-2 text-sm"
-						>
-							{t("navWebsite")}
-						</Link>
-					)}
+					) : null}
 				</div>
 				<div className="relative mt-4 max-w-md">
 					<SearchIcon className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />

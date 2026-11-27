@@ -407,11 +407,10 @@ export default function ServiceDetailPage() {
 												/>
 											))}
 											<span className="text-[13px] text-[#6B6B6B]">
-												{rating.toFixed(1)} (
+												{rating.toFixed(1)}{" "}
 												{t("serviceReviewCount", {
 													count: String(service.reviewCount ?? 0),
 												})}
-												)
 											</span>
 										</div>
 									) : (

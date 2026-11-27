@@ -1,3 +1,5 @@
+import { apiFetch } from "@/lib/backend/client";
+import { isBackendMode } from "@/lib/env";
 import { getSupabase } from "@/lib/supabase/client";
 import { mapBankRow, type BankMethod } from "./types";
 
@@ -8,10 +10,43 @@ function ownerIds(authUserId: string, providerId: string | null): string[] {
 	return [...ids];
 }
 
+function mapApiBank(row: Record<string, unknown>): BankMethod {
+	return mapBankRow({
+		...row,
+		providerID: row.providerID ?? row.providerId ?? row.provider_id,
+		method_type: row.method_type ?? row.methodType ?? "bank",
+		method_code: row.method_code ?? row.methodCode,
+		method_name: row.method_name ?? row.methodName,
+		is_active: row.is_active ?? row.isActive,
+		is_default: row.is_default ?? row.isDefault,
+	});
+}
+
 export async function fetchBankMethods(params: {
 	authUserId: string;
 	providerId: string | null;
 }): Promise<{ banks: BankMethod[]; error: string | null }> {
+	if (isBackendMode()) {
+		try {
+			const page = await apiFetch<
+				| { items?: Record<string, unknown>[]; data?: Record<string, unknown>[] }
+				| Record<string, unknown>[]
+			>("/wallet/payment-methods", { auth: true });
+			const rows = Array.isArray(page)
+				? page
+				: (page.items ?? page.data ?? []);
+			return {
+				banks: rows.map((row) => mapApiBank(row)),
+				error: null,
+			};
+		} catch (e) {
+			return {
+				banks: [],
+				error: e instanceof Error ? e.message : "Failed to load banks",
+			};
+		}
+	}
+
 	const ids = ownerIds(params.authUserId, params.providerId);
 	if (!ids.length) return { banks: [], error: "Missing user id" };
 
@@ -47,7 +82,6 @@ export async function saveBankMethod(params: {
 	/** When omitted: true for create, false for update (preserves current default). */
 	setAsDefault?: boolean;
 }): Promise<{ ok: boolean; error: string | null }> {
-	const providerID = params.authUserId;
 	const bankName = params.bankName.trim();
 	const methodName = bankName || "Bank";
 	const methodCode = methodName.toLowerCase().replace(/\s+/g, "_");
@@ -56,8 +90,38 @@ export async function saveBankMethod(params: {
 		return { ok: false, error: "Account number is required" };
 	}
 
-	const supabase = getSupabase();
 	const setAsDefault = params.setAsDefault ?? !params.id;
+
+	if (isBackendMode()) {
+		try {
+			await apiFetch("/wallet/payment-methods", {
+				method: "POST",
+				auth: true,
+				body: {
+					bankName: bankName || null,
+					accountNumber,
+					holderName: params.holderName.trim(),
+					swiftCode: params.swiftCode?.trim() || null,
+					branchCity: params.branchCity?.trim() || null,
+					branchCountry: params.branchCountry?.trim() || null,
+					methodType: "bank",
+					methodCode,
+					methodName,
+					isDefault: setAsDefault,
+					isActive: true,
+				},
+			});
+			return { ok: true, error: null };
+		} catch (e) {
+			return {
+				ok: false,
+				error: e instanceof Error ? e.message : "Failed to save bank",
+			};
+		}
+	}
+
+	const providerID = params.authUserId;
+	const supabase = getSupabase();
 
 	if (setAsDefault) {
 		await supabase
@@ -119,6 +183,35 @@ export async function setDefaultBankMethod(params: {
 	authUserId: string;
 	bankId: string;
 }): Promise<{ ok: boolean; error: string | null }> {
+	if (isBackendMode()) {
+		// ponytail: wallet payment-methods API has no dedicated default PATCH; recreate via POST body.
+		try {
+			const { banks, error } = await fetchBankMethods({
+				authUserId: params.authUserId,
+				providerId: null,
+			});
+			if (error) return { ok: false, error };
+			const bank = banks.find((b) => b.id === params.bankId);
+			if (!bank) return { ok: false, error: "Bank method not found" };
+			return saveBankMethod({
+				authUserId: params.authUserId,
+				id: bank.id,
+				holderName: bank.holderName ?? "",
+				accountNumber: bank.accountNumber ?? "",
+				bankName: bank.bankName ?? bank.methodName ?? "Bank",
+				swiftCode: bank.swiftCode ?? undefined,
+				branchCity: bank.branchCity ?? undefined,
+				branchCountry: bank.branchCountry ?? undefined,
+				setAsDefault: true,
+			});
+		} catch (e) {
+			return {
+				ok: false,
+				error: e instanceof Error ? e.message : "Failed to set default",
+			};
+		}
+	}
+
 	const supabase = getSupabase();
 	await supabase
 		.from("provider_payment_methods")
@@ -137,6 +230,21 @@ export async function setDefaultBankMethod(params: {
 export async function deleteBankMethod(
 	bankId: string,
 ): Promise<{ ok: boolean; error: string | null }> {
+	if (isBackendMode()) {
+		try {
+			await apiFetch(`/wallet/payment-methods/${bankId}`, {
+				method: "DELETE",
+				auth: true,
+			});
+			return { ok: true, error: null };
+		} catch (e) {
+			return {
+				ok: false,
+				error: e instanceof Error ? e.message : "Failed to delete bank",
+			};
+		}
+	}
+
 	const { error } = await getSupabase()
 		.from("provider_payment_methods")
 		.delete()

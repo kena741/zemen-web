@@ -62,6 +62,7 @@ import {
 	type CustomerAddress,
 } from "@/services/customer/addressesApi";
 import { useAppDispatch } from "@/store/hooks";
+import { patchAuthUser } from "@/store/authSlice";
 import { invalidateBookings } from "@/store/customerCacheSlice";
 import { useAuth } from "@/store/useAuth";
 import { useCachedServiceDetail } from "@/store/useCustomerCache";
@@ -421,7 +422,7 @@ function BookServiceForm() {
 
 		if (isCustomOffer) {
 			const offerRes = await createCustomerServiceOffer({
-				customerId: user.id,
+				customerId: customer.id,
 				serviceId: service.id,
 				providerId,
 				offeredPrice: total,
@@ -436,7 +437,7 @@ function BookServiceForm() {
 				return;
 			}
 			const bookRes = await createCustomerBooking({
-				customerId: user.id,
+				customerId: customer.id,
 				providerId,
 				serviceId: service.id,
 				firstName,
@@ -490,7 +491,7 @@ function BookServiceForm() {
 		}
 
 		const res = await createCustomerBooking({
-			customerId: user.id,
+			customerId: customer.id,
 			providerId,
 			serviceId: service.id,
 			firstName,
@@ -536,13 +537,23 @@ function BookServiceForm() {
 		if (paymentMethod === "wallet") {
 			const paid = await payBookingWithWallet({
 				bookingId: res.bookingId,
-				customerId: user.id,
+				customerId: customer.id,
 				amount: dueNow,
 			});
 			setBusy(false);
 			if (!paid.ok) {
 				setError(paid.error || t("bookServiceWalletFailed"));
 				return;
+			}
+			if (paid.newBalance != null) {
+				dispatch(
+					patchAuthUser({
+						customer: {
+							...customer,
+							walletAmount: String(paid.newBalance),
+						},
+					}),
+				);
 			}
 			await finishPostJobPaid();
 			dispatch(invalidateBookings());

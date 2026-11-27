@@ -221,12 +221,34 @@ export async function payBookingWithWallet(params: {
 		return { ok: false, newBalance: null, error: "Invalid amount." };
 	}
 
+	if (isBackendMode()) {
+		return backend.payBookingWithWallet({
+			bookingId: params.bookingId,
+			amount,
+			extraPayment: params.extraPayment,
+			remainingBalance: params.remainingBalance,
+			fullObligation: params.fullObligation,
+		});
+	}
+
 	const supabase = getSupabase();
-	const { data: customer, error: custErr } = await supabase
+	let customerId = params.customerId;
+	let { data: customer, error: custErr } = await supabase
 		.from("customer")
 		.select("id, wallet_amount")
-		.eq("id", params.customerId)
+		.eq("id", customerId)
 		.maybeSingle();
+
+	if (!customer) {
+		const byUser = await supabase
+			.from("customer")
+			.select("id, wallet_amount")
+			.eq("user_id", customerId)
+			.maybeSingle();
+		customer = byUser.data;
+		custErr = byUser.error;
+		if (customer) customerId = String((customer as { id: string }).id);
+	}
 
 	if (custErr || !customer) {
 		return {
@@ -256,7 +278,7 @@ export async function payBookingWithWallet(params: {
 		transactionId: params.bookingId,
 		note: "Service fee debited",
 		type: "customer",
-		userId: params.customerId,
+		userId: customerId,
 		isCredit: false,
 	});
 
@@ -270,7 +292,7 @@ export async function payBookingWithWallet(params: {
 		.update({
 			wallet_amount: String(newBalance),
 		})
-		.eq("id", params.customerId);
+		.eq("id", customerId);
 
 	if (walletErr) {
 		console.error("payBookingWithWallet wallet", walletErr);

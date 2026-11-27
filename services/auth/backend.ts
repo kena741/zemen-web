@@ -154,14 +154,30 @@ export async function buildAuthUser(
 
 export async function phoneAlreadyRegistered(
 	phone: string,
-	_mode: AppMode,
+	mode: AppMode,
 ): Promise<{ taken: boolean | null }> {
 	const local = normalizeLocalEthiopianPhone(phone);
 	if (local.length !== 9) return { taken: false };
-	// ponytail: no dedicated "phone taken" API; signup endpoint rejects duplicates
-	void local;
-	void _mode;
-	return { taken: false };
+
+	try {
+		if (mode === "provider") {
+			try {
+				await apiFetch("/providers/by-phone", { query: { phone: local } });
+				return { taken: true };
+			} catch (e) {
+				if (e instanceof ApiError && e.status === 404) return { taken: false };
+				throw e;
+			}
+		}
+		const res = await apiFetch<{ isRegistered?: boolean; is_registered?: boolean }>(
+			"/customers/check-phone",
+			{ query: { phone: local } },
+		);
+		return { taken: Boolean(res.isRegistered ?? res.is_registered) };
+	} catch (e) {
+		console.error("phoneAlreadyRegistered", e);
+		return { taken: null };
+	}
 }
 
 function resolveIdentifier(identifier: string): Omit<LoginBody, "password"> {
