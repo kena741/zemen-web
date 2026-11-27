@@ -21,6 +21,15 @@ export type PublicSubCategory =
 
 type Page<T> = { items?: T[]; meta?: unknown };
 
+function asRows(payload: unknown): Record<string, unknown>[] {
+	if (Array.isArray(payload)) return payload as Record<string, unknown>[];
+	if (payload && typeof payload === "object") {
+		const items = (payload as Page<Record<string, unknown>>).items;
+		if (Array.isArray(items)) return items;
+	}
+	return [];
+}
+
 export async function fetchCatalogServices(params?: {
 	categoryId?: string;
 	featuredOnly?: boolean;
@@ -28,11 +37,11 @@ export async function fetchCatalogServices(params?: {
 	search?: string;
 }): Promise<{ services: ProviderService[]; error: string | null }> {
 	try {
-		const page = await apiFetch<Page<Record<string, unknown>>>(
+		const page = await apiFetch<Page<Record<string, unknown>> | Record<string, unknown>[]>(
 			"/catalog/services",
 			{
 				query: {
-					category_id: params?.categoryId,
+					categoryId: params?.categoryId,
 					feature: params?.featuredOnly ? true : undefined,
 					limit: params?.limit ?? 40,
 					search: params?.search,
@@ -41,7 +50,7 @@ export async function fetchCatalogServices(params?: {
 				},
 			},
 		);
-		let services = (page.items ?? []).map((row) => mapServiceRow(row));
+		let services = asRows(page).map((row) => mapServiceRow(row));
 		if (params?.search?.trim()) {
 			const q = params.search.trim().toLowerCase();
 			services = services.filter(
@@ -161,16 +170,20 @@ export async function fetchCategories(): Promise<{
 	error: string | null;
 }> {
 	try {
-		const rows = await apiFetch<Record<string, unknown>[]>(
-			"/catalog/categories",
-		);
+		const payload = await apiFetch<
+			Record<string, unknown>[] | Page<Record<string, unknown>>
+		>("/catalog/categories", { query: { activeOnly: true } });
 		return {
-			categories: (rows ?? []).map((r) => ({
-				id: String(r.id ?? ""),
-				categoryName: String(r.categoryName ?? r.category_name ?? "Category"),
-				image: r.image != null ? String(r.image) : null,
-				active: r.active !== false,
-			})),
+			categories: asRows(payload)
+				.map((r) => ({
+					id: String(r.id ?? ""),
+					categoryName: String(
+						r.categoryName ?? r.category_name ?? "Category",
+					),
+					image: r.image != null ? String(r.image) : null,
+					active: r.active !== false,
+				}))
+				.filter((c) => c.id && c.active),
 			error: null,
 		};
 	} catch (e) {
@@ -185,18 +198,21 @@ export async function fetchSubCategories(
 	categoryId?: string,
 ): Promise<{ subCategories: ServiceSubCategory[]; error: string | null }> {
 	try {
-		const rows = await apiFetch<Record<string, unknown>[]>(
-			"/catalog/sub-categories",
-			{ query: { category_id: categoryId } },
-		);
+		const payload = await apiFetch<
+			Record<string, unknown>[] | Page<Record<string, unknown>>
+		>("/catalog/sub-categories", {
+			query: { categoryId: categoryId || undefined },
+		});
 		return {
-			subCategories: (rows ?? []).map((r) => ({
-				id: String(r.id ?? ""),
-				categoryId: String(r.categoryId ?? r.category_id ?? ""),
-				subCategoryName: String(
-					r.subCategoryName ?? r.sub_category_name ?? "",
-				),
-			})),
+			subCategories: asRows(payload)
+				.map((r) => ({
+					id: String(r.id ?? ""),
+					categoryId: String(r.categoryId ?? r.category_id ?? ""),
+					subCategoryName: String(
+						r.subCategoryName ?? r.sub_category_name ?? "",
+					),
+				}))
+				.filter((s) => s.id),
 			error: null,
 		};
 	} catch (e) {

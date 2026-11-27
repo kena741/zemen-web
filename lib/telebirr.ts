@@ -92,6 +92,21 @@ function env(name: string): string {
 	return (process.env[name] ?? "").trim();
 }
 
+/** Telebirr rejects `https:/host` (one slash) and non-http(s) notify URLs. */
+function normalizeTelebirrPublicUrl(raw: string): string | null {
+	let url = raw.trim();
+	if (!url) return null;
+	// Common secret typo: https:/host → https://host
+	url = url.replace(/^https:\/(?!\/)/i, "https://").replace(/^http:\/(?!\/)/i, "http://");
+	try {
+		const parsed = new URL(url);
+		if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return null;
+		return url;
+	} catch {
+		return null;
+	}
+}
+
 function resolveEnvironmentUrls(environment: string): {
 	baseUrl: string;
 	webBaseUrl: string;
@@ -172,8 +187,13 @@ export async function loadTelebirrConfig(
 		env("TELEBIRR_PRIVATE_KEY") || String(fromDb.privateKey ?? "").trim();
 
 	const siteUrl = getSiteUrl().replace(/\/$/, "");
-	const notifyUrl =
-		env("TELEBIRR_NOTIFY_URL") || `${siteUrl}/api/pay/telebirr/notify`;
+	const notifyUrl = normalizeTelebirrPublicUrl(
+		env("TELEBIRR_NOTIFY_URL") || `${siteUrl}/api/pay/telebirr/notify`,
+	);
+	if (!notifyUrl) {
+		console.error("[telebirr] TELEBIRR_NOTIFY_URL is not a valid http(s) URL");
+		return null;
+	}
 
 	if (
 		!fabricAppId ||

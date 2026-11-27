@@ -21,11 +21,11 @@ export type LaunchTelebirrPaymentResult =
 
 export { getTelebirrPayMode, isTelebirrMiniApp };
 
-/** Telebirr H5 paygate rejects `location.href` in some WebViews; `<a>` click works. */
+/** Telebirr H5 paygate rejects missing Referer with 60320006 — never use noreferrer. */
 function openCheckoutUrl(url: string): void {
 	const a = document.createElement("a");
 	a.href = url;
-	a.rel = "noopener noreferrer";
+	a.rel = "noopener";
 	a.style.display = "none";
 	document.body.appendChild(a);
 	a.click();
