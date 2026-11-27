@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { getSiteUrl, isBackendMode } from "@/lib/env";
+import { getSiteUrlFromRequest, isBackendMode } from "@/lib/env";
 import {
 	createTelebirrCheckout,
 	generateMerchOrderId,
@@ -81,7 +81,7 @@ export async function POST(request: Request) {
 			);
 		}
 
-		const appBaseUrl = getSiteUrl().replace(/\/$/, "");
+		const appBaseUrl = getSiteUrlFromRequest(request);
 		const txRef = generateMerchOrderId("web");
 		txRefLog = txRef;
 		const purpose = (body.purpose ?? "wallet").trim();

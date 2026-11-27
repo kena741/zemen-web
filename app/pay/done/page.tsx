@@ -11,9 +11,11 @@ import {
 } from "lucide-react";
 
 import { AuthShell } from "@/components/auth/auth-shell";
+import { refreshAccessToken } from "@/lib/auth/session";
 import { getAccessToken } from "@/lib/auth/tokenStore";
 import { useLocale } from "@/lib/i18n";
 import type { MessageKey } from "@/lib/i18n/messages/en";
+import { isBackendMode } from "@/lib/env";
 import { getSupabase } from "@/lib/supabase/client";
 import {
 	clearPaymentPending,
@@ -95,23 +97,39 @@ function PayDoneContent() {
 		txRef ? "verifying" : "pending",
 	);
 	const [message, setMessage] = useState<string | null>(null);
+	const [needsSignIn, setNeedsSignIn] = useState(false);
 	const [retryToken, setRetryToken] = useState(0);
 	const redirected = useRef(false);
+
+	const signInHref = (() => {
+		const q = new URLSearchParams();
+		q.set("purpose", purpose);
+		if (amount) q.set("amount", amount);
+		if (txRef) q.set("tx_ref", txRef);
+		if (bookingIdFromUrl) q.set("bookingId", bookingIdFromUrl);
+		const next = `/pay/done?${q.toString()}`;
+		return `/login?next=${encodeURIComponent(next)}`;
+	})();
 
 	const verify = useCallback(async () => {
 		if (!txRef) return;
 
 		setStatus("verifying");
 		setMessage(null);
+		setNeedsSignIn(false);
 
 		const pending = readPaymentPending();
 		let token = getAccessToken();
+		if (!token && isBackendMode()) {
+			token = await refreshAccessToken();
+		}
 		if (!token) {
 			const session = await getSupabase().auth.getSession();
 			token = session.data.session?.access_token ?? null;
 		}
 		if (!token) {
 			setStatus("error");
+			setNeedsSignIn(true);
 			setMessage(t("paymentSignInVerify"));
 			return;
 		}
@@ -239,13 +257,22 @@ function PayDoneContent() {
 
 					{status === "error" || status === "pending" ? (
 						<>
-							<button
-								type="button"
-								onClick={() => setRetryToken((n) => n + 1)}
-								className="inline-flex h-12 w-full items-center justify-center rounded-xl bg-[#174309] px-4 text-[14px] font-semibold text-[#f4faf0] transition-colors duration-150 hover:bg-[#1f5a0b] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#174309]/35 focus-visible:ring-offset-2"
-							>
-								{t("paymentRetry")}
-							</button>
+							{needsSignIn ? (
+								<Link
+									href={signInHref}
+									className="inline-flex h-12 w-full items-center justify-center rounded-xl bg-[#174309] px-4 text-[14px] font-semibold text-[#f4faf0] transition-colors duration-150 hover:bg-[#1f5a0b] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#174309]/35 focus-visible:ring-offset-2"
+								>
+									{t("signIn")}
+								</Link>
+							) : (
+								<button
+									type="button"
+									onClick={() => setRetryToken((n) => n + 1)}
+									className="inline-flex h-12 w-full items-center justify-center rounded-xl bg-[#174309] px-4 text-[14px] font-semibold text-[#f4faf0] transition-colors duration-150 hover:bg-[#1f5a0b] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#174309]/35 focus-visible:ring-offset-2"
+								>
+									{t("paymentRetry")}
+								</button>
+							)}
 							<Link
 								href={href}
 								className="inline-flex h-12 w-full items-center justify-center rounded-xl border border-border bg-transparent px-4 text-[14px] font-semibold text-foreground transition-colors duration-150 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#174309]/25 focus-visible:ring-offset-2"

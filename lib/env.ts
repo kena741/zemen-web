@@ -69,6 +69,16 @@ export function getSiteUrl(): string {
 	);
 }
 
+/** Prefer the host the browser actually hit (staging Cloud Run ≠ production domain). */
+export function getSiteUrlFromRequest(request: Request): string {
+	const forwardedHost = request.headers.get("x-forwarded-host")?.split(",")[0]?.trim();
+	const host = forwardedHost || request.headers.get("host")?.trim();
+	const proto =
+		request.headers.get("x-forwarded-proto")?.split(",")[0]?.trim() || "https";
+	if (host) return `${proto}://${host}`.replace(/\/$/, "");
+	return getSiteUrl().replace(/\/$/, "");
+}
+
 export function getEdgeFunctionsBaseUrl(): string {
 	// ponytail: empty in backend — callers already treat "" as "not configured"
 	if (isBackendMode()) return "";

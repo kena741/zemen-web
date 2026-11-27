@@ -28,14 +28,22 @@ export interface PaymentPending {
 
 const KEY = "zemen_payment_pending";
 
+function canUseStorage(): boolean {
+	return typeof window !== "undefined";
+}
+
 export function savePaymentPending(pending: PaymentPending): void {
-	if (typeof window === "undefined") return;
-	sessionStorage.setItem(KEY, JSON.stringify(pending));
+	if (!canUseStorage()) return;
+	const raw = JSON.stringify(pending);
+	// localStorage survives Telebirr H5 round-trips better than sessionStorage.
+	window.localStorage.setItem(KEY, raw);
+	window.sessionStorage.setItem(KEY, raw);
 }
 
 export function readPaymentPending(): PaymentPending | null {
-	if (typeof window === "undefined") return null;
-	const raw = sessionStorage.getItem(KEY);
+	if (!canUseStorage()) return null;
+	const raw =
+		window.localStorage.getItem(KEY) || window.sessionStorage.getItem(KEY);
 	if (!raw) return null;
 	try {
 		return JSON.parse(raw) as PaymentPending;
@@ -51,6 +59,7 @@ export function patchPaymentPending(patch: Partial<PaymentPending>): void {
 }
 
 export function clearPaymentPending(): void {
-	if (typeof window === "undefined") return;
-	sessionStorage.removeItem(KEY);
+	if (!canUseStorage()) return;
+	window.localStorage.removeItem(KEY);
+	window.sessionStorage.removeItem(KEY);
 }

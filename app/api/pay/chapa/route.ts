@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { getSiteUrl, isBackendMode } from "@/lib/env";
+import { getSiteUrlFromRequest, isBackendMode } from "@/lib/env";
 import { loadChapaSecretKey, normalizeChapaPhone } from "@/lib/chapa";
 import { proxyToBackend } from "@/lib/backend/proxy";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
@@ -47,7 +47,7 @@ export async function POST(request: Request) {
 		}
 
 		const purpose = (body.purpose ?? "wallet").trim();
-		const appBaseUrl = getSiteUrl().replace(/\/$/, "");
+		const appBaseUrl = getSiteUrlFromRequest(request);
 		const returnPath = (body.return_path ?? "/pay/done").trim() || "/pay/done";
 		const returnUrl = new URL(
 			returnPath.startsWith("http")
