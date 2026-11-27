@@ -119,6 +119,18 @@ function PayDoneContent() {
 		setNeedsSignIn(false);
 
 		const pending = readPaymentPending();
+		const purposeResolved = pending?.purpose ?? purpose;
+		const gatewayResolved = pending?.gateway ?? "telebirr";
+		const accountResolved =
+			pending?.accountType ??
+			(search.get("account") === "provider" ? "provider" : "customer");
+		const userIdResolved =
+			(pending?.userId ?? "").trim() || (search.get("uid") ?? "").trim();
+		const canAuthlessWallet =
+			gatewayResolved === "telebirr" &&
+			purposeResolved === "wallet" &&
+			Boolean(userIdResolved);
+
 		let token = getAccessToken();
 		if (!token && isBackendMode()) {
 			token = await refreshAccessToken();
@@ -127,7 +139,7 @@ function PayDoneContent() {
 			const session = await getSupabase().auth.getSession();
 			token = session.data.session?.access_token ?? null;
 		}
-		if (!token) {
+		if (!token && !canAuthlessWallet) {
 			setStatus("error");
 			setNeedsSignIn(true);
 			setMessage(t("paymentSignInVerify"));
@@ -136,11 +148,11 @@ function PayDoneContent() {
 
 		const body = {
 			tx_ref: txRef,
-			purpose: pending?.purpose ?? purpose,
+			purpose: purposeResolved,
 			amount: pending?.amount ?? amount,
-			gateway: pending?.gateway ?? "telebirr",
-			accountType: pending?.accountType ?? "customer",
-			userId: pending?.userId,
+			gateway: gatewayResolved,
+			accountType: accountResolved,
+			userId: userIdResolved || undefined,
 			providerId: pending?.providerId,
 			bookingId: pending?.bookingId?.trim() || bookingIdFromUrl || undefined,
 			serviceId: pending?.serviceId,
@@ -158,7 +170,7 @@ function PayDoneContent() {
 				method: "POST",
 				headers: {
 					"Content-Type": "application/json",
-					Authorization: `Bearer ${token}`,
+					...(token ? { Authorization: `Bearer ${token}` } : {}),
 				},
 				body: JSON.stringify(body),
 			});
@@ -177,7 +189,7 @@ function PayDoneContent() {
 			setStatus("error");
 			setMessage(t("paymentVerifyFailed"));
 		}
-	}, [txRef, purpose, amount, t, bookingIdFromUrl]);
+	}, [txRef, purpose, amount, t, bookingIdFromUrl, search]);
 
 	useEffect(() => {
 		void verify();

@@ -29,6 +29,8 @@ interface PayBody {
 	plan_id?: number;
 	to_tier_max?: number;
 	from_tier_max?: number;
+	user_id?: string;
+	account_type?: string;
 	/** Client detects SuperApp and sends miniapp | h5. */
 	mode?: TelebirrCheckoutMode;
 }
@@ -96,6 +98,13 @@ export async function POST(request: Request) {
 		returnUrl.searchParams.set("tx_ref", txRef);
 		returnUrl.searchParams.set("purpose", purpose);
 		returnUrl.searchParams.set("amount", amount.toFixed(2));
+		const uid = (body.user_id ?? "").trim();
+		if (uid) returnUrl.searchParams.set("uid", uid);
+		const account =
+			body.account_type === "provider" ? "provider" : "customer";
+		if (purpose === "wallet") {
+			returnUrl.searchParams.set("account", account);
+		}
 
 		mode = body.mode === "miniapp" ? "miniapp" : "h5";
 

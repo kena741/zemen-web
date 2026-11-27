@@ -81,11 +81,12 @@ function signWalletTopup(params: {
 	txRef: string;
 	accountType: string;
 	amount: number;
+	userId: string;
 }): string | null {
 	const secret = paymentConfirmSecret();
 	if (!secret) return null;
 	const account = params.accountType === "provider" ? "provider" : "customer";
-	const payload = `${params.txRef}:${account}:${Number(params.amount).toFixed(2)}`;
+	const payload = `${params.txRef}:${account}:${Number(params.amount).toFixed(2)}:${params.userId}`;
 	return createHmac("sha256", secret).update(payload).digest("hex");
 }
 
@@ -252,10 +253,18 @@ export async function POST(request: Request) {
 			}
 			const accountType =
 				body.accountType === "provider" ? "provider" : "customer";
+			const userId = (body.userId ?? "").trim();
+			if (!userId) {
+				return NextResponse.json(
+					{ error: "userId is required to credit wallet" },
+					{ status: 400 },
+				);
+			}
 			const sig = signWalletTopup({
 				txRef,
 				accountType,
 				amount: paidAmount,
+				userId,
 			});
 			const base = getApiBaseUrl();
 			if (!base || !sig) {
@@ -268,19 +277,18 @@ export async function POST(request: Request) {
 					{ status: 500 },
 				);
 			}
-			const authHeader = request.headers.get("authorization") || "";
 			const res = await fetch(`${base}/api/v1/payments/wallet/topup`, {
 				method: "POST",
 				headers: {
 					Accept: "application/json",
 					"Content-Type": "application/json",
-					...(authHeader ? { Authorization: authHeader } : {}),
 					"X-Zemen-Pay-Sig": sig,
 				},
 				body: JSON.stringify({
 					txRef,
 					amount: paidAmount,
 					accountType,
+					userId,
 					skipGatewayVerify: true,
 				}),
 			});

@@ -117,6 +117,8 @@ export function TelebirrCheckout({
 					phone_number: phone,
 					purpose,
 					return_path: path,
+					user_id: userId,
+					account_type: accountType,
 					provider_id: providerId,
 					booking_id: bookingId,
 					service_id: serviceId,
