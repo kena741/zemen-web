@@ -77,6 +77,18 @@ function signTierConfirm(params: {
 	return createHmac("sha256", secret).update(payload).digest("hex");
 }
 
+function signWalletTopup(params: {
+	txRef: string;
+	accountType: string;
+	amount: number;
+}): string | null {
+	const secret = paymentConfirmSecret();
+	if (!secret) return null;
+	const account = params.accountType === "provider" ? "provider" : "customer";
+	const payload = `${params.txRef}:${account}:${Number(params.amount).toFixed(2)}`;
+	return createHmac("sha256", secret).update(payload).digest("hex");
+}
+
 async function normalizeBackendResponse(
 	proxied: Response,
 	txRef: string,
@@ -185,6 +197,90 @@ export async function POST(request: Request) {
 					providerId,
 					amount,
 					tierMax,
+					skipGatewayVerify: true,
+				}),
+			});
+			return normalizeBackendResponse(res, txRef, purpose);
+		}
+
+		// Telebirr wallet: confirm with Telebirr, then credit via signed BE topup.
+		if (gateway === "telebirr" && purpose === "wallet") {
+			if (!txRef) {
+				return NextResponse.json(
+					{ error: "tx_ref is required" },
+					{ status: 400 },
+				);
+			}
+			const config = await loadTelebirrConfig();
+			if (!config) {
+				return NextResponse.json(
+					{ error: "Telebirr is not configured" },
+					{ status: 500 },
+				);
+			}
+			let paidAmount = amount;
+			try {
+				const order = await queryTelebirrOrderStatus({
+					config,
+					merchOrderId: txRef,
+				});
+				if (!order.paid) {
+					return NextResponse.json(
+						{
+							status: order.failed ? "failed" : "pending",
+							error: order.failed
+								? `Telebirr status is ${order.tradeStatus || "failed"}`
+								: "Payment not confirmed yet",
+							tx_ref: txRef,
+						},
+						{ status: order.failed ? 402 : 202 },
+					);
+				}
+				if (order.amount && Number(order.amount) > 0) {
+					paidAmount = Number(order.amount);
+				}
+			} catch (error: unknown) {
+				const message =
+					error instanceof Error ? error.message : "Telebirr verify failed";
+				return NextResponse.json({ error: message }, { status: 502 });
+			}
+			if (paidAmount == null || !Number.isFinite(paidAmount) || paidAmount <= 0) {
+				return NextResponse.json(
+					{ error: "Paid amount missing from Telebirr order" },
+					{ status: 502 },
+				);
+			}
+			const accountType =
+				body.accountType === "provider" ? "provider" : "customer";
+			const sig = signWalletTopup({
+				txRef,
+				accountType,
+				amount: paidAmount,
+			});
+			const base = getApiBaseUrl();
+			if (!base || !sig) {
+				return NextResponse.json(
+					{
+						error: !sig
+							? "PAYMENT_CONFIRM_SECRET (or TELEBIRR_APP_SECRET) required"
+							: "API_BASE_URL not configured",
+					},
+					{ status: 500 },
+				);
+			}
+			const authHeader = request.headers.get("authorization") || "";
+			const res = await fetch(`${base}/api/v1/payments/wallet/topup`, {
+				method: "POST",
+				headers: {
+					Accept: "application/json",
+					"Content-Type": "application/json",
+					...(authHeader ? { Authorization: authHeader } : {}),
+					"X-Zemen-Pay-Sig": sig,
+				},
+				body: JSON.stringify({
+					txRef,
+					amount: paidAmount,
+					accountType,
 					skipGatewayVerify: true,
 				}),
 			});
@@ -357,6 +453,17 @@ export async function POST(request: Request) {
 			}
 		}
 
+		// Remaining purposes still use Chapa on the backend — never send Telebirr refs there.
+		if (gateway === "telebirr") {
+			return NextResponse.json(
+				{
+					error: `Telebirr verify for purpose "${purpose}" is not supported yet`,
+					tx_ref: txRef,
+				},
+				{ status: 501 },
+			);
+		}
+
 		let path = "/payments/chapa/verify";
 		let proxyBody: Record<string, unknown> = {
 			txRef: rawTxRef,
@@ -387,7 +494,6 @@ export async function POST(request: Request) {
 				amount,
 			};
 		} else if (purpose === "booking" && body.bookingId?.trim()) {
-			// Chapa booking verify (Telebirr handled above)
 			path = "/payments/chapa/verify";
 			proxyBody = {
 				txRef: rawTxRef,

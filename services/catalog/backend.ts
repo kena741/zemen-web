@@ -151,7 +151,7 @@ export async function toggleServiceFavorite(params: {
 			set.delete(params.userId);
 		} else {
 			await apiFetch(`/catalog/services/${params.serviceId}/like`, {
-				method: "POST",
+				method: "PUT",
 				auth: true,
 			});
 			set.add(params.userId);
